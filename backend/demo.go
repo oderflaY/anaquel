@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -55,6 +56,48 @@ var demoProductos = []demoProducto{
 	{"Queso fresco 500 g", "Productos locales", 7500, 3, 2, color.RGBA{250, 250, 240, 255}, 1, -1},
 	{"Miel de mezquite 500 g", "Productos locales", 9000, 4, 2, color.RGBA{200, 140, 20, 255}, 3, -1},
 	{"Tostadas de maíz", "Productos locales", 3000, 6, 3, color.RGBA{230, 180, 90, 255}, 2, -1},
+}
+
+// demoSurtido: el resto de la tiendita (no sale en la foto del anaquel); con
+// esto la bodega 3D se ve como una tienda de verdad: refri, góndolas,
+// limpieza, botanero y dulces en el mostrador.
+var demoSurtido = []struct {
+	nombre, categoria, unidad string
+	precio, stock, min        int64
+}{
+	{"Refresco de cola 2 L", "Bebidas", "pza", 4300, 14, 6},
+	{"Agua mineral 600 ml", "Bebidas", "pza", 1800, 10, 6},
+	{"Leche entera 1 L", "Lácteos", "pza", 2900, 2, 6},
+	{"Yogur bebible de fresa", "Lácteos", "pza", 1600, 9, 4},
+	{"Crema ácida 250 ml", "Lácteos", "pza", 2400, 5, 3},
+	{"Jamón de pavo 250 g", "Lácteos", "pza", 4200, 4, 2},
+	{"Jugo de naranja 1 L", "Bebidas", "pza", 3100, 7, 4},
+	{"Aceite vegetal 1 L", "Abarrotes", "pza", 4800, 8, 4},
+	{"Azúcar estándar 1 kg", "Abarrotes", "pza", 3200, 0, 4},
+	{"Sal de mesa 1 kg", "Abarrotes", "pza", 1500, 6, 2},
+	{"Harina de maíz 1 kg", "Abarrotes", "pza", 2400, 9, 4},
+	{"Pasta para sopa 200 g", "Abarrotes", "pza", 1200, 24, 10},
+	{"Atún en lata 140 g", "Enlatados", "lata", 2600, 16, 6},
+	{"Chiles jalapeños en lata 220 g", "Enlatados", "lata", 2100, 10, 4},
+	{"Frijoles refritos en lata", "Enlatados", "lata", 2300, 8, 4},
+	{"Puré de tomate 210 g", "Enlatados", "pza", 1100, 18, 6},
+	{"Café soluble 120 g", "Desayuno", "frasco", 7800, 5, 2},
+	{"Avena en hojuelas 400 g", "Desayuno", "pza", 2700, 6, 3},
+	{"Cereal de maíz 500 g", "Desayuno", "caja", 5200, 4, 3},
+	{"Mayonesa 390 g", "Abarrotes", "frasco", 4600, 6, 3},
+	{"Jabón de barra para ropa", "Limpieza", "pza", 1900, 12, 4},
+	{"Detergente en polvo 1 kg", "Limpieza", "bolsa", 4100, 6, 3},
+	{"Cloro 1 L", "Limpieza", "pza", 2200, 7, 3},
+	{"Papel higiénico 4 rollos", "Higiene", "paquete", 3800, 3, 4},
+	{"Shampoo 400 ml", "Higiene", "pza", 5600, 5, 2},
+	{"Pasta dental 100 ml", "Higiene", "caja", 3300, 8, 3},
+	{"Servilletas 250 pzas", "Higiene", "paquete", 2600, 6, 3},
+	{"Churritos de maíz 60 g", "Botanas", "bolsa", 1500, 14, 6},
+	{"Cacahuates japoneses 100 g", "Botanas", "bolsa", 1700, 10, 5},
+	{"Palomitas para microondas", "Botanas", "caja", 1400, 9, 4},
+	{"Chicles (caja 40)", "Dulces", "caja", 9000, 2, 1},
+	{"Paletas de dulce", "Dulces", "pza", 300, 60, 20},
+	{"Chocolate de barra", "Dulces", "pza", 1800, 18, 6},
 }
 
 // sembrarDemo crea la tienda demo una sola vez (si ya existe no hace nada).
@@ -120,6 +163,13 @@ func (a *App) sembrarDemo() error {
 		}
 		id, _ := r.LastInsertId()
 		productos = append(productos, id)
+	}
+
+	for i, p := range demoSurtido {
+		if _, err := tx.Exec(`INSERT INTO productos (tienda_id, codigo, nombre, categoria, unidad, precio_c, stock, stock_min, actualizado)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, tienda, fmt.Sprintf("750100%05d", i+1), p.nombre, p.categoria, p.unidad, p.precio, p.stock, p.min, t); err != nil {
+			return err
+		}
 	}
 
 	// Anaquel con foto de referencia (lleno) generada.

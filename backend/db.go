@@ -208,6 +208,19 @@ CREATE TABLE asesor_mensajes (
 	creado     INTEGER NOT NULL
 );
 `,
+	// 3: bodega 3D. El plano (paredes, puerta, muebles) es un JSON por tienda y
+	// cada producto guarda en qué mueble, lado, entrepaño y posición está.
+	`
+CREATE TABLE planos (
+	tienda_id   INTEGER PRIMARY KEY REFERENCES tiendas(id) ON DELETE CASCADE,
+	datos       TEXT NOT NULL,
+	actualizado INTEGER NOT NULL
+);
+ALTER TABLE productos ADD COLUMN lugar_mueble TEXT NOT NULL DEFAULT '';
+ALTER TABLE productos ADD COLUMN lugar_lado INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE productos ADD COLUMN lugar_nivel INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE productos ADD COLUMN lugar_pos REAL NOT NULL DEFAULT 0;
+`,
 }
 
 func abrirDB(ruta string) (*sql.DB, error) {

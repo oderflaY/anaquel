@@ -246,3 +246,67 @@ details summary { cursor: pointer; }
   .burbuja-chat { max-width: 92%; }
   .trato-fila .ultimo { max-width: 32ch; }
 }
+
+/* ---- Bodega 3D ---- */
+.rejilla3d { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+.lienzo3d { position: relative; height: min(72vh, 680px); min-height: 380px; border-radius: var(--radio); overflow: hidden; border: 1px solid var(--borde); background: var(--superficie); touch-action: none; }
+.lado3d { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); padding: 1rem; max-height: min(72vh, 680px); overflow-y: auto; }
+.barra3d { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: .35rem; flex-wrap: wrap; z-index: 5; pointer-events: none; }
+.barra3d > * { pointer-events: auto; box-shadow: var(--sombra); }
+.barra3d.abajo { top: auto; bottom: 10px; }
+.leyenda3d { position: absolute; right: 10px; bottom: 56px; z-index: 5; display: flex; flex-direction: column; gap: .2rem; background: color-mix(in srgb, var(--superficie) 88%, transparent); border: 1px solid var(--borde); border-radius: 10px; padding: .45rem .6rem; font-size: .8rem; }
+.leyenda3d i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: .4rem; vertical-align: -1px; }
+.tip3d { position: absolute; z-index: 6; pointer-events: none; display: flex; flex-direction: column; background: var(--texto); color: var(--fondo); border-radius: 10px; padding: .4rem .6rem; font-size: .82rem; max-width: 220px; box-shadow: var(--sombra); }
+.aviso-editor { position: absolute; left: 50%; transform: translateX(-50%); top: 10px; z-index: 5; background: var(--ambar); color: #3a2a00; font-weight: 700; font-size: .82rem; padding: .35rem .8rem; border-radius: 999px; white-space: nowrap; max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; }
+.respuesta3d { border-top: 1px solid var(--borde); padding-top: .6rem; }
+.pasos3d { margin: .5rem 0 0; padding-left: 1.4rem; display: flex; flex-direction: column; gap: .25rem; }
+.pasos3d li { padding: .15rem .4rem; border-radius: 8px; }
+.pasos3d li.activo { background: var(--ambar-suave); font-weight: 700; }
+.microfono { width: 48px; padding: 0; border-radius: 50%; }
+.microfono.escuchando { background: var(--rojo); color: #fff; animation: latir 1s ease-in-out infinite; }
+.cifras3d { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.cifras3d > div { display: flex; flex-direction: column; background: var(--fondo); border-radius: 10px; padding: .5rem .65rem; }
+.cifras3d b { font-size: 1.25rem; line-height: 1.15; }
+.cifras3d span { font-size: .78rem; color: var(--texto-2); }
+.cifras3d .alerta b { color: var(--rojo); }
+.cifras3d .aviso3d b { color: #b07800; }
+.mueble-fila { display: flex; align-items: center; gap: .6rem; width: 100%; text-align: left; background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px; padding: .45rem .6rem; font: inherit; color: inherit; cursor: pointer; }
+.mueble-fila:hover { border-color: var(--marca); }
+.mueble-fila small { display: block; color: var(--texto-2); font-size: .78rem; }
+.icono-mueble { font-size: 1.3rem; }
+.tarjeta-plana { background: var(--fondo); border: 1px solid var(--borde); border-radius: 12px; padding: .65rem .75rem; }
+.kardex3d { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
+.kardex3d li { display: grid; grid-template-columns: 1fr auto 3.5rem; gap: .4rem; align-items: baseline; border-bottom: 1px dashed var(--borde); padding-bottom: .15rem; }
+.entrepano3d { display: flex; gap: .4rem; align-items: flex-start; background: var(--fondo); border-radius: 8px; padding: .35rem .45rem; border-bottom: 3px solid var(--borde); }
+.entrepano3d .num { flex: none; width: 22px; height: 22px; border-radius: 6px; background: var(--marca); color: #fff; font-size: .75rem; font-weight: 800; display: grid; place-items: center; }
+.pieza3d { font: inherit; font-size: .78rem; border-radius: 999px; border: 1px solid var(--borde); background: var(--superficie); color: inherit; padding: .1rem .55rem; cursor: pointer; }
+.pieza3d.agotado { border-color: var(--rojo); color: var(--rojo); }
+.pieza3d.bajo { border-color: var(--ambar); }
+.paleta3d { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; }
+.paleta3d .boton { justify-content: flex-start; font-weight: 600; font-size: .8rem; }
+.rejilla-campos { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+.rejilla-campos .campo { font-size: .82rem; }
+.rejilla-campos input, .rejilla-campos select { min-height: 38px; padding: .4rem .5rem; }
+/* Etiquetas dentro del 3D (CSS2D) */
+.t3d-tag { background: rgb(20 30 25 / 82%); color: #fff; font: 600 12px/1.2 system-ui, sans-serif; padding: 3px 8px; border-radius: 999px; white-space: nowrap; transform: translateY(-6px); }
+.t3d-hit { background: var(--ambar); color: #2a1d00; font-size: 13px; font-weight: 800; }
+.t3d-inicio { background: var(--marca); }
+.t3d-ruta { background: #1d2a24; border: 2px solid var(--ambar); }
+.t3d-mueble { color: #fff; background: rgb(14 124 90 / 78%); font: 700 11px/1.2 system-ui, sans-serif; padding: 2px 7px; border-radius: 6px; white-space: nowrap; opacity: .92; }
+.t3d-area { color: #1d2a24; background: rgb(255 255 255 / 75%); font: 800 12px/1 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; }
+.en-app { max-width: none; }
+.en-app .bodega3d > .renglon h1 { font-size: 1.3rem; }
+@media (max-width: 900px) {
+  .rejilla3d { grid-template-columns: 1fr; }
+  .lado3d { max-height: none; }
+  .lienzo3d { height: 62vh; }
+}
+@media (prefers-reduced-motion: reduce) { .microfono.escuchando { animation: none; } }
+
+/* Dentro de la app (WebView): la app pone su propio buscador; primero el 3D, luego la respuesta. */
+.en-app .bodega3d > .renglon, .en-app .bodega3d .busca3d { display: none; }
+.en-app .bodega3d .rejilla3d { order: -1; }
+.en-app .bodega3d .ejemplos3d { flex-wrap: nowrap; overflow-x: auto; padding-bottom: .2rem; }
+.en-app .bodega3d .ejemplos3d .boton { white-space: nowrap; flex: none; }
+@media (max-width: 900px) { .en-app .bodega3d .lienzo3d { height: 58vh; min-height: 320px; } }
+@media (max-width: 600px) { .barra3d { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .barra3d .boton { flex: none; white-space: nowrap; } }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { api, guardarToken, token, type Resumen, type Tienda } from './api'
 import { Enlace, ir, useRuta } from './router'
 import { Toasts } from './ui'
@@ -19,6 +19,9 @@ import Asesor from './pages/Asesor'
 import Vitrina from './pages/Vitrina'
 import Avisos from './pages/Avisos'
 import RedPublica from './pages/RedPublica'
+
+// El 3D (three.js) se baja solo cuando se abre.
+const Bodega3D = lazy(() => import('./pages/Bodega3D'))
 
 export type Sesion = { tienda: Tienda; resumen: Resumen | null; refrescar: () => void; salir: () => void }
 
@@ -47,7 +50,9 @@ export default function App() {
   // Páginas públicas
   let pagina: React.ReactNode
   const enPanel = camino.startsWith('/panel')
-  if (camino.startsWith('/t/')) pagina = <TiendaPublica slug={decodeURIComponent(camino.slice(3))} />
+  const m3d = camino.match(/^\/t\/([^/]+)\/3d$/)
+  if (m3d) pagina = <Bodega3D slug={decodeURIComponent(m3d[1])} />
+  else if (camino.startsWith('/t/')) pagina = <TiendaPublica slug={decodeURIComponent(camino.slice(3))} />
   else if (camino === '/productores') pagina = <Productores />
   else if (camino === '/red') pagina = <RedPublica consulta={ruta.split('?')[1] ?? ''} />
   else if (camino === '/entrar') pagina = <Entrar alEntrar={entrar} />
@@ -63,6 +68,7 @@ export default function App() {
         : camino === '/panel/tratos' ? <Tratos />
         : camino === '/panel/red' ? <Red sesion={s} consulta={ruta.split('?')[1] ?? ''} />
         : camino === '/panel/asesor' ? <Asesor sesion={s} />
+        : camino === '/panel/bodega' ? <Bodega3D sesion={s} />
         : camino === '/panel/vitrina' ? <Vitrina sesion={s} />
         : camino === '/panel/avisos' ? <Avisos sesion={s} />
         : camino === '/panel/anaqueles' ? <Anaqueles sesion={s} />
@@ -80,15 +86,19 @@ export default function App() {
     ['/panel/red', 'Red'],
     ['/panel/tratos', 'Tratos', resumen?.tratos_pendientes],
     ['/panel/productos', 'Inventario'],
+    ['/panel/bodega', 'Bodega 3D'],
     ['/panel/vitrina', 'Mi vitrina'],
     ['/panel/anaqueles', 'Anaqueles'],
     ['/panel/pedidos', 'Pedidos', resumen?.atrasados],
     ['/panel/tienda', 'Mi tienda'],
   ]
 
+  // Dentro de la app (WebView) va sin encabezado: la app ya tiene el suyo.
+  const enApp = new URLSearchParams(ruta.split('?')[1] ?? '').get('app') === '1'
+
   return (
     <>
-      <header className="barra">
+      {!enApp && <header className="barra">
         <div className="contenedor">
           <Enlace href={tienda ? '/panel' : '/'} className="logo">
             <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" /> <span>Anaquel</span>
@@ -114,8 +124,10 @@ export default function App() {
             </nav>
           )}
         </div>
-      </header>
-      <main className="contenedor" style={{ paddingTop: '1.25rem', paddingBottom: '2rem' }}>{pagina}</main>
+      </header>}
+      <main className={`contenedor ${enApp ? 'en-app' : ''}`} style={{ paddingTop: enApp ? '.6rem' : '1.25rem', paddingBottom: '2rem' }}>
+        <Suspense fallback={<div className="vacio-lista">Cargando el 3D…</div>}>{pagina}</Suspense>
+      </main>
       <Toasts />
     </>
   )

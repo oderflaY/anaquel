@@ -103,6 +103,11 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("GET /api/productos/codigo/{codigo}", a.conTienda(a.productoDeCodigo))
 
 	// Red de comercio local
+	// Bodega 3D: plano del local y lugar de cada producto.
+	m.HandleFunc("GET /api/bodega", a.conTienda(a.bodega))
+	m.HandleFunc("PUT /api/bodega/plano", a.conTienda(a.guardarPlanoHTTP))
+	m.HandleFunc("PUT /api/bodega/lugares", a.conTienda(a.guardarLugaresHTTP))
+	m.HandleFunc("POST /api/bodega/acomodar", a.conTienda(a.acomodarHTTP))
 	m.HandleFunc("GET /api/red", a.conTienda(a.red))
 	m.HandleFunc("GET /api/anuncios", a.conTienda(a.listarAnuncios))
 	m.HandleFunc("POST /api/anuncios", a.conTienda(a.crearAnuncio))
@@ -131,6 +136,7 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("POST /api/publico/productores", a.registrarProductor)
 	m.HandleFunc("GET /api/publico/tiendas", a.tiendasCercanas)
 	m.HandleFunc("GET /api/publico/tiendas/{slug}", a.tiendaPublica)
+	m.HandleFunc("GET /api/publico/tiendas/{slug}/bodega", a.bodegaPublica)
 	m.HandleFunc("GET /api/salud", func(w http.ResponseWriter, r *http.Request) {
 		responder(w, 200, map[string]any{"ok": true, "vision": a.vision.Nombre()})
 	})

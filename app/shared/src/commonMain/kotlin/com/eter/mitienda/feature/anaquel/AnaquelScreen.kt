@@ -56,6 +56,8 @@ import com.eter.mitienda.core.designsystem.theme.NeuDimens
 import com.eter.mitienda.core.designsystem.theme.NeuShapes
 import com.eter.mitienda.core.image.ImagePickResult
 import com.eter.mitienda.core.image.rememberImagePickerLauncher
+import com.eter.mitienda.core.web.Vista3D
+import com.eter.mitienda.core.web.hay3D
 import mitienda.shared.generated.resources.Res
 import mitienda.shared.generated.resources.ic_add
 import mitienda.shared.generated.resources.ic_remove
@@ -216,12 +218,14 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
                         SeccionAnaquel.ANAQUELES -> st.resumen?.sinFotoHoy ?: 0
                         SeccionAnaquel.TRATOS -> st.resumen?.tratosPendientes ?: 0
                         SeccionAnaquel.RED -> st.resumen?.avisos ?: 0
-                        SeccionAnaquel.ASESOR -> 0
+                        SeccionAnaquel.ASESOR, SeccionAnaquel.BODEGA -> 0
                     }
                     NeumorphicChip(if (n > 0) "${s.titulo} · $n" else s.titulo, selected = st.seccion == s, onClick = { vm.elegirSeccion(s) })
                 }
             }
-            LazyColumn(
+            if (st.seccion == SeccionAnaquel.BODEGA) {
+                Bodega3D(vm, Modifier.weight(1f))
+            } else LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(
                     start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceXl,
@@ -244,6 +248,7 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
                     SeccionAnaquel.ASESOR -> asesor(st, vm) { negociando = it }
                     SeccionAnaquel.RED -> red(st, vm) { negociando = it }
                     SeccionAnaquel.TRATOS -> tratos(st, vm) { contra = true }
+                    SeccionAnaquel.BODEGA -> Unit
                 }
             }
         }
@@ -639,5 +644,34 @@ private fun hace(ms: Long?): String {
         min < 60 * 24 -> "hace ${min / 60} h"
         min < 60 * 48 -> "ayer"
         else -> "hace ${min / 1440} días"
+    }
+}
+
+/**
+ * Bodega 3D: la tienda a escala con lo que queda en cada entrepaño. Se escribe
+ * qué buscar y la escena traza la ruta («Llévame»). Es la página del panel
+ * dentro de un WebView, igual que en MatObra.
+ */
+@Composable
+private fun Bodega3D(vm: AnaquelViewModel, modifier: Modifier) {
+    var texto by remember { mutableStateOf("") }
+    var pregunta by remember { mutableStateOf("") }
+    val url = vm.urlBodega(pregunta)
+    Column(modifier.fillMaxWidth()) {
+        if (hay3D) {
+            Row(
+                Modifier.padding(horizontal = NeuDimens.ScreenPadding, vertical = NeuDimens.SpaceSm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NeumorphicInput(texto, { texto = it }, placeholder = "¿Dónde está…? (atún, leche)", modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(NeuDimens.SpaceMd))
+                NeumorphicButton("Llévame", onClick = { pregunta = texto })
+            }
+        }
+        if (url == null || !hay3D) {
+            Texto("Entra a tu cuenta para ver la bodega 3D.", Modifier.padding(NeuDimens.ScreenPadding))
+        } else {
+            Vista3D(url, Modifier.fillMaxWidth().weight(1f))
+        }
     }
 }

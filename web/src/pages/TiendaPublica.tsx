@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, hace, nombreGiro, pesos, type TiendaPublica as TP } from '../api'
 import { TarjetaRed } from '../red'
+import { Enlace } from '../router'
 import { Estado, Mapa, Nivel, useDatos } from '../ui'
 
 export default function TiendaPublica({ slug }: { slug: string }) {
@@ -18,7 +19,10 @@ export default function TiendaPublica({ slug }: { slug: string }) {
         <p className="secundario" style={{ margin: 0 }}>{nombreGiro(t.giro)}{t.direccion ? ` · ${t.direccion}` : ''}</p>
         {t.descripcion && <p style={{ margin: '.3rem 0 0' }}>{t.descripcion}</p>}
         {datos.actualizado && <p className="secundario chico">Actualizado {hace(datos.actualizado)} con la foto de sus anaqueles.</p>}
-        {wa && <a className="boton wa chico" href={wa} target="_blank" rel="noreferrer">Escribir por WhatsApp</a>}
+        <div className="fila" style={{ gap: '.5rem', marginTop: '.4rem' }}>
+          {wa && <a className="boton wa chico" href={wa} target="_blank" rel="noreferrer">Escribir por WhatsApp</a>}
+          <Enlace className="boton chico" href={`/t/${encodeURIComponent(slug)}/3d`}>🧭 Recorrer la tienda en 3D</Enlace>
+        </div>
       </div>
 
       {(datos.vitrina?.length ?? 0) + (datos.anuncios?.length ?? 0) > 0 && (

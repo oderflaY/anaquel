@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.eter.mitienda.core.util.readFileBytes
 import com.eter.mitienda.data.local.AjustesDao
 import com.eter.mitienda.domain.repository.ProductRepository
+import io.ktor.http.encodeURLParameter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class SeccionAnaquel(val titulo: String) {
-    HOY("Hoy"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"),
+    HOY("Hoy"), BODEGA("Bodega 3D"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"),
 }
 
 data class AnaquelUiState(
@@ -128,6 +129,17 @@ class AnaquelViewModel(
             SeccionAnaquel.TRATOS -> trabajo(null) { _state.update { it.copy(tratos = api.tratos()) } }
             else -> Unit
         }
+    }
+
+    /**
+     * La bodega 3D es la misma página del panel en un WebView: ?app=1 quita el
+     * encabezado, ?q= pregunta en cuanto carga y el token va en el hash (no viaja al servidor en la URL).
+     */
+    fun urlBodega(pregunta: String): String? {
+        val tok = api.token ?: return null
+        val q = pregunta.trim()
+        val consulta = if (q.isEmpty()) "" else "&q=" + q.encodeURLParameter()
+        return "$SERVIDOR_ANAQUEL/panel/bodega?app=1$consulta#t=$tok"
     }
 
     // ---------------- Red, tratos y asesor ----------------
