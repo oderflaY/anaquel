@@ -115,6 +115,99 @@ CREATE TABLE pedido_items (
 	recibido    INTEGER NOT NULL DEFAULT 0
 );
 `,
+	// 2: red de comercio local (vitrina, publicidad, solicitudes, tratos),
+	// kárdex de inventario al estilo MatObra y el asesor del negocio.
+	`
+ALTER TABLE tiendas ADD COLUMN giro TEXT NOT NULL DEFAULT 'abarrotes';
+ALTER TABLE tiendas ADD COLUMN descripcion TEXT NOT NULL DEFAULT '';
+ALTER TABLE productos ADD COLUMN publicado INTEGER NOT NULL DEFAULT 0;   -- visible en la red
+ALTER TABLE productos ADD COLUMN precio_mayoreo_c INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE productos ADD COLUMN minimo_mayoreo INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE productos ADD COLUMN unidad TEXT NOT NULL DEFAULT 'pza';
+ALTER TABLE productos ADD COLUMN descripcion TEXT NOT NULL DEFAULT '';
+-- Kárdex: cada cambio de existencia deja un renglón. cantidad lleva signo.
+CREATE TABLE movimientos (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	tienda_id   INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+	tipo        TEXT NOT NULL,   -- entrada | salida | venta | ajuste | trato_entrada | trato_salida
+	cantidad    INTEGER NOT NULL,
+	saldo       INTEGER NOT NULL,
+	nota        TEXT NOT NULL DEFAULT '',
+	trato_id    INTEGER,
+	creado      INTEGER NOT NULL
+);
+CREATE INDEX idx_mov_producto ON movimientos(producto_id, creado);
+CREATE INDEX idx_mov_tienda ON movimientos(tienda_id, creado);
+-- Publicidad: lo que una tienda, proveedor o productor ofrece (incluye servicios).
+CREATE TABLE anuncios (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	tienda_id   INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	tipo        TEXT NOT NULL DEFAULT 'producto', -- producto | servicio | promocion
+	titulo      TEXT NOT NULL,
+	texto       TEXT NOT NULL DEFAULT '',
+	precio      TEXT NOT NULL DEFAULT '',          -- libre: "$45 la pieza desde 50"
+	activo      INTEGER NOT NULL DEFAULT 1,
+	creado      INTEGER NOT NULL
+);
+-- "Busco 1000 gorras": lo que una tienda necesita conseguir.
+CREATE TABLE solicitudes (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	tienda_id   INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	que         TEXT NOT NULL,
+	cantidad    INTEGER NOT NULL DEFAULT 0,
+	detalle     TEXT NOT NULL DEFAULT '',
+	estado      TEXT NOT NULL DEFAULT 'abierta',  -- abierta | cerrada
+	por_asesor  INTEGER NOT NULL DEFAULT 0,
+	creado      INTEGER NOT NULL
+);
+-- Negociación entre dos tiendas.
+CREATE TABLE tratos (
+	id            INTEGER PRIMARY KEY AUTOINCREMENT,
+	comprador_id  INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	vendedor_id   INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	producto_id   INTEGER REFERENCES productos(id) ON DELETE SET NULL,
+	anuncio_id    INTEGER REFERENCES anuncios(id) ON DELETE SET NULL,
+	solicitud_id  INTEGER REFERENCES solicitudes(id) ON DELETE SET NULL,
+	titulo        TEXT NOT NULL,
+	cantidad      INTEGER NOT NULL,
+	precio_c      INTEGER NOT NULL DEFAULT 0,   -- por unidad
+	propuso_id    INTEGER NOT NULL,             -- quién hizo la última propuesta
+	estado        TEXT NOT NULL DEFAULT 'negociando', -- negociando | aceptado | entregado | cancelado
+	creado        INTEGER NOT NULL,
+	actualizado   INTEGER NOT NULL
+);
+CREATE INDEX idx_tratos_comprador ON tratos(comprador_id, actualizado);
+CREATE INDEX idx_tratos_vendedor ON tratos(vendedor_id, actualizado);
+CREATE TABLE trato_mensajes (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	trato_id   INTEGER NOT NULL REFERENCES tratos(id) ON DELETE CASCADE,
+	tienda_id  INTEGER,                 -- NULL = mensaje del sistema
+	texto      TEXT NOT NULL,
+	cantidad   INTEGER,                 -- con cantidad/precio es una contraoferta
+	precio_c   INTEGER,
+	creado     INTEGER NOT NULL
+);
+CREATE TABLE avisos (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	tienda_id  INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	clave      TEXT,                    -- evita avisar dos veces lo mismo
+	tipo       TEXT NOT NULL,           -- encontrado | interesado | trato | sistema
+	texto      TEXT NOT NULL,
+	enlace     TEXT NOT NULL DEFAULT '',
+	leido      INTEGER NOT NULL DEFAULT 0,
+	creado     INTEGER NOT NULL,
+	UNIQUE (tienda_id, clave)
+);
+CREATE TABLE asesor_mensajes (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	tienda_id  INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	rol        TEXT NOT NULL,           -- user | assistant
+	texto      TEXT NOT NULL,
+	extra      TEXT NOT NULL DEFAULT '{}', -- tarjetas y pasos (JSON)
+	creado     INTEGER NOT NULL
+);
+`,
 }
 
 func abrirDB(ruta string) (*sql.DB, error) {

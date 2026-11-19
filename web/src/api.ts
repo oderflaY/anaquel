@@ -6,12 +6,13 @@ export const media = (u: string) => BASE + u
 
 export type Tienda = {
   id: number; nombre: string; slug: string; email?: string; telefono: string
-  direccion: string; lat: number | null; lng: number | null
+  direccion: string; lat: number | null; lng: number | null; giro: string; descripcion: string
 }
 export type Producto = {
   id: number; codigo: string; nombre: string; categoria: string; precio_c: number
   stock: number | null; stock_min: number; proveedor_id: number | null
   productor_id: number | null; productor?: string
+  publicado: boolean; precio_mayoreo_c: number; minimo_mayoreo: number; unidad: string; descripcion: string
 }
 export type Nivel = 'lleno' | 'poco' | 'vacio'
 export type Zona = {
@@ -44,7 +45,7 @@ export type Pedido = {
 }
 export type Resumen = {
   faltantes: number; sin_pedir: number; pedidos_abiertos: number; atrasados: number
-  anaqueles: number; sin_foto_hoy: number; productos: number
+  anaqueles: number; sin_foto_hoy: number; productos: number; avisos: number; tratos_pendientes: number
 }
 export type ResultadoFoto = { anaquel: Anaquel; metodo: string; faltantes: Zona[]; llegaron: Pedido[] }
 export type ProductoPublico = {
@@ -53,6 +54,44 @@ export type ProductoPublico = {
 }
 export type TiendaPublica = {
   tienda: Tienda; productos: ProductoPublico[]; hecho_cerca: ProductoPublico[]; actualizado: number | null
+  anuncios: Anuncio[]; vitrina: Resultado[]
+}
+
+// ---- Red de comercio local ----
+export type TiendaCorta = { id: number; nombre: string; slug: string; giro: string; telefono: string }
+export type Resultado = {
+  tipo: 'producto' | 'anuncio' | 'solicitud' | 'productor'; id: number; titulo: string; detalle: string
+  subtipo?: 'producto' | 'servicio' | 'promocion'; precio_c?: number; precio_mayoreo_c?: number
+  minimo_mayoreo?: number; unidad?: string; disponible?: number; precio?: string; cantidad?: number
+  tienda?: TiendaCorta; telefono?: string; lugar?: string; distancia_km?: number; creado: number
+}
+export type Anuncio = { id: number; tipo: 'producto' | 'servicio' | 'promocion'; titulo: string; texto: string; precio: string; activo: boolean; creado: number }
+export type Solicitud = { id: number; que: string; cantidad: number; detalle: string; estado: 'abierta' | 'cerrada'; por_asesor: boolean; creado: number; ofertas: number }
+export type MensajeTrato = { id: number; de: 'yo' | 'otro' | 'sistema'; texto: string; cantidad?: number; precio_c?: number; creado: number }
+export type Trato = {
+  id: number; rol: 'compro' | 'vendo'; otra: TiendaCorta; titulo: string; cantidad: number; precio_c: number
+  estado: 'negociando' | 'aceptado' | 'entregado' | 'cancelado'; te_toca: boolean; producto_id?: number
+  solicitud_id?: number; disponible?: number; creado: number; actualizado: number; ultimo?: string
+  mensajes?: MensajeTrato[]; whatsapp?: string
+}
+export type Aviso = { id: number; tipo: 'encontrado' | 'interesado' | 'trato' | 'sistema'; texto: string; enlace: string; leido: boolean; creado: number }
+export type MensajeAsesor = {
+  id: number; rol: 'user' | 'assistant'; texto: string; tarjetas?: Resultado[]; pasos?: string[]
+  motor?: 'ia' | 'basico'; creado: number
+}
+export type Movimiento = { id: number; producto_id: number; producto: string; tipo: string; cantidad: number; saldo: number; nota: string; trato_id?: number; creado: number }
+export type Giro = { Clave: string; Nombre: string }
+
+export const GIROS: [string, string][] = [
+  ['abarrotes', 'Abarrotes / tiendita'], ['ropa', 'Ropa y accesorios'], ['papeleria', 'Papelería'],
+  ['ferreteria', 'Ferretería'], ['farmacia', 'Farmacia'], ['dulceria', 'Dulcería y fiestas'],
+  ['comida', 'Comida y antojitos'], ['mayoreo', 'Proveedor / mayoreo'], ['servicios', 'Servicios'], ['otro', 'Otro'],
+]
+export const nombreGiro = (g: string) => GIROS.find(([k]) => k === g)?.[1] ?? 'Otro'
+export const numero = (n: number) => n.toLocaleString('es-MX')
+export const whatsapp = (tel: string, texto = '') => {
+  const t = tel.replace(/\D/g, '').replace(/^(\d{10})$/, '52$1')
+  return t.length >= 10 ? `https://wa.me/${t}${texto ? `?text=${encodeURIComponent(texto)}` : ''}` : null
 }
 export type TiendaCercana = { nombre: string; slug: string; direccion: string; lat: number; lng: number; distancia_km?: number }
 

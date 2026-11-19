@@ -15,14 +15,16 @@ import (
 )
 
 type Tienda struct {
-	ID        int64    `json:"id"`
-	Nombre    string   `json:"nombre"`
-	Slug      string   `json:"slug"`
-	Email     string   `json:"email,omitempty"`
-	Telefono  string   `json:"telefono"`
-	Direccion string   `json:"direccion"`
-	Lat       *float64 `json:"lat"`
-	Lng       *float64 `json:"lng"`
+	ID          int64    `json:"id"`
+	Nombre      string   `json:"nombre"`
+	Slug        string   `json:"slug"`
+	Email       string   `json:"email,omitempty"`
+	Telefono    string   `json:"telefono"`
+	Direccion   string   `json:"direccion"`
+	Lat         *float64 `json:"lat"`
+	Lng         *float64 `json:"lng"`
+	Giro        string   `json:"giro"`
+	Descripcion string   `json:"descripcion"`
 }
 
 type ctxTienda struct{}
@@ -99,13 +101,15 @@ func (a *App) slugLibre(base string) string {
 }
 
 type datosRegistro struct {
-	Nombre    string   `json:"nombre"`
-	Email     string   `json:"email"`
-	Password  string   `json:"password"`
-	Telefono  string   `json:"telefono"`
-	Direccion string   `json:"direccion"`
-	Lat       *float64 `json:"lat"`
-	Lng       *float64 `json:"lng"`
+	Nombre      string   `json:"nombre"`
+	Email       string   `json:"email"`
+	Password    string   `json:"password"`
+	Telefono    string   `json:"telefono"`
+	Direccion   string   `json:"direccion"`
+	Lat         *float64 `json:"lat"`
+	Lng         *float64 `json:"lng"`
+	Giro        string   `json:"giro"`
+	Descripcion string   `json:"descripcion"`
 }
 
 func (a *App) crearSesion(tiendaID int64) (string, error) {
@@ -140,10 +144,10 @@ func (a *App) registro(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hash, _ := bcrypt.GenerateFromPassword([]byte(d.Password), bcrypt.DefaultCost)
-	res, err := a.db.Exec(`INSERT INTO tiendas (nombre, slug, email, pass_hash, telefono, direccion, lat, lng, creado)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	res, err := a.db.Exec(`INSERT INTO tiendas (nombre, slug, email, pass_hash, telefono, direccion, lat, lng, giro, creado)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		d.Nombre, a.slugLibre(slugDe(d.Nombre)), d.Email, string(hash), strings.TrimSpace(d.Telefono),
-		strings.TrimSpace(d.Direccion), d.Lat, d.Lng, ahora())
+		strings.TrimSpace(d.Direccion), d.Lat, d.Lng, giroValido(d.Giro), ahora())
 	if err != nil {
 		manejar(w, nil, err)
 		return
@@ -183,8 +187,8 @@ func (a *App) responderSesion(w http.ResponseWriter, id int64) {
 
 func (a *App) tienda(id int64) (Tienda, error) {
 	var t Tienda
-	err := a.db.QueryRow("SELECT id, nombre, slug, email, telefono, direccion, lat, lng FROM tiendas WHERE id = ?", id).
-		Scan(&t.ID, &t.Nombre, &t.Slug, &t.Email, &t.Telefono, &t.Direccion, &t.Lat, &t.Lng)
+	err := a.db.QueryRow("SELECT id, nombre, slug, email, telefono, direccion, lat, lng, giro, descripcion FROM tiendas WHERE id = ?", id).
+		Scan(&t.ID, &t.Nombre, &t.Slug, &t.Email, &t.Telefono, &t.Direccion, &t.Lat, &t.Lng, &t.Giro, &t.Descripcion)
 	return t, err
 }
 
@@ -203,8 +207,9 @@ func (a *App) actualizarYo(w http.ResponseWriter, r *http.Request) {
 		manejar(w, nil, fallo(400, "Escribe el nombre de la tienda"))
 		return
 	}
-	_, err := a.db.Exec("UPDATE tiendas SET nombre = ?, telefono = ?, direccion = ?, lat = ?, lng = ? WHERE id = ?",
-		strings.TrimSpace(d.Nombre), strings.TrimSpace(d.Telefono), strings.TrimSpace(d.Direccion), d.Lat, d.Lng, tiendaDe(r))
+	_, err := a.db.Exec("UPDATE tiendas SET nombre = ?, telefono = ?, direccion = ?, lat = ?, lng = ?, giro = ?, descripcion = ? WHERE id = ?",
+		strings.TrimSpace(d.Nombre), strings.TrimSpace(d.Telefono), strings.TrimSpace(d.Direccion), d.Lat, d.Lng,
+		giroValido(d.Giro), recortarTexto(strings.TrimSpace(d.Descripcion), 600), tiendaDe(r))
 	if err != nil {
 		manejar(w, nil, err)
 		return

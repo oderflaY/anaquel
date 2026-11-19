@@ -17,16 +17,24 @@ type Producto struct {
 	ProveedorID *int64 `json:"proveedor_id"`
 	ProductorID *int64 `json:"productor_id"`
 	Productor   string `json:"productor,omitempty"`
+	// Vitrina: lo que la tienda ofrece a otras tiendas de la red.
+	Publicado      bool   `json:"publicado"`
+	PrecioMayoreoC int64  `json:"precio_mayoreo_c"`
+	MinimoMayoreo  int64  `json:"minimo_mayoreo"`
+	Unidad         string `json:"unidad"`
+	Descripcion    string `json:"descripcion"`
 }
 
 const selProducto = `SELECT p.id, p.codigo, p.nombre, p.categoria, p.precio_c, p.stock, p.stock_min,
-	p.proveedor_id, p.productor_id, COALESCE(pr.nombre, '')
+	p.proveedor_id, p.productor_id, COALESCE(pr.nombre, ''),
+	p.publicado, p.precio_mayoreo_c, p.minimo_mayoreo, p.unidad, p.descripcion
 	FROM productos p LEFT JOIN productores pr ON pr.id = p.productor_id`
 
 func scanProducto(s interface{ Scan(...any) error }) (Producto, error) {
 	var p Producto
 	err := s.Scan(&p.ID, &p.Codigo, &p.Nombre, &p.Categoria, &p.PrecioC, &p.Stock, &p.StockMin,
-		&p.ProveedorID, &p.ProductorID, &p.Productor)
+		&p.ProveedorID, &p.ProductorID, &p.Productor,
+		&p.Publicado, &p.PrecioMayoreoC, &p.MinimoMayoreo, &p.Unidad, &p.Descripcion)
 	return p, err
 }
 
@@ -82,15 +90,25 @@ func (a *App) crearProducto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.validarRelaciones(tiendaDe(r), &p)
+	limpiarVitrina(&p)
 	res, err := a.db.Exec(`INSERT INTO productos (tienda_id, codigo, nombre, categoria, precio_c, stock, stock_min,
-		proveedor_id, productor_id, actualizado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		proveedor_id, productor_id, publicado, precio_mayoreo_c, minimo_mayoreo, unidad, descripcion, actualizado)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		tiendaDe(r), strings.TrimSpace(p.Codigo), p.Nombre, strings.TrimSpace(p.Categoria), max(0, p.PrecioC),
-		p.Stock, max(0, p.StockMin), p.ProveedorID, p.ProductorID, ahora())
+		p.Stock, max(0, p.StockMin), p.ProveedorID, p.ProductorID, p.Publicado, p.PrecioMayoreoC, p.MinimoMayoreo,
+		p.Unidad, p.Descripcion, ahora())
 	if err != nil {
 		manejar(w, nil, err)
 		return
 	}
 	id, _ := res.LastInsertId()
+	if p.Stock != nil && *p.Stock > 0 {
+		a.db.Exec(`INSERT INTO movimientos (tienda_id, producto_id, tipo, cantidad, saldo, nota, creado)
+			VALUES (?, ?, 'entrada', ?, ?, 'Existencia inicial', ?)`, tiendaDe(r), id, *p.Stock, *p.Stock, ahora())
+	}
+	if p.Publicado {
+		a.buscarInteresados(tiendaDe(r), id)
+	}
 	out, err := scanProducto(a.db.QueryRow(selProducto+" WHERE p.id = ?", id))
 	manejar(w, out, err)
 }
@@ -109,10 +127,22 @@ func (a *App) editarProducto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.validarRelaciones(tiendaDe(r), &p)
+	limpiarVitrina(&p)
+	var antes *int64
+	var publicadoAntes bool
+	a.db.QueryRow("SELECT stock, publicado FROM productos WHERE id = ? AND tienda_id = ?", id, tiendaDe(r)).Scan(&antes, &publicadoAntes)
 	res, err := a.db.Exec(`UPDATE productos SET codigo = ?, nombre = ?, categoria = ?, precio_c = ?, stock = ?,
-		stock_min = ?, proveedor_id = ?, productor_id = ?, actualizado = ? WHERE id = ? AND tienda_id = ?`,
+		stock_min = ?, proveedor_id = ?, productor_id = ?, publicado = ?, precio_mayoreo_c = ?, minimo_mayoreo = ?,
+		unidad = ?, descripcion = ?, actualizado = ? WHERE id = ? AND tienda_id = ?`,
 		strings.TrimSpace(p.Codigo), strings.TrimSpace(p.Nombre), strings.TrimSpace(p.Categoria), max(0, p.PrecioC),
-		p.Stock, max(0, p.StockMin), p.ProveedorID, p.ProductorID, ahora(), id, tiendaDe(r))
+		p.Stock, max(0, p.StockMin), p.ProveedorID, p.ProductorID, p.Publicado, p.PrecioMayoreoC, p.MinimoMayoreo,
+		p.Unidad, p.Descripcion, ahora(), id, tiendaDe(r))
+	if err == nil {
+		registrarAjuste(a.db, tiendaDe(r), id, antes, p.Stock, "Corrección manual")
+		if p.Publicado && !publicadoAntes {
+			a.buscarInteresados(tiendaDe(r), id)
+		}
+	}
 	if err == nil {
 		if n, _ := res.RowsAffected(); n == 0 {
 			err = fallo(404, "Ese producto no existe")
@@ -174,6 +204,9 @@ func (a *App) syncProductos(w http.ResponseWriter, r *http.Request) {
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, tienda, p.Codigo, p.Nombre, p.Categoria, max(0, p.PrecioC), p.Stock, max(0, p.StockMin), t)
 			creados++
 		case err == nil:
+			var antes *int64
+			tx.QueryRow("SELECT stock FROM productos WHERE id = ?", id).Scan(&antes)
+			registrarAjuste(tx, tienda, id, antes, p.Stock, "Sincronizado desde la app")
 			_, err = tx.Exec(`UPDATE productos SET nombre = ?, categoria = ?, precio_c = ?, stock = ?, stock_min = ?, actualizado = ?
 				WHERE id = ?`, p.Nombre, p.Categoria, max(0, p.PrecioC), p.Stock, max(0, p.StockMin), t, id)
 			actualizados++
@@ -188,4 +221,15 @@ func (a *App) syncProductos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	manejar(w, map[string]int{"creados": creados, "actualizados": actualizados}, nil)
+}
+
+// limpiarVitrina deja valores razonables en los campos de la vitrina.
+func limpiarVitrina(p *Producto) {
+	p.Unidad = strings.TrimSpace(p.Unidad)
+	if p.Unidad == "" {
+		p.Unidad = "pza"
+	}
+	p.Descripcion = recortarTexto(strings.TrimSpace(p.Descripcion), 400)
+	p.PrecioMayoreoC = max(0, p.PrecioMayoreoC)
+	p.MinimoMayoreo = max(0, p.MinimoMayoreo)
 }

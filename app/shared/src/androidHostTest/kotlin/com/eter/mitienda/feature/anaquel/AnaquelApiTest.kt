@@ -40,4 +40,31 @@ class AnaquelApiTest {
         assertTrue(z.zonas.size == an.first().zonas.size)
         println("pedidos: ${api.pedidos().size}")
     }
+
+    @Test
+    fun redTratosYAsesor() = runBlocking {
+        val url = System.getenv("ANAQUEL_URL") ?: return@runBlocking
+        val compra = AnaquelApi(url).apply { token = entrar("papeleria@anaquel.mx", "demo1234").token }
+        val vende = AnaquelApi(url).apply { token = entrar("mayoreo@anaquel.mx", "demo1234").token }
+        val red = compra.red("gorras")
+        println("red: ${red.map { it.tipo + ":" + it.titulo }}")
+        val gorra = red.first { it.tipo == "producto" }
+        val t = compra.crearTrato(gorra, 100, 4500, "Prueba desde la app")
+        assertTrue(t.estado == "negociando" && !t.teToca)
+        val delVendedor = vende.tratos().first { it.id == t.id }
+        assertTrue(delVendedor.teToca && delVendedor.rol == "vendo")
+        val contra = vende.mensajeTrato(t.id, "", 100, 4800)
+        assertTrue(contra.precioC == 4800L)
+        val ok = compra.accionTrato(t.id, "aceptar")
+        assertTrue(ok.estado == "aceptado")
+        val ent = vende.accionTrato(t.id, "entregar")
+        assertTrue(ent.estado == "entregado")
+        println("mensajes: ${vende.trato(t.id).mensajes.map { it.de + ": " + it.texto }}")
+        val conv = compra.asesor()
+        println("motor: ${conv.motor}, mensajes previos: ${conv.mensajes.size}")
+        val r = compra.preguntar("¿Qué viene para mi papelería?")
+        assertTrue(r.respuesta.texto.isNotBlank())
+        println("asesor: ${r.respuesta.texto.take(120)} · tarjetas=${r.respuesta.tarjetas.size}")
+        println("resumen: ${compra.resumen()}")
+    }
 }

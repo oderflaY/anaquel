@@ -583,9 +583,14 @@ func (a *App) resumen(w http.ResponseWriter, r *http.Request) {
 	a.db.QueryRow("SELECT COUNT(*) FROM anaqueles WHERE tienda_id = ?", tienda).Scan(&anaqueles)
 	a.db.QueryRow("SELECT COUNT(*) FROM anaqueles WHERE tienda_id = ? AND (ultima_en IS NULL OR ultima_en < ?)", tienda, inicioDelDia()).Scan(&sinFoto)
 	a.db.QueryRow("SELECT COUNT(*) FROM productos WHERE tienda_id = ?", tienda).Scan(&productos)
+	var avisos, tratos int
+	a.db.QueryRow("SELECT COUNT(*) FROM avisos WHERE tienda_id = ? AND leido = 0", tienda).Scan(&avisos)
+	a.db.QueryRow(`SELECT COUNT(*) FROM tratos WHERE (comprador_id = ? OR vendedor_id = ?) AND
+		((estado = 'negociando' AND propuso_id != ?) OR (estado = 'aceptado' AND vendedor_id = ?))`, tienda, tienda, tienda, tienda).Scan(&tratos)
 	manejar(w, map[string]int{
 		"faltantes": len(f), "sin_pedir": sinPedir, "pedidos_abiertos": abiertos, "atrasados": atrasados,
 		"anaqueles": anaqueles, "sin_foto_hoy": sinFoto, "productos": productos,
+		"avisos": avisos, "tratos_pendientes": tratos,
 	}, nil)
 }
 

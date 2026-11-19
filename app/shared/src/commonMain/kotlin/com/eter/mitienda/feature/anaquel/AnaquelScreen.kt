@@ -165,9 +165,18 @@ private fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
         item {
             NeumorphicCard(Modifier.fillMaxWidth()) {
                 Titulo("¿Solo quieres verla funcionar?")
-                Texto("Entra a «Abarrotes Doña Lupita», una tienda de demostración con anaquel, faltantes y pedidos.")
+                Texto("Tiendas de demostración que comercian entre ellas en la red:")
                 Spacer(Modifier.height(NeuDimens.SpaceMd))
-                NeumorphicButton("Entrar a la demo", onClick = vm::entrarDemo, enabled = !ocupado, containerColor = NeuColors.Blue, modifier = Modifier.fillMaxWidth())
+                Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
+                    listOf(
+                        "demo@anaquel.mx" to "Abarrotes Doña Lupita",
+                        "ropa@anaquel.mx" to "Boutique Alondra (ropa)",
+                        "mayoreo@anaquel.mx" to "Gorras El Tunal (mayoreo)",
+                        "papeleria@anaquel.mx" to "Papelería El Estudiante",
+                    ).forEach { (email, nombre) ->
+                        NeumorphicButton(nombre, onClick = { vm.entrarDemo(email) }, enabled = !ocupado, containerColor = NeuColors.Blue, modifier = Modifier.fillMaxWidth())
+                    }
+                }
             }
         }
         item { Texto("Tu inventario se sigue guardando en el teléfono y funciona sin internet. Anaquel sube una copia para revisar tus anaqueles.", Modifier.fillMaxWidth()) }
@@ -180,6 +189,8 @@ private fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
 private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String) -> Unit) {
     var pedirNombre by remember { mutableStateOf(false) }
     var confirmarSalir by remember { mutableStateOf(false) }
+    var negociando by remember { mutableStateOf<ResultadoRed?>(null) }
+    var contra by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Row(
@@ -203,6 +214,9 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
                         SeccionAnaquel.HOY -> st.resumen?.sinPedir ?: 0
                         SeccionAnaquel.PEDIDOS -> st.resumen?.atrasados ?: 0
                         SeccionAnaquel.ANAQUELES -> st.resumen?.sinFotoHoy ?: 0
+                        SeccionAnaquel.TRATOS -> st.resumen?.tratosPendientes ?: 0
+                        SeccionAnaquel.RED -> st.resumen?.avisos ?: 0
+                        SeccionAnaquel.ASESOR -> 0
                     }
                     NeumorphicChip(if (n > 0) "${s.titulo} · $n" else s.titulo, selected = st.seccion == s, onClick = { vm.elegirSeccion(s) })
                 }
@@ -227,6 +241,9 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
                     SeccionAnaquel.HOY -> hoy(st, vm)
                     SeccionAnaquel.ANAQUELES -> anaqueles(st, vm)
                     SeccionAnaquel.PEDIDOS -> pedidos(st, vm)
+                    SeccionAnaquel.ASESOR -> asesor(st, vm) { negociando = it }
+                    SeccionAnaquel.RED -> red(st, vm) { negociando = it }
+                    SeccionAnaquel.TRATOS -> tratos(st, vm) { contra = true }
                 }
             }
         }
@@ -249,6 +266,13 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
             confirmButton = { TextButton(onClick = { pedirNombre = false; onNuevo(n) }) { Text("Tomar foto") } },
             dismissButton = { TextButton(onClick = { pedirNombre = false }) { Text("Cancelar") } },
         )
+    }
+    negociando?.let { r ->
+        DialogoNegociar(r, onCerrar = { negociando = null }) { n, pc, msg -> negociando = null; vm.negociar(r, n, pc, msg) }
+    }
+    val tratoAbierto = st.trato
+    if (contra && tratoAbierto != null) {
+        DialogoContraoferta(tratoAbierto, onCerrar = { contra = false }) { n, pc -> contra = false; vm.escribirTrato("", n, pc) }
     }
     if (confirmarSalir) {
         AlertDialog(

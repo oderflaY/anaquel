@@ -20,6 +20,7 @@ type App struct {
 	media  string // carpeta de fotos
 	web    string // build de la web (SPA)
 	vision Vision
+	claude *clienteClaude // nil = asesor básico (sin llave de Anthropic)
 }
 
 func env(k, def string) string {
@@ -41,14 +42,18 @@ func main() {
 		media:  filepath.Join(datos, "media"),
 		web:    env("WEB", "../web/dist"),
 		vision: nuevaVision(),
+		claude: nuevoClaude(),
 	}
 	if env("DATOS_DEMO", "1") == "1" {
 		if err := app.sembrarDemo(); err != nil {
 			log.Println("demo:", err)
 		}
+		if err := app.sembrarRed(); err != nil {
+			log.Println("demo red:", err)
+		}
 	}
 	addr := env("ADDR", ":8080")
-	log.Printf("Anaquel escuchando en %s (visión: %s)", addr, app.vision.Nombre())
+	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v)", addr, app.vision.Nombre(), app.claude != nil)
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           app.rutas(),
@@ -91,6 +96,37 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("POST /api/pedidos", a.conTienda(a.crearPedido))
 	m.HandleFunc("POST /api/pedidos/{id}/estado", a.conTienda(a.cambiarEstadoPedido))
 	// Público
+	// Inventario (kárdex al estilo MatObra)
+	m.HandleFunc("GET /api/movimientos", a.conTienda(a.listarMovimientos))
+	m.HandleFunc("POST /api/movimientos", a.conTienda(a.crearMovimiento))
+	m.HandleFunc("POST /api/movimientos/lote", a.conTienda(a.crearLote))
+	m.HandleFunc("GET /api/productos/codigo/{codigo}", a.conTienda(a.productoDeCodigo))
+
+	// Red de comercio local
+	m.HandleFunc("GET /api/red", a.conTienda(a.red))
+	m.HandleFunc("GET /api/anuncios", a.conTienda(a.listarAnuncios))
+	m.HandleFunc("POST /api/anuncios", a.conTienda(a.crearAnuncio))
+	m.HandleFunc("PUT /api/anuncios/{id}", a.conTienda(a.editarAnuncio))
+	m.HandleFunc("DELETE /api/anuncios/{id}", a.conTienda(a.borrarAnuncio))
+	m.HandleFunc("GET /api/solicitudes", a.conTienda(a.listarSolicitudes))
+	m.HandleFunc("POST /api/solicitudes", a.conTienda(a.crearSolicitud))
+	m.HandleFunc("GET /api/solicitudes/{id}", a.conTienda(a.verSolicitud))
+	m.HandleFunc("POST /api/solicitudes/{id}/cerrar", a.conTienda(a.cerrarSolicitud))
+	m.HandleFunc("GET /api/tratos", a.conTienda(a.listarTratos))
+	m.HandleFunc("POST /api/tratos", a.conTienda(a.crearTrato))
+	m.HandleFunc("GET /api/tratos/{id}", a.conTienda(a.verTrato))
+	m.HandleFunc("POST /api/tratos/{id}/mensajes", a.conTienda(a.mensajeTrato))
+	m.HandleFunc("POST /api/tratos/{id}/{accion}", a.conTienda(a.accionTrato))
+	m.HandleFunc("GET /api/avisos", a.conTienda(a.listarAvisos))
+	m.HandleFunc("POST /api/avisos/leidos", a.conTienda(a.avisosLeidos))
+
+	// Asesor del negocio
+	m.HandleFunc("GET /api/asesor", a.conTienda(a.verAsesor))
+	m.HandleFunc("POST /api/asesor", a.conTienda(a.preguntarAsesor))
+	m.HandleFunc("DELETE /api/asesor", a.conTienda(a.borrarAsesor))
+
+	m.HandleFunc("GET /api/publico/giros", a.listarGiros)
+	m.HandleFunc("GET /api/publico/red", a.redPublica)
 	m.HandleFunc("GET /api/publico/productores", a.productoresCercanos)
 	m.HandleFunc("POST /api/publico/productores", a.registrarProductor)
 	m.HandleFunc("GET /api/publico/tiendas", a.tiendasCercanas)

@@ -194,3 +194,55 @@ dialog .cuerpo { padding: 1.2rem; display: flex; flex-direction: column; gap: .8
   .item-falta > .fila { width: 100%; }
   .item-falta select { flex: 1; width: auto !important; }
 }
+
+/* ---- Red de comercio local ---- */
+.campana { position: relative; text-decoration: none; font-size: 1.25rem; padding: .3rem .45rem; border-radius: 999px; }
+.campana.activo { background: var(--marca-suave); }
+.campana .burbuja { position: absolute; top: -2px; right: -4px; background: var(--rojo); color: #fff; border-radius: 999px; padding: 0 .35rem; font-size: .7rem; font-weight: 700; }
+.tarjeta-red { display: flex; flex-direction: column; gap: .3rem; border-top: 4px solid var(--marca); }
+.tarjeta-red.t-solicitud { border-top-color: var(--ambar); }
+.tarjeta-red.t-servicio, .tarjeta-red.t-promocion, .tarjeta-red.t-anuncio { border-top-color: var(--azul); }
+.tarjeta-red .titulo-red { font-size: 1.05rem; line-height: 1.25; }
+.detalle-red { color: var(--texto-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.precios { display: flex; flex-direction: column; font-size: .92rem; }
+.chip.red-producto { background: var(--marca-suave); color: var(--marca-fuerte); }
+.chip.red-solicitud { background: var(--ambar-suave); color: #8a5a00; }
+.chip.red-servicio, .chip.red-promocion, .chip.red-anuncio { background: var(--azul-suave); color: var(--azul); }
+.chip.red-productor { background: var(--marca-suave); color: var(--marca-fuerte); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .chip.red-solicitud { color: var(--ambar); } }
+
+.chat { display: flex; flex-direction: column; gap: .6rem; }
+.burbuja-chat { max-width: min(82%, 640px); padding: .65rem .9rem; border-radius: 16px; background: var(--superficie); border: 1px solid var(--borde); box-shadow: var(--sombra); align-self: flex-start; }
+.burbuja-chat.yo { align-self: flex-end; background: var(--marca); color: #fff; border-color: transparent; }
+.burbuja-chat.sistema { align-self: center; background: var(--fondo); color: var(--texto-2); font-size: .88rem; box-shadow: none; text-align: center; }
+.burbuja-chat.del-asesor { max-width: 100%; width: 100%; }
+.burbuja-chat p { margin: 0 0 .5rem; } .burbuja-chat p:last-child { margin: 0; }
+.burbuja-chat ul { margin: 0 0 .5rem; padding-left: 1.2rem; }
+.burbuja-chat .hora { display: block; font-size: .72rem; opacity: .7; margin-top: .2rem; }
+.burbuja-chat .oferta { margin-top: .35rem; font-weight: 700; font-size: .9rem; }
+.burbuja-chat.pensando { color: var(--texto-2); animation: latir 1.2s ease-in-out infinite; }
+@keyframes latir { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .burbuja-chat.pensando { animation: none; } }
+.tarjetas-chat { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); margin-top: .6rem; }
+.tarjetas-chat .tarjeta { box-shadow: none; }
+.pasos { margin-top: .4rem; font-size: .85rem; color: var(--texto-2); }
+.pasos summary { cursor: pointer; }
+.sugerencias { gap: .4rem; }
+.sugerencias .boton { font-weight: 600; }
+.terminos { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.terminos > div { display: flex; flex-direction: column; background: var(--fondo); border-radius: 10px; padding: .5rem .7rem; }
+.terminos b { font-size: 1.2rem; }
+.trato-fila { text-decoration: none; color: inherit; }
+.trato-fila .ultimo { color: var(--texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60ch; }
+.aviso-fila { display: flex; gap: .75rem; align-items: flex-start; text-decoration: none; color: inherit; }
+.aviso-fila.nuevo { border-left: 4px solid var(--marca); }
+.icono-aviso { font-size: 1.4rem; line-height: 1; }
+.vitrina-campos { border: 1px solid var(--borde); border-radius: 12px; padding: .75rem; display: flex; flex-direction: column; gap: .6rem; margin: 0; }
+.vitrina-campos legend { font-weight: 700; padding: 0 .3rem; }
+.camara { width: 100%; max-height: 260px; object-fit: cover; border-radius: 12px; background: #000; }
+.demo-cuentas .boton { justify-content: flex-start; font-weight: 400; }
+details summary { cursor: pointer; }
+@media (max-width: 640px) {
+  .burbuja-chat { max-width: 92%; }
+  .trato-fila .ultimo { max-width: 32ch; }
+}

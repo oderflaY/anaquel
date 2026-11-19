@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class SeccionAnaquel(val titulo: String) { HOY("Hoy"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos") }
+enum class SeccionAnaquel(val titulo: String) {
+    HOY("Hoy"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"),
+}
 
 data class AnaquelUiState(
     val revisandoSesion: Boolean = true,
@@ -34,6 +36,15 @@ data class AnaquelUiState(
     val resultado: ResultadoFoto? = null,
     val ocupado: String? = null,
     val error: String? = null,
+    // Red de comercio local
+    val consultaRed: String = "",
+    val red: List<ResultadoRed>? = null,
+    val tratos: List<Trato>? = null,
+    val trato: Trato? = null,
+    val asesor: List<MensajeAsesor>? = null,
+    val motorAsesor: String = "basico",
+    /** Pregunta que el asesor está contestando. */
+    val pensando: String? = null,
 )
 
 /** Un grupo de la lista de resurtido: a quién pedir y qué. */
@@ -84,7 +95,7 @@ class AnaquelViewModel(
     // ---------------- Sesión ----------------
 
     fun entrar(email: String, password: String) = conSesion { api.entrar(email, password) }
-    fun entrarDemo() = conSesion { api.entrar("demo@anaquel.mx", "demo1234") }
+    fun entrarDemo(email: String = "demo@anaquel.mx") = conSesion { api.entrar(email, "demo1234") }
     fun registrar(nombre: String, email: String, password: String, telefono: String) =
         conSesion { api.registrar(nombre, email, password, telefono) }
 
@@ -109,7 +120,87 @@ class AnaquelViewModel(
 
     // ---------------- Datos ----------------
 
-    fun elegirSeccion(s: SeccionAnaquel) = _state.update { it.copy(seccion = s) }
+    fun elegirSeccion(s: SeccionAnaquel) {
+        _state.update { it.copy(seccion = s, trato = null) }
+        when (s) {
+            SeccionAnaquel.ASESOR -> if (_state.value.asesor == null) trabajo(null) { cargarAsesor() }
+            SeccionAnaquel.RED -> if (_state.value.red == null) buscarRed(_state.value.consultaRed)
+            SeccionAnaquel.TRATOS -> trabajo(null) { _state.update { it.copy(tratos = api.tratos()) } }
+            else -> Unit
+        }
+    }
+
+    // ---------------- Red, tratos y asesor ----------------
+
+    private suspend fun cargarAsesor() {
+        val c = api.asesor()
+        _state.update { it.copy(asesor = c.mensajes, motorAsesor = c.motor) }
+    }
+
+    fun preguntar(texto: String) {
+        val q = texto.trim()
+        if (q.isEmpty() || _state.value.pensando != null) return
+        _state.update { it.copy(pensando = q) }
+        viewModelScope.launch {
+            try {
+                val r = api.preguntar(q)
+                _state.update { it.copy(asesor = it.asesor.orEmpty() + r.pregunta + r.respuesta) }
+                runCatching { _state.update { it.copy(resumen = api.resumen()) } }
+            } catch (e: Exception) {
+                mensaje = e.message ?: "El asesor no pudo responder"
+            } finally {
+                _state.update { it.copy(pensando = null) }
+            }
+        }
+    }
+
+    fun conversacionNueva() = trabajo("asesor") {
+        api.borrarAsesor()
+        _state.update { it.copy(asesor = emptyList()) }
+    }
+
+    fun buscarRed(q: String) = trabajo("red") {
+        _state.update { it.copy(consultaRed = q) }
+        val r = api.red(q)
+        _state.update { it.copy(red = r) }
+    }
+
+    /** Desde una tarjeta del asesor: ir a la red con esa búsqueda. */
+    fun verEnRed(q: String) {
+        _state.update { it.copy(seccion = SeccionAnaquel.RED, red = null) }
+        buscarRed(q)
+    }
+
+    fun negociar(r: ResultadoRed, cantidad: Long, precioC: Long, mensajeTexto: String) = trabajo("trato") {
+        val t = api.crearTrato(r, cantidad, precioC, mensajeTexto)
+        mensaje = if (r.tipo == "solicitud") "Oferta enviada" else "Propuesta enviada. Te avisamos cuando responda."
+        _state.update { it.copy(seccion = SeccionAnaquel.TRATOS, trato = t, tratos = api.tratos()) }
+    }
+
+    fun abrirTrato(t: Trato) = trabajo("trato") { _state.update { it.copy(trato = api.trato(t.id)) } }
+    fun cerrarTrato() = trabajo(null) { _state.update { it.copy(trato = null, tratos = api.tratos()) } }
+
+    fun escribirTrato(texto: String, cantidad: Long? = null, precioC: Long? = null) {
+        val t = _state.value.trato ?: return
+        if (texto.isBlank() && cantidad == null) return
+        trabajo("trato") { _state.update { it.copy(trato = api.mensajeTrato(t.id, texto.trim(), cantidad, precioC)) } }
+    }
+
+    fun accionTrato(accion: String) {
+        val t = _state.value.trato ?: return
+        trabajo("trato") {
+            val n = api.accionTrato(t.id, accion)
+            _state.update { it.copy(trato = n) }
+            mensaje = when (accion) {
+                "aceptar" -> "¡Trato aceptado!"
+                "entregar" -> "Entrega registrada en el inventario de las dos tiendas"
+                else -> "Trato cancelado"
+            }
+            runCatching { _state.update { it.copy(resumen = api.resumen()) } }
+        }
+    }
+
+    fun abrirWhatsApp(enlace: String) { abrirEnlace = enlace }
 
     fun refrescar() = trabajo(null) { refrescarAhora() }
 
@@ -121,9 +212,10 @@ class AnaquelViewModel(
         val f = api.faltantes()
         val a = api.anaqueles()
         val p = api.pedidos()
+        val tr = if (_state.value.seccion == SeccionAnaquel.TRATOS) runCatching { api.tratos() }.getOrNull() else null
         _state.update { st ->
             st.copy(
-                resumen = r, faltantes = f, anaqueles = a, pedidos = p, error = null,
+                resumen = r, faltantes = f, anaqueles = a, pedidos = p, error = null, tratos = tr ?: st.tratos,
                 abierto = st.abierto?.let { ab -> a.firstOrNull { it.id == ab.id } ?: ab },
             )
         }

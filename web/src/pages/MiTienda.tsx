@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { api, type Tienda } from '../api'
+import { api, GIROS, type Tienda } from '../api'
 import type { Sesion } from '../App'
 import { Enlace, url } from '../router'
 import { avisar, Mapa, mensajeDe, miUbicacion } from '../ui'
 
 export default function MiTienda({ sesion }: { sesion: Sesion }) {
   const t = sesion.tienda
-  const [f, setF] = useState({ nombre: t.nombre, telefono: t.telefono, direccion: t.direccion, password: '' })
+  const [f, setF] = useState({ nombre: t.nombre, telefono: t.telefono, direccion: t.direccion, password: '', giro: t.giro, descripcion: t.descripcion })
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(t.lat != null && t.lng != null ? { lat: t.lat, lng: t.lng } : null)
   const [ocupado, setOcupado] = useState(false)
   const enlace = `${location.origin}${url(`/t/${t.slug}`)}`
@@ -42,6 +42,13 @@ export default function MiTienda({ sesion }: { sesion: Sesion }) {
       </div>
       <form className="tarjeta columna" onSubmit={guardar}>
         <label className="campo">Nombre<input required value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} /></label>
+        <label className="campo">Giro
+          <select value={f.giro} onChange={(e) => setF({ ...f, giro: e.target.value })}>
+            {GIROS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
+          </select>
+          <span className="secundario chico" style={{ fontWeight: 400 }}>Tu asesor usa el giro para avisarte de las temporadas que te tocan.</span>
+        </label>
+        <label className="campo">Qué vendes o qué haces<textarea maxLength={500} value={f.descripcion} onChange={(e) => setF({ ...f, descripcion: e.target.value })} placeholder="Ropa de dama y caballero, uniformes escolares…" /></label>
         <label className="campo">WhatsApp<input type="tel" value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} /></label>
         <label className="campo">Dirección<input value={f.direccion} onChange={(e) => setF({ ...f, direccion: e.target.value })} /></label>
         <div className="columna" style={{ gap: '.4rem' }}>

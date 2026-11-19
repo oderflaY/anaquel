@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { api, hace, pesos, type TiendaPublica as TP } from '../api'
+import { api, hace, nombreGiro, pesos, type TiendaPublica as TP } from '../api'
+import { TarjetaRed } from '../red'
 import { Estado, Mapa, Nivel, useDatos } from '../ui'
 
 export default function TiendaPublica({ slug }: { slug: string }) {
@@ -14,10 +15,23 @@ export default function TiendaPublica({ slug }: { slug: string }) {
     <div className="columna" style={{ gap: '1.25rem' }}>
       <div>
         <h1 style={{ marginBottom: '.2rem' }}>{t.nombre}</h1>
-        <p className="secundario" style={{ margin: 0 }}>{t.direccion}</p>
-        <p className="secundario chico">Actualizado {hace(datos.actualizado)} con la foto de sus anaqueles.</p>
+        <p className="secundario" style={{ margin: 0 }}>{nombreGiro(t.giro)}{t.direccion ? ` · ${t.direccion}` : ''}</p>
+        {t.descripcion && <p style={{ margin: '.3rem 0 0' }}>{t.descripcion}</p>}
+        {datos.actualizado && <p className="secundario chico">Actualizado {hace(datos.actualizado)} con la foto de sus anaqueles.</p>}
         {wa && <a className="boton wa chico" href={wa} target="_blank" rel="noreferrer">Escribir por WhatsApp</a>}
       </div>
+
+      {(datos.vitrina?.length ?? 0) + (datos.anuncios?.length ?? 0) > 0 && (
+        <section className="columna">
+          <h2 style={{ margin: 0 }}>Para otros negocios</h2>
+          <div className="rejilla">
+            {(datos.vitrina ?? []).map((r) => <TarjetaRed key={'p' + r.id} r={r} />)}
+            {(datos.anuncios ?? []).map((a) => (
+              <TarjetaRed key={'a' + a.id} r={{ tipo: 'anuncio', subtipo: a.tipo, id: a.id, titulo: a.titulo, detalle: a.texto, precio: a.precio, creado: a.creado, telefono: t.telefono }} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {datos.hecho_cerca.length > 0 && (
         <section className="tarjeta columna" style={{ borderTop: '4px solid var(--marca)' }}>

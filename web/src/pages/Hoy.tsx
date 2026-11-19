@@ -59,7 +59,7 @@ export default function Hoy({ sesion }: { sesion: Sesion }) {
       <div>
         <h1 style={{ marginBottom: '.2rem' }}>Hoy en {sesion.tienda.nombre}</h1>
         <p className="secundario" style={{ margin: 0 }}>Lo que falta, a quién pedírselo y lo que viene en camino.</p>
-        {sesion.tienda.email === 'demo@anaquel.mx' && (
+        {/^(demo|ropa|mayoreo|textiles|papeleria|abarrotes\.mayoreo|fletes|imprenta)@anaquel\.mx$/.test(sesion.tienda.email ?? '') && (
           <button className="boton claro chico" style={{ marginTop: '.6rem' }} onClick={async () => {
             if (!confirm('¿Dejar la demo como nueva? Se borran los cambios que se le hayan hecho.')) return
             try {
@@ -69,6 +69,23 @@ export default function Hoy({ sesion }: { sesion: Sesion }) {
           }}>↺ Reiniciar demo</button>
         )}
       </div>
+
+      {r && (r.avisos > 0 || r.tratos_pendientes > 0) && (
+        <div className="tarjeta renglon" style={{ borderLeft: '4px solid var(--marca)' }}>
+          <span>
+            {r.avisos > 0 && <><b>{r.avisos}</b> aviso(s) nuevo(s) de la red{r.tratos_pendientes > 0 ? ' · ' : ''}</>}
+            {r.tratos_pendientes > 0 && <><b>{r.tratos_pendientes}</b> trato(s) esperan tu respuesta</>}
+          </span>
+          <div className="fila">
+            {r.avisos > 0 && <Enlace href="/panel/avisos" className="boton chico">Ver avisos</Enlace>}
+            {r.tratos_pendientes > 0 && <Enlace href="/panel/tratos" className="boton claro chico">Tratos</Enlace>}
+          </div>
+        </div>
+      )}
+      <Enlace href="/panel/asesor" className="tarjeta renglon asesor-atajo" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <span><b>✨ Pregúntale a tu asesor</b><br /><span className="secundario chico">Qué comprar para la temporada, cómo va tu negocio y quién en la red tiene lo que necesitas.</span></span>
+        <span className="boton chico">Abrir</span>
+      </Enlace>
 
       {r && (
         <div className="cifras">

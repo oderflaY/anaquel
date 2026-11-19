@@ -13,6 +13,12 @@ import Proveedores from './pages/Proveedores'
 import MiTienda from './pages/MiTienda'
 import TiendaPublica from './pages/TiendaPublica'
 import Productores from './pages/Productores'
+import Red from './pages/Red'
+import Tratos, { TratoDetalle } from './pages/Tratos'
+import Asesor from './pages/Asesor'
+import Vitrina from './pages/Vitrina'
+import Avisos from './pages/Avisos'
+import RedPublica from './pages/RedPublica'
 
 export type Sesion = { tienda: Tienda; resumen: Resumen | null; refrescar: () => void; salir: () => void }
 
@@ -43,6 +49,7 @@ export default function App() {
   const enPanel = camino.startsWith('/panel')
   if (camino.startsWith('/t/')) pagina = <TiendaPublica slug={decodeURIComponent(camino.slice(3))} />
   else if (camino === '/productores') pagina = <Productores />
+  else if (camino === '/red') pagina = <RedPublica consulta={ruta.split('?')[1] ?? ''} />
   else if (camino === '/entrar') pagina = <Entrar alEntrar={entrar} />
   else if (enPanel) {
     if (!token()) { queueMicrotask(() => ir('/entrar', true)); pagina = null }
@@ -50,7 +57,14 @@ export default function App() {
     else {
       const s: Sesion = { tienda, resumen, refrescar, salir }
       const m = camino.match(/^\/panel\/anaqueles\/(\d+)/)
+      const mt = camino.match(/^\/panel\/tratos\/(\d+)/)
       pagina = m ? <AnaquelDetalle id={Number(m[1])} sesion={s} />
+        : mt ? <TratoDetalle id={Number(mt[1])} sesion={s} />
+        : camino === '/panel/tratos' ? <Tratos />
+        : camino === '/panel/red' ? <Red sesion={s} consulta={ruta.split('?')[1] ?? ''} />
+        : camino === '/panel/asesor' ? <Asesor sesion={s} />
+        : camino === '/panel/vitrina' ? <Vitrina sesion={s} />
+        : camino === '/panel/avisos' ? <Avisos sesion={s} />
         : camino === '/panel/anaqueles' ? <Anaqueles sesion={s} />
         : camino === '/panel/pedidos' ? <Pedidos sesion={s} />
         : camino === '/panel/productos' ? <Productos sesion={s} />
@@ -62,10 +76,13 @@ export default function App() {
 
   const pestanas: [string, string, number?][] = [
     ['/panel', 'Hoy', resumen?.sin_pedir],
+    ['/panel/asesor', '✨ Asesor'],
+    ['/panel/red', 'Red'],
+    ['/panel/tratos', 'Tratos', resumen?.tratos_pendientes],
+    ['/panel/productos', 'Inventario'],
+    ['/panel/vitrina', 'Mi vitrina'],
     ['/panel/anaqueles', 'Anaqueles'],
     ['/panel/pedidos', 'Pedidos', resumen?.atrasados],
-    ['/panel/productos', 'Productos'],
-    ['/panel/proveedores', 'Proveedores'],
     ['/panel/tienda', 'Mi tienda'],
   ]
 
@@ -84,8 +101,14 @@ export default function App() {
                 </Enlace>
               ))}
             </nav>
+          ) : null}
+          {enPanel && tienda ? (
+            <Enlace href="/panel/avisos" className={`campana ${camino === '/panel/avisos' ? 'activo' : ''}`} aria-label={`Avisos${resumen?.avisos ? `: ${resumen.avisos} nuevos` : ''}`}>
+              🔔{resumen?.avisos ? <span className="burbuja">{resumen.avisos}</span> : null}
+            </Enlace>
           ) : (
             <nav className="nav" aria-label="Principal">
+              <Enlace href="/red" className={camino === '/red' ? 'activo' : ''}>Red local</Enlace>
               <Enlace href="/productores" className={camino === '/productores' ? 'activo' : ''}>Productores</Enlace>
               <Enlace href={tienda ? '/panel' : '/entrar'}>{tienda ? 'Mi panel' : 'Entrar'}</Enlace>
             </nav>

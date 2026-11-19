@@ -16,6 +16,7 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
+import io.ktor.http.encodeURLQueryComponent
 import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -102,7 +103,75 @@ data class Resumen(
     val faltantes: Int = 0, @SerialName("sin_pedir") val sinPedir: Int = 0,
     @SerialName("pedidos_abiertos") val pedidosAbiertos: Int = 0, val atrasados: Int = 0,
     val anaqueles: Int = 0, @SerialName("sin_foto_hoy") val sinFotoHoy: Int = 0, val productos: Int = 0,
+    val avisos: Int = 0, @SerialName("tratos_pendientes") val tratosPendientes: Int = 0,
 )
+
+// ---------------- Red de comercio local ----------------
+
+@Serializable
+data class TiendaCorta(val id: Long, val nombre: String, val slug: String = "", val giro: String = "", val telefono: String = "")
+
+/** Un resultado de la red: producto en vitrina, anuncio, solicitud ("busca…") o productor. */
+@Serializable
+data class ResultadoRed(
+    val tipo: String, val id: Long, val titulo: String, val detalle: String = "",
+    val subtipo: String? = null, @SerialName("precio_c") val precioC: Long? = null,
+    @SerialName("precio_mayoreo_c") val precioMayoreoC: Long? = null,
+    @SerialName("minimo_mayoreo") val minimoMayoreo: Long? = null, val unidad: String? = null,
+    val disponible: Long? = null, val precio: String? = null, val cantidad: Long? = null,
+    val tienda: TiendaCorta? = null, val telefono: String? = null, val lugar: String? = null,
+    @SerialName("distancia_km") val distanciaKm: Double? = null,
+) {
+    val clave: String get() = "$tipo:$id"
+    val negociable: Boolean get() = tipo != "productor" && tienda != null
+}
+
+@Serializable
+data class MensajeTrato(
+    val id: Long, val de: String, val texto: String,
+    val cantidad: Long? = null, @SerialName("precio_c") val precioC: Long? = null, val creado: Long = 0,
+)
+
+@Serializable
+data class Trato(
+    val id: Long, val rol: String, val otra: TiendaCorta, val titulo: String, val cantidad: Long,
+    @SerialName("precio_c") val precioC: Long, val estado: String,
+    @SerialName("te_toca") val teToca: Boolean = false, val disponible: Long? = null,
+    val actualizado: Long = 0, val ultimo: String? = null,
+    val mensajes: List<MensajeTrato> = emptyList(), val whatsapp: String? = null,
+) {
+    val abierto: Boolean get() = estado == "negociando" || estado == "aceptado"
+}
+
+@Serializable
+data class MensajeAsesor(
+    val id: Long = 0, val rol: String, val texto: String,
+    val tarjetas: List<ResultadoRed> = emptyList(), val pasos: List<String> = emptyList(),
+    val motor: String? = null,
+)
+
+@Serializable
+data class ConversacionAsesor(val mensajes: List<MensajeAsesor> = emptyList(), val motor: String = "basico")
+
+@Serializable
+data class RespuestaAsesor(val pregunta: MensajeAsesor, val respuesta: MensajeAsesor)
+
+@Serializable
+private data class Pregunta(val mensaje: String)
+
+@Serializable
+private data class TratoNuevo(
+    @SerialName("producto_id") val productoId: Long? = null,
+    @SerialName("anuncio_id") val anuncioId: Long? = null,
+    @SerialName("solicitud_id") val solicitudId: Long? = null,
+    val cantidad: Long, @SerialName("precio_c") val precioC: Long, val mensaje: String = "",
+)
+
+@Serializable
+private data class MensajeNuevo(val texto: String = "", val cantidad: Long? = null, @SerialName("precio_c") val precioC: Long? = null)
+
+@Serializable
+private class Vacio
 
 @Serializable
 data class ResultadoFoto(
@@ -150,7 +219,8 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
 
     private val http = HttpClient {
         install(HttpTimeout) {
-            requestTimeoutMillis = 60_000
+            // El asesor con IA puede tardar (busca en la red varias veces).
+            requestTimeoutMillis = 180_000
             connectTimeoutMillis = 15_000
         }
         expectSuccess = false
@@ -205,6 +275,25 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
     suspend fun guardarZonas(id: Long, zonas: List<Zona>): Anaquel = put("/anaqueles/$id/zonas", zonas)
     suspend fun renombrar(id: Long, nombre: String): Anaquel = put("/anaqueles/$id", Nombre(nombre))
     suspend fun borrarAnaquel(id: Long) { llamar(HttpMethod.Delete, "/anaqueles/$id") }
+
+    // Red, tratos y asesor
+    suspend fun red(q: String): List<ResultadoRed> = get("/red?q=" + q.trim().encodeURLQueryComponent())
+    suspend fun tratos(): List<Trato> = get("/tratos")
+    suspend fun trato(id: Long): Trato = get("/tratos/$id")
+    suspend fun crearTrato(r: ResultadoRed, cantidad: Long, precioC: Long, mensaje: String): Trato = post(
+        "/tratos",
+        TratoNuevo(
+            productoId = r.id.takeIf { r.tipo == "producto" }, anuncioId = r.id.takeIf { r.tipo == "anuncio" },
+            solicitudId = r.id.takeIf { r.tipo == "solicitud" }, cantidad = cantidad, precioC = precioC, mensaje = mensaje,
+        ),
+    )
+    suspend fun mensajeTrato(id: Long, texto: String, cantidad: Long? = null, precioC: Long? = null): Trato =
+        post("/tratos/$id/mensajes", MensajeNuevo(texto, cantidad, precioC))
+    /** aceptar | entregar | cancelar */
+    suspend fun accionTrato(id: Long, accion: String): Trato = post("/tratos/$id/$accion", Vacio())
+    suspend fun asesor(): ConversacionAsesor = get("/asesor")
+    suspend fun preguntar(m: String): RespuestaAsesor = post("/asesor", Pregunta(m))
+    suspend fun borrarAsesor() { llamar(HttpMethod.Delete, "/asesor") }
 
     suspend fun cambiarEstado(pedido: Long, estado: String): Pedido = post("/pedidos/$pedido/estado", CambioEstado(estado))
 

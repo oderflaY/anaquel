@@ -199,8 +199,8 @@ type ProductoPublico struct {
 // anaquel (o el conteo de la app), y lo que se produce aquí cerca.
 func (a *App) tiendaPublica(w http.ResponseWriter, r *http.Request) {
 	var t Tienda
-	err := a.db.QueryRow("SELECT id, nombre, slug, telefono, direccion, lat, lng FROM tiendas WHERE slug = ?", r.PathValue("slug")).
-		Scan(&t.ID, &t.Nombre, &t.Slug, &t.Telefono, &t.Direccion, &t.Lat, &t.Lng)
+	err := a.db.QueryRow("SELECT id, nombre, slug, telefono, direccion, lat, lng, giro, descripcion FROM tiendas WHERE slug = ?", r.PathValue("slug")).
+		Scan(&t.ID, &t.Nombre, &t.Slug, &t.Telefono, &t.Direccion, &t.Lat, &t.Lng, &t.Giro, &t.Descripcion)
 	if err != nil {
 		manejar(w, nil, fallo(404, "Esa tienda no existe"))
 		return
@@ -270,5 +270,14 @@ func (a *App) tiendaPublica(w http.ResponseWriter, r *http.Request) {
 	}
 	var ultima *int64
 	a.db.QueryRow("SELECT MAX(ultima_en) FROM anaqueles WHERE tienda_id = ?", t.ID).Scan(&ultima)
-	manejar(w, map[string]any{"tienda": t, "productos": hay, "hecho_cerca": cerca, "actualizado": ultima}, nil)
+	anuncios, _ := a.anunciosDe(t.ID, true)
+	vitrina, _ := a.buscarRed(filtroRed{yo: -1, tipo: "producto", limite: 0})
+	mia := []Resultado{}
+	for _, v := range vitrina {
+		if v.Tienda != nil && v.Tienda.ID == t.ID {
+			mia = append(mia, v)
+		}
+	}
+	manejar(w, map[string]any{"tienda": t, "productos": hay, "hecho_cerca": cerca, "actualizado": ultima,
+		"anuncios": anuncios, "vitrina": mia}, nil)
 }
