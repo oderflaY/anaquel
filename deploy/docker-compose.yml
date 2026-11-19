@@ -1,0 +1,17 @@
+services:
+  anaquel-api:
+    build: .
+    container_name: anaquel-api
+    restart: unless-stopped
+    mem_limit: 256m
+    volumes:
+      - ./datos:/datos
+    environment:
+      DATOS_DEMO: "1"
+      # Si algún día hay API key de Anthropic, la visión usa IA:
+      # ANTHROPIC_API_KEY_FILE: /datos/anthropic_key
+    networks:
+      - rutacree_edge
+networks:
+  rutacree_edge:
+    external: true

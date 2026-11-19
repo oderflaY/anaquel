@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Solo la carpeta temporal de la foto cruda de la cámara (cacheDir/camera). -->
+    <cache-path name="camera" path="camera/" />
+</paths>
