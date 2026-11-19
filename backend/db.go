@@ -221,6 +221,29 @@ ALTER TABLE productos ADD COLUMN lugar_lado INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE productos ADD COLUMN lugar_nivel INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE productos ADD COLUMN lugar_pos REAL NOT NULL DEFAULT 0;
 `,
+	// 4: chat entre tiendas. Cada par de tiendas tiene una conversación; los
+	// mensajes pueden ser texto, un mini catálogo o un pedido (tratos).
+	`
+CREATE TABLE chats (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	tienda_a    INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	tienda_b    INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	actualizado INTEGER NOT NULL,
+	leido_a     INTEGER NOT NULL DEFAULT 0, -- último mensaje que leyó cada tienda
+	leido_b     INTEGER NOT NULL DEFAULT 0,
+	UNIQUE (tienda_a, tienda_b)
+);
+CREATE TABLE chat_mensajes (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	chat_id    INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+	tienda_id  INTEGER,                         -- NULL = mensaje del sistema
+	tipo       TEXT NOT NULL DEFAULT 'texto',   -- texto | catalogo | pedido | sistema
+	texto      TEXT NOT NULL DEFAULT '',
+	datos      TEXT NOT NULL DEFAULT '',
+	creado     INTEGER NOT NULL
+);
+CREATE INDEX idx_chat_mensajes ON chat_mensajes(chat_id, id);
+`,
 }
 
 func abrirDB(ruta string) (*sql.DB, error) {

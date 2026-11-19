@@ -588,7 +588,7 @@ func (a *App) resumen(w http.ResponseWriter, r *http.Request) {
 	a.db.QueryRow(`SELECT COUNT(*) FROM tratos WHERE (comprador_id = ? OR vendedor_id = ?) AND
 		((estado = 'negociando' AND propuso_id != ?) OR (estado = 'aceptado' AND vendedor_id = ?))`, tienda, tienda, tienda, tienda).Scan(&tratos)
 	manejar(w, map[string]int{
-		"faltantes": len(f), "sin_pedir": sinPedir, "pedidos_abiertos": abiertos, "atrasados": atrasados,
+		"chats_sin_leer": a.chatsSinLeer(tienda), "faltantes": len(f), "sin_pedir": sinPedir, "pedidos_abiertos": abiertos, "atrasados": atrasados,
 		"anaqueles": anaqueles, "sin_foto_hoy": sinFoto, "productos": productos,
 		"avisos": avisos, "tratos_pendientes": tratos,
 	}, nil)

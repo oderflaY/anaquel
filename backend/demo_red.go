@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -105,6 +106,10 @@ var redDemo = []demoTienda{
 			{"Kit de ponche navideño", "Temporada", "kit", "Tejocote, guayaba, caña y piloncillo para 20 tazas.", 12000, 8500, 10, 150, 20, 15, true},
 			{"Cacahuate japonés 1 kg", "Botanas", "pza", "", 9000, 6800, 10, 90, 20, 30, true},
 			{"Agua natural 1 L (caja 12)", "Bebidas", "caja", "", 14400, 10800, 5, 200, 30, 60, true},
+			{"Leche entera 1 L", "Lácteos", "pza", "Caducidad mínima de 10 días.", 2700, 2250, 12, 180, 30, 140, true},
+			{"Azúcar estándar 1 kg", "Abarrotes", "pza", "", 3000, 2450, 20, 300, 50, 110, true},
+			{"Atún en lata 140 g", "Enlatados", "lata", "", 2300, 1850, 24, 260, 48, 120, true},
+			{"Papel higiénico 4 rollos", "Higiene", "paquete", "", 3500, 2700, 10, 120, 20, 45, true},
 		},
 		anuncios: []demoAnuncio{{"servicio", "Surtimos tu tiendita a domicilio", "Haz tu pedido por la red antes del lunes y te lo llevamos el martes sin costo desde $1,500.", "Envío gratis desde $1,500"}},
 	},
@@ -237,6 +242,47 @@ func (a *App) sembrarRed() error {
 				tr, boutique, hace, tr, textiles, t-3600_000)
 			a.avisar(boutique, fmt.Sprintf("trato:%d:msg", tr), "trato", "Textiles Guadiana (demo) respondió en el trato de Sudadera con capucha unisex: te las deja en $175 c/u.",
 				fmt.Sprintf("/panel/tratos/%d", tr))
+		}
+	}
+	// Chat del mayorista con Doña Lupita: le mandó su catálogo y quedó una respuesta sin leer.
+	if surte := ids["abarrotes-mayoreo-guadiana"]; surte > 0 && lupita > 0 {
+		if chat, err := a.chatEntre(lupita, surte); err == nil {
+			items, _ := a.miCatalogo(surte, nil, true)
+			cat, _ := json.Marshal(datosCatalogo{Items: items})
+			msgs := []struct {
+				de          int64
+				tipo, texto string
+				datos       string
+				hace        int64
+			}{
+				{surte, "texto", "Buenas, Doña Lupita. Ya salió la promo de la semana: pida antes del lunes y se lo llevo el martes sin costo desde $1,500.", "", 26},
+				{surte, "catalogo", fmt.Sprintf("Le comparto mi catálogo (%d productos)", len(items)), string(cat), 26},
+				{lupita, "texto", "Gracias, Don Chuy. ¿La leche sigue a ese precio? Ando corta de leche y azúcar.", "", 25},
+				{surte, "texto", "Sí, la leche a $22.50 llevando 12 o más. El azúcar también trae precio de mayoreo. Arme su pedido en el catálogo y se lo confirmo. 👍", "", 2},
+			}
+			var leida int64
+			for _, m := range msgs {
+				res, err := a.db.Exec("INSERT INTO chat_mensajes (chat_id, tienda_id, tipo, texto, datos, creado) VALUES (?, ?, ?, ?, ?, ?)",
+					chat, m.de, m.tipo, m.texto, m.datos, t-m.hace*3600_000)
+				if err == nil && m.de == lupita {
+					leida, _ = res.LastInsertId()
+				}
+			}
+			a.db.Exec(`UPDATE chats SET actualizado = ?, leido_a = CASE WHEN tienda_a = ? THEN ? ELSE leido_a END,
+				leido_b = CASE WHEN tienda_b = ? THEN ? ELSE leido_b END WHERE id = ?`, t-2*3600_000, lupita, leida, lupita, leida, chat)
+			a.avisar(lupita, fmt.Sprintf("chat:%d:demo", chat), "chat", "Abarrotes Mayoreo Guadiana: la leche a $22.50 llevando 12 o más.", fmt.Sprintf("/panel/chats/%d", chat))
+		}
+	}
+	// El trato de las sudaderas también aparece en el chat de la boutique con Textiles.
+	if boutique > 0 && textiles > 0 {
+		var tr int64
+		if a.db.QueryRow("SELECT id FROM tratos WHERE comprador_id = ? AND vendedor_id = ?", boutique, textiles).Scan(&tr) == nil {
+			if chat, err := a.chatEntre(boutique, textiles); err == nil {
+				d, _ := json.Marshal(datosPedido{Tratos: []int64{tr}})
+				a.db.Exec("INSERT INTO chat_mensajes (chat_id, tienda_id, tipo, texto, datos, creado) VALUES (?, ?, 'pedido', 'Pedido de 1 producto', ?, ?)", chat, boutique, string(d), t-5*3600_000)
+				a.db.Exec("INSERT INTO chat_mensajes (chat_id, tienda_id, tipo, texto, creado) VALUES (?, ?, 'texto', 'A $165 no me sale, pero en 36 piezas se las dejo en $175 y se las llevo el jueves.', ?)", chat, textiles, t-3600_000)
+				a.db.Exec("UPDATE chats SET actualizado = ? WHERE id = ?", t-3600_000, chat)
+			}
 		}
 	}
 	// El buscador une las solicitudes con las vitrinas (aquí nacen los avisos de las gorras).

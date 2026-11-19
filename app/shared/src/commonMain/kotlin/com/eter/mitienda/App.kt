@@ -161,6 +161,7 @@ fun App(container: AppContainer) {
                                 onBluetoothClick = { navController.navigate(Routes.SYNC) },
                                 onManageCategories = { navController.navigate(Routes.CATEGORIES) },
                                 onSellClick = { navController.navigate(Routes.SALE) },
+                                onStatsClick = { navController.navigate(Routes.STATS) },
                             )
                         }
 
