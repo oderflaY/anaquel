@@ -65,6 +65,7 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("GET /api/yo", a.conTienda(a.yo))
 	m.HandleFunc("PUT /api/yo", a.conTienda(a.actualizarYo))
 	m.HandleFunc("GET /api/resumen", a.conTienda(a.resumen))
+	m.HandleFunc("POST /api/demo/reiniciar", a.conTienda(a.reiniciarDemo))
 	// Productos
 	m.HandleFunc("GET /api/productos", a.conTienda(a.listarProductos))
 	m.HandleFunc("POST /api/productos", a.conTienda(a.crearProducto))

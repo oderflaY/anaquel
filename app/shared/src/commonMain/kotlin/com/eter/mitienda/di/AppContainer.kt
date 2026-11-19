@@ -54,6 +54,10 @@ class AppContainer(
     val orderRepository: OrderRepository = SqliteOrderRepository(OrderDao(database), changes, reminderScheduler)
     val statsRepository = StatsRepository(StatsDao(database), changes)
 
+    /** Anaquel (nube): cliente del servidor y ajustes donde se guarda la sesión. */
+    val anaquelApi = com.eter.mitienda.feature.anaquel.AnaquelApi()
+    val ajustesDao = com.eter.mitienda.data.local.AjustesDao(database)
+
     val syncManager = SyncManager(
         database = database,
         files = databaseFiles,

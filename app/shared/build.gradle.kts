@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -56,6 +57,8 @@ kotlin {
             implementation(libs.play.services.nearby)
             // Recordatorios de pedidos: trabajos programados que sobreviven a reinicios.
             implementation(libs.androidx.work.runtime)
+            // Anaquel (nube): cliente HTTP.
+            implementation(libs.ktor.client.okhttp)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
         }
@@ -73,6 +76,12 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             // SQL crudo multiplataforma (sin ORM). Driver: AndroidSQLiteDriver / NativeSQLiteDriver.
             api(libs.androidx.sqlite.framework)
+            // Anaquel (nube): API del servidor.
+            implementation(libs.ktor.client.core)
+            implementation(libs.kotlinx.serialization.json)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

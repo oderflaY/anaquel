@@ -22,7 +22,7 @@ object NeuColors {
     val ShadowLight = Color(0xFFFFFFFF)
 
     /** Acento principal, magenta DIF: acciones primarias (FAB, guardar, confirmar). */
-    val Magenta = Color(0xFFD91178)
+    val Magenta = Color(0xFF0E7C5A) // Anaquel: verde de la marca
 
     /** Acento secundario, azul DIF: filtros activos, acciones de hardware (escáner). */
     val Blue = Color(0xFF2F5DA8)
@@ -31,11 +31,11 @@ object NeuColors {
     val OnAccent = Color(0xFFFFFFFF)
 
     /** Magenta aclarado para usar sobre fondos oscuros (cámara, snackbar). */
-    val MagentaOnDark = Color(0xFFF56AAE)
+    val MagentaOnDark = Color(0xFF4FD1A2)
 
     /** Badges suaves: fondo rosa DIF con texto vino. */
-    val ChipBackground = Color(0xFFF7D3E5)
-    val OnChip = Color(0xFF9C1866)
+    val ChipBackground = Color(0xFFDFF3EA)
+    val OnChip = Color(0xFF0A5F45)
 
     /** Títulos (alto contraste). */
     val TextPrimary = Color(0xFF2C3E50)

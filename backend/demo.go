@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"net/http"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -258,4 +259,26 @@ func jpegDe(img image.Image) []byte {
 	var b bytes.Buffer
 	jpeg.Encode(&b, img, &jpeg.Options{Quality: 85})
 	return b.Bytes()
+}
+
+// reiniciarDemo deja la tienda demo como nueva (para presentarla otra vez).
+// Solo la propia cuenta demo puede hacerlo.
+func (a *App) reiniciarDemo(w http.ResponseWriter, r *http.Request) {
+	var email string
+	a.db.QueryRow("SELECT email FROM tiendas WHERE id = ?", tiendaDe(r)).Scan(&email)
+	if email != DemoEmail {
+		manejar(w, nil, fallo(403, "Solo la tienda demo se puede reiniciar"))
+		return
+	}
+	if _, err := a.db.Exec("DELETE FROM tiendas WHERE id = ?", tiendaDe(r)); err != nil {
+		manejar(w, nil, err)
+		return
+	}
+	if err := a.sembrarDemo(); err != nil {
+		manejar(w, nil, err)
+		return
+	}
+	var id int64
+	a.db.QueryRow("SELECT id FROM tiendas WHERE email = ?", DemoEmail).Scan(&id)
+	a.responderSesion(w, id)
 }

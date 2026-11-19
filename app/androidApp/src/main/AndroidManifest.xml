@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Anaquel: subir fotos del anaquel y pedidos al servidor. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Escáner de códigos de barras (permiso en tiempo de ejecución). -->
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Vibración al leer un código (permiso normal, se concede al instalar). -->

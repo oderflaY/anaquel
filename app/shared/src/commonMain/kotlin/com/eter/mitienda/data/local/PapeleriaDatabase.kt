@@ -102,6 +102,10 @@ class PapeleriaDatabase(
                 // v4: pedidos por encargo (piñatas, manualidades…).
                 PedidosTable.MIGRATION_V4.forEach(conn::execSQL)
             }
+            if (version < 5) {
+                // v5: ajustes clave/valor (sesión de Anaquel en la nube).
+                conn.execSQL("CREATE TABLE IF NOT EXISTS ajustes (clave TEXT PRIMARY KEY, valor TEXT NOT NULL)")
+            }
             conn.execSQL("PRAGMA user_version = $SCHEMA_VERSION")
             conn.execSQL("COMMIT")
         } catch (e: Throwable) {
@@ -126,7 +130,7 @@ class PapeleriaDatabase(
 
     companion object {
         const val NAME = "papeleria_inventory.db"
-        const val SCHEMA_VERSION = 4
+        const val SCHEMA_VERSION = 5
     }
 }
 

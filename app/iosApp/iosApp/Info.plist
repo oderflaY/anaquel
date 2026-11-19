@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>La cámara se usa para escanear códigos de barras y fotografiar productos.</string>
+	<string>La cámara se usa para escanear códigos de barras, fotografiar productos y tomar la foto diaria de tus anaqueles.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Se usa para elegir la foto de un producto desde tu galería.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

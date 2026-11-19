@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { api, type Faltante, type Pedido, type Sugerencia } from '../api'
+import { api, guardarToken, type Faltante, type Pedido, type Sugerencia, type Tienda } from '../api'
 import type { Sesion } from '../App'
 import { Enlace } from '../router'
 import { avisar, Estado, mensajeDe, Nivel, useDatos } from '../ui'
@@ -59,6 +59,15 @@ export default function Hoy({ sesion }: { sesion: Sesion }) {
       <div>
         <h1 style={{ marginBottom: '.2rem' }}>Hoy en {sesion.tienda.nombre}</h1>
         <p className="secundario" style={{ margin: 0 }}>Lo que falta, a quién pedírselo y lo que viene en camino.</p>
+        {sesion.tienda.email === 'demo@anaquel.mx' && (
+          <button className="boton claro chico" style={{ marginTop: '.6rem' }} onClick={async () => {
+            if (!confirm('¿Dejar la demo como nueva? Se borran los cambios que se le hayan hecho.')) return
+            try {
+              const r = await api.post<{ token: string; tienda: Tienda }>('/demo/reiniciar')
+              guardarToken(r.token); setEleccion({}); setCantidad({}); recargar(); sesion.refrescar(); avisar('Demo reiniciada')
+            } catch (e) { avisar(mensajeDe(e)) }
+          }}>↺ Reiniciar demo</button>
+        )}
       </div>
 
       {r && (

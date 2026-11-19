@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import com.eter.mitienda.core.designsystem.neumorphism.neumorphicInset
 import com.eter.mitienda.core.designsystem.theme.NeuColors
@@ -41,6 +42,7 @@ fun NeumorphicInput(
     singleLine: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val textStyle = MaterialTheme.typography.bodyLarge
 
@@ -53,6 +55,7 @@ fun NeumorphicInput(
         cursorBrush = SolidColor(NeuColors.TextPrimary),
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
+        visualTransformation = visualTransformation,
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier

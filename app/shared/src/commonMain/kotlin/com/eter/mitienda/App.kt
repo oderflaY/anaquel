@@ -30,6 +30,9 @@ import mitienda.shared.generated.resources.Res
 import mitienda.shared.generated.resources.ic_chart
 import mitienda.shared.generated.resources.ic_inventory
 import mitienda.shared.generated.resources.ic_orders
+import mitienda.shared.generated.resources.ic_shelf
+import com.eter.mitienda.feature.anaquel.AnaquelRoute
+import com.eter.mitienda.feature.anaquel.AnaquelViewModel
 import org.jetbrains.compose.resources.painterResource
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,12 +62,13 @@ private object Routes {
     const val DASHBOARD = "dashboard"
     const val ORDERS = "orders"
     const val STATS = "stats"
+    const val ANAQUEL = "anaquel"
     const val ARG_ORDER_ID = "orderId"
     const val ORDER_FORM = "order_form?$ARG_ORDER_ID={$ARG_ORDER_ID}"
     fun orderForm(orderId: Long?) = "order_form?$ARG_ORDER_ID=${orderId ?: NEW_PRODUCT}"
 
     /** Pantallas con barra inferior. */
-    val TOP_LEVEL = setOf(DASHBOARD, ORDERS, STATS)
+    val TOP_LEVEL = setOf(ANAQUEL, DASHBOARD, ORDERS, STATS)
     const val SYNC = "sync"
     const val CATEGORIES = "categories"
     const val SALE = "sale"
@@ -145,7 +149,7 @@ fun App(container: AppContainer) {
                         // La barra inferior ya ocupa la zona de navegación del sistema.
                         .then(if (showBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier),
                 ) {
-                    NavHost(navController = navController, startDestination = Routes.DASHBOARD) {
+                    NavHost(navController = navController, startDestination = Routes.ANAQUEL) {
                         composable(Routes.DASHBOARD) {
                             DashboardRoute(
                                 viewModel = viewModel { DashboardViewModel(repository, container.categoryRepository) },
@@ -185,6 +189,12 @@ fun App(container: AppContainer) {
                                     )
                                 },
                                 onBack = { navController.popBackStack() },
+                            )
+                        }
+
+                        composable(Routes.ANAQUEL) {
+                            AnaquelRoute(
+                                viewModel = viewModel { AnaquelViewModel(container.anaquelApi, container.ajustesDao, repository) },
                             )
                         }
 
@@ -277,6 +287,7 @@ fun App(container: AppContainer) {
                 if (showBottomBar) {
                     NeumorphicBottomBar(
                         items = listOf(
+                            BottomBarItem(Routes.ANAQUEL, "Anaquel", painterResource(Res.drawable.ic_shelf)),
                             BottomBarItem(Routes.DASHBOARD, "Inventario", painterResource(Res.drawable.ic_inventory)),
                             BottomBarItem(Routes.ORDERS, "Pedidos", painterResource(Res.drawable.ic_orders), badge = urgentOrders),
                             BottomBarItem(Routes.STATS, "Gráficas", painterResource(Res.drawable.ic_chart)),
@@ -285,7 +296,7 @@ fun App(container: AppContainer) {
                         onSelect = { route ->
                             navController.navigate(route) {
                                 // Pestañas: una sola copia de cada una y conservan su scroll/estado.
-                                popUpTo(Routes.DASHBOARD) { saveState = true }
+                                popUpTo(Routes.ANAQUEL) { saveState = true }
                                 launchSingleTop = true
                                 restoreState = true
                             }
