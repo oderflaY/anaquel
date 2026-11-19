@@ -2,3 +2,9 @@ web/node_modules/
 web/dist/
 backend/datos/
 *.apk
+services/.env.local
+services/.pids
+services/bin/
+services/datos/
+deploy/.env
+*.exe
