@@ -40,7 +40,9 @@
 # la app se cierra justo al detectar un código.
 -keep class com.google.photos.vision.barhopper.** { *; }
 -keep class com.google.android.libraries.barhopper.** { *; }
--keep class com.google.mlkit.vision.barcode.** { *; }
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.firebase.components.** { *; }
+-keep class * implements com.google.firebase.components.ComponentRegistrar { *; }
 -keep class com.google.android.gms.internal.mlkit_vision_barcode_bundled.** { *; }
 -keep class * extends com.google.android.gms.internal.mlkit_vision_barcode_bundled.zzed { *; }
 -keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite { <fields>; }
