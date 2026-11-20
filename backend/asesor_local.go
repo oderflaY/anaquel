@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"sort"
@@ -20,11 +21,11 @@ import (
 // contesta el asesor básico.
 //
 // El formato de la hoja es el mismo con el que se entrenó el modelo
-// (AnaquelIA/generar_datos.py): si cambias uno, cambia el otro.
+// (AnaquelIA/generar_datos_v2.py): si cambias uno, cambia el otro.
 
-const promptLocal = "Eres el asesor de negocios de Anaquel para tienditas y negocios de Durango. " +
-	"Contesta en español de México, claro y breve (máximo 8 renglones), usando SOLO los datos de la tienda que te doy. " +
-	"Da cifras exactas (piezas, precios, distancias, porcentajes) tal como aparecen. " +
+const promptLocal = "Eres «tu socio», el amigo que sabe de negocios y asesora a tienditas y negocios de Durango en Anaquel. " +
+	"Contesta en español de México, cálido y directo, breve (máximo 10 renglones), usando SOLO los datos de la tienda que te doy. " +
+	"Da cifras exactas (piezas, precios, distancias, porcentajes, pronósticos) tal como aparecen; cuando recomiendes algo, di por qué con un dato. " +
 	"Si un dato no está, dilo y sugiere qué hacer en Anaquel; nunca inventes productos, precios ni proveedores. " +
 	"Termina con una acción concreta (pedir en el chat, tocar «Negociar», publicar que lo buscas)."
 
@@ -73,6 +74,58 @@ func (a *App) contextoAsesor(tienda int64, pregunta string) (string, *turnoAseso
 		}
 	}
 	fmt.Fprintf(&b, "TIENDA: %s · giro %s · hoy %s\n", neg.Tienda, nombreGiro(giro), fechaTxt(horaMexico()))
+	// Números del negocio y pronóstico (modelo de demanda entrenado con ventas reales).
+	plan := a.armarPlan(context.Background(), tienda)
+	var cifras []string
+	for _, c := range plan.Cifras {
+		l := c.Etiqueta + ": " + c.Valor
+		if c.Detalle != "" {
+			l += " (" + c.Detalle + ")"
+		}
+		cifras = append(cifras, l)
+	}
+	lista("NÚMEROS DEL NEGOCIO", cifras)
+	pron := a.pronosticar(tienda)
+	var prons []string
+	for _, p := range neg.Productos {
+		f, ok := pron[p.ID]
+		if !ok || f.P50 < 1 || len(prons) >= 6 {
+			continue
+		}
+		l := fmt.Sprintf("%s: venderás ~%d (hasta %d)", p.Nombre, int64(math.Round(f.P50)), int64(math.Ceil(f.P90)))
+		if p.Existencia != nil {
+			l += fmt.Sprintf(", tienes %d", *p.Existencia)
+			if f.DiasAlcanza != nil {
+				l += fmt.Sprintf(", te alcanza ~%d días", *f.DiasAlcanza)
+			}
+			if f.Pedir > 0 {
+				l += fmt.Sprintf(", pide %d", f.Pedir)
+			}
+		}
+		if f.Tendencia != "estable" {
+			l += ", va de " + map[string]string{"sube": "subida", "baja": "bajada"}[f.Tendencia]
+		}
+		prons = append(prons, l)
+	}
+	lista("PRONÓSTICO 14 DÍAS", prons)
+	var recos []string
+	for _, r := range plan.Recomendaciones {
+		if len(recos) >= 5 {
+			break
+		}
+		l := r.Titulo + ": " + r.Motivo
+		if r.Cantidad > 0 && r.Tipo != "vender" {
+			l += fmt.Sprintf("; sugiero %d", r.Cantidad)
+		}
+		if r.Ganancia > 0 {
+			l += fmt.Sprintf(" (ganas %d%%)", r.Ganancia)
+		}
+		recos = append(recos, l)
+		if r.Oferta != nil && r.Tipo != "vender" {
+			turno.agregar([]Resultado{r.resultado()})
+		}
+	}
+	lista("RECOMENDACIONES DEL GRAFO", recos)
 
 	var acaba, conviene []string
 	for _, s := range in.ParaSurtir {
@@ -211,7 +264,7 @@ func (m *modeloLocal) responder(ctx context.Context, hoja, pregunta string) (str
 			{"role": "system", "content": promptLocal},
 			{"role": "user", "content": "DATOS DE MI TIENDA:\n" + hoja + "\nPREGUNTA: " + pregunta},
 		},
-		"temperature": 0.2, "top_p": 0.9, "max_tokens": 260, "repeat_penalty": 1.1,
+		"temperature": 0.2, "top_p": 0.9, "max_tokens": 360, "repeat_penalty": 1.1,
 	})
 	req, err := http.NewRequestWithContext(ctx, "POST", m.url+"/v1/chat/completions", bytes.NewReader(cuerpo))
 	if err != nil {

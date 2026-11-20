@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -524,18 +525,41 @@ func historialVentas(tx *sql.Tx, rnd *rand.Rand, tienda, producto, stock, ventas
 			return err
 		}
 	}
-	quedan := ventas
-	cuando := t - 30*dia
-	for quedan > 0 {
-		n := min(quedan, 1+rnd.Int63n(max(1, ventas/6+1)))
-		quedan -= n
-		saldo -= n
-		cuando += dia * 30 / max(1, ventas/2+1)
-		if cuando > t-3600_000 {
-			cuando = t - 3600_000
+	// Reparte las ventas día por día en los últimos 30 días, con más venta en
+	// fin de semana y en quincena (como una tienda real), para que el
+	// pronóstico de demanda vea un historial creíble.
+	porDia := make([]int64, 31) // 1 = ayer … 30 = hace 30 días
+	pesos := make([]float64, 31)
+	total := 0.0
+	for d := 1; d <= 30; d++ {
+		f := time.UnixMilli(t - int64(d)*dia).In(zonaMX)
+		w := 1.0
+		if f.Weekday() == time.Saturday || f.Weekday() == time.Sunday {
+			w = 1.35
 		}
+		if f.Day() == 15 || f.Day() == 16 || f.Day() >= 30 || f.Day() <= 2 {
+			w *= 1.25
+		}
+		pesos[d] = w
+		total += w
+	}
+	for i := int64(0); i < ventas; i++ {
+		r := rnd.Float64() * total
+		for d := 1; d <= 30; d++ {
+			if r -= pesos[d]; r <= 0 || d == 30 {
+				porDia[d]++
+				break
+			}
+		}
+	}
+	for d := 30; d >= 1; d-- {
+		if porDia[d] == 0 {
+			continue
+		}
+		saldo -= porDia[d]
+		cuando := t - int64(d)*dia + int64(rnd.Intn(10)+9)*3600_000 // entre 9 am y 7 pm de ese día
 		if _, err := tx.Exec(`INSERT INTO movimientos (tienda_id, producto_id, tipo, cantidad, saldo, nota, creado)
-			VALUES (?, ?, 'venta', ?, ?, '', ?)`, tienda, producto, -n, saldo, cuando); err != nil {
+			VALUES (?, ?, 'venta', ?, ?, '', ?)`, tienda, producto, -porDia[d], saldo, cuando); err != nil {
 			return err
 		}
 	}

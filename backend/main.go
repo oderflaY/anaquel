@@ -143,6 +143,7 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("GET /api/grafo/mapa", a.conTienda(a.mapaGrafo))
 	m.HandleFunc("GET /api/grafo/estado", a.conTienda(a.estadoGrafo))
 	m.HandleFunc("GET /api/asesor/plan", a.conTienda(a.planAsesor))
+	m.HandleFunc("GET /api/pronostico", a.conTienda(a.verPronostico))
 	m.HandleFunc("PUT /api/mayoreo/{id}", a.conTienda(a.guardarMayoreo))
 	m.HandleFunc("GET /api/notificaciones", a.conTienda(a.notificaciones))
 	m.HandleFunc("GET /api/avisos", a.conTienda(a.listarAvisos))

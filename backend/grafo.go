@@ -185,6 +185,7 @@ func (a *App) clonarGrafoEn(ctx context.Context) error {
 	}
 	rows.Close()
 
+	pron := a.pronosticar(0) // pronóstico de demanda de 14 días de cada producto (modelo M5)
 	articulos := map[string]string{}
 	var vende, ofertas []map[string]any
 	rows, err = a.db.Query(`SELECT id, tienda_id, nombre, categoria, precio_c, stock, stock_min, publicado, precio_mayoreo_c,
@@ -209,8 +210,12 @@ func (a *App) clonarGrafoEn(ctx context.Context) error {
 		if stock != nil {
 			st = *stock
 		}
+		var p50, p90 any
+		if pr, ok := pron[id]; ok {
+			p50, p90 = pr.P50, pr.P90
+		}
 		vende = append(vende, map[string]any{"t": tienda, "a": clave, "producto": id, "stock": st, "minimo": minimo,
-			"ventas30": ventas[id], "precio": precio})
+			"ventas30": ventas[id], "precio": precio, "p50": p50, "p90": p90})
 		if publicado && (stock == nil || *stock > 0) {
 			if cat == "" {
 				cat = "Otros"
@@ -272,7 +277,8 @@ func (a *App) clonarGrafoEn(ctx context.Context) error {
 			{`UNWIND $filas AS x MERGE (a:Articulo {clave: x.clave}) SET a.nombre = x.nombre, a.v = $v`, map[string]any{"filas": arts}},
 			{`UNWIND $filas AS x MATCH (t:Tienda {id: x.t}), (a:Articulo {clave: x.a})
 				MERGE (t)-[r:VENDE]->(a)
-				SET r.producto = x.producto, r.stock = x.stock, r.minimo = x.minimo, r.ventas30 = x.ventas30, r.precio = x.precio, r.v = $v`,
+				SET r.producto = x.producto, r.stock = x.stock, r.minimo = x.minimo, r.ventas30 = x.ventas30, r.precio = x.precio,
+					r.p50 = x.p50, r.p90 = x.p90, r.v = $v`,
 				map[string]any{"filas": vende}},
 			{`UNWIND $filas AS x MATCH (t:Tienda {id: x.t}), (a:Articulo {clave: x.a})
 				MERGE (p:Producto {id: x.id})
@@ -356,14 +362,15 @@ var consultasGrafo = map[string]string{
 	// Se te acaba (o te dura menos de 10 días): la oferta más barata que puedes ver.
 	"surtir": `MATCH (yo:Tienda {id: $yo})-[v:VENDE]->(a:Articulo)<-[:ES]-(p:Producto)<-[:OFRECE]-(prov:Tienda)
 		WHERE prov <> yo AND ` + visibleCypher + ` AND v.stock IS NOT NULL
-		  AND (v.stock <= v.minimo OR (v.ventas30 > 0 AND v.stock * 30.0 / v.ventas30 < 10))
+		  AND (v.stock <= v.minimo OR (v.p50 IS NOT NULL AND v.stock < v.p50 * 10.0 / 14)
+		       OR (v.p50 IS NULL AND v.ventas30 > 0 AND v.stock * 30.0 / v.ventas30 < 10))
 		WITH yo, v, a, p, prov, CASE WHEN p.mayoreo > 0 THEN p.mayoreo ELSE p.precio END AS costo ORDER BY costo
 		WITH yo, v, a, collect({p: p, prov: prov, costo: costo}) AS ops
 		WITH yo, v, a, ops[0] AS m, size(ops) AS opciones
 		WITH yo, v, a, m.p AS p, m.prov AS prov, m.costo AS costo, opciones
 		RETURN a.nombre AS articulo, p AS p, prov AS prov, ` + kmCypher + ` AS km,
 			v.stock AS stock, v.minimo AS minimo, v.ventas30 AS ventas30, v.precio AS miPrecio, costo, opciones,
-			0 AS tiendas, 0 AS veces
+			0 AS tiendas, 0 AS veces, v.p50 AS p50, v.p90 AS p90
 		ORDER BY CASE WHEN v.stock <= 0 THEN 0 ELSE 1 END, v.ventas30 DESC LIMIT 8`,
 	// Filtrado colaborativo: tiendas parecidas a la mía (venden lo mismo que yo)
 	// venden esto con salida y yo no lo tengo; alguien de la red lo ofrece.
@@ -387,7 +394,7 @@ var consultasGrafo = map[string]string{
 		WITH yo, prov, c, collect({a: a, v: v, p: p, costo: costo})[0] AS m
 		RETURN m.a.nombre AS articulo, m.p AS p, prov AS prov, ` + kmCypher + ` AS km,
 			m.v.stock AS stock, m.v.minimo AS minimo, m.v.ventas30 AS ventas30, m.v.precio AS miPrecio, m.costo AS costo,
-			1 AS opciones, 0 AS tiendas, c.veces AS veces
+			1 AS opciones, 0 AS tiendas, c.veces AS veces, m.v.p50 AS p50, m.v.p90 AS p90
 		ORDER BY c.veces DESC LIMIT 4`,
 	// Para vender: tiendas que se están quedando sin algo que yo ofrezco al mayoreo.
 	"vender": `MATCH (yo:Tienda {id: $yo})-[:OFRECE]->(p:Producto)-[:ES]->(a:Articulo)<-[v:VENDE]-(prov:Tienda)
@@ -395,14 +402,14 @@ var consultasGrafo = map[string]string{
 		  AND (p.audiencia = 'todos' OR (p)-[:VISIBLE_PARA]->(prov))
 		RETURN a.nombre AS articulo, p AS p, prov AS prov, ` + kmCypher + ` AS km,
 			v.stock AS stock, v.minimo AS minimo, v.ventas30 AS ventas30, v.precio AS miPrecio,
-			CASE WHEN p.mayoreo > 0 THEN p.mayoreo ELSE p.precio END AS costo, 1 AS opciones, 0 AS tiendas, 0 AS veces
+			CASE WHEN p.mayoreo > 0 THEN p.mayoreo ELSE p.precio END AS costo, 1 AS opciones, 0 AS tiendas, 0 AS veces, v.p50 AS p50, v.p90 AS p90
 		ORDER BY v.ventas30 DESC LIMIT 6`,
 	// Precios que alguien compartió solo conmigo.
 	"exclusivo": `MATCH (p:Producto)-[:VISIBLE_PARA]->(yo:Tienda {id: $yo}), (prov:Tienda)-[:OFRECE]->(p)-[:ES]->(a:Articulo)
 		OPTIONAL MATCH (yo)-[v:VENDE]->(a)
 		RETURN a.nombre AS articulo, p AS p, prov AS prov, ` + kmCypher + ` AS km,
 			v.stock AS stock, coalesce(v.minimo, 0) AS minimo, coalesce(v.ventas30, 0) AS ventas30, coalesce(v.precio, 0) AS miPrecio,
-			CASE WHEN p.mayoreo > 0 THEN p.mayoreo ELSE p.precio END AS costo, 1 AS opciones, 0 AS tiendas, 0 AS veces
+			CASE WHEN p.mayoreo > 0 THEN p.mayoreo ELSE p.precio END AS costo, 1 AS opciones, 0 AS tiendas, 0 AS veces, v.p50 AS p50, v.p90 AS p90
 		LIMIT 4`,
 }
 
@@ -460,8 +467,14 @@ func (a *App) recomendacionesGrafo(ctx context.Context, yo int64) ([]Recomendaci
 			if miPrecio > 0 && costo > 0 && costo < miPrecio {
 				rec.Ganancia = (miPrecio - costo) * 100 / miPrecio
 			}
-			// Cuántas pedir: lo que vendes en ~2 semanas menos lo que tienes, sin bajar del mínimo de mayoreo.
+			// Cuántas pedir: lo que venderás en 2 semanas según el modelo de demanda (p90, para no
+			// quedarte sin mercancía) menos lo que tienes; sin modelo, la mitad de lo vendido en 30 días.
+			p50, conP50 := get("p50").(float64)
+			p90, _ := get("p90").(float64)
 			sugerida := int64(math.Ceil(float64(ventas) / 2))
+			if conP50 {
+				sugerida = int64(math.Ceil(p90))
+			}
 			if tieneStock {
 				sugerida -= stock
 			}
@@ -481,6 +494,9 @@ func (a *App) recomendacionesGrafo(ctx context.Context, yo int64) ([]Recomendaci
 				dias := ""
 				if tieneStock && stock <= 0 {
 					dias = "Se te acabó"
+				} else if conP50 && p50 > 0 && tieneStock {
+					dias = fmt.Sprintf("Te alcanza para ~%d días: en 2 semanas venderás unas %d (hasta %d)",
+						max(1, int64(float64(stock)/(p50/14))), int64(math.Round(p50)), int64(math.Ceil(p90)))
 				} else if ventas > 0 && tieneStock {
 					dias = fmt.Sprintf("Te alcanza para ~%d días", max(1, stock*30/ventas))
 				} else {

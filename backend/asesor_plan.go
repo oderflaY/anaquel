@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sort"
@@ -38,10 +39,10 @@ type PlanAsesor struct {
 }
 
 func (a *App) planAsesor(w http.ResponseWriter, r *http.Request) {
-	manejar(w, a.armarPlan(r, tiendaDe(r)), nil)
+	manejar(w, a.armarPlan(r.Context(), tiendaDe(r)), nil)
 }
 
-func (a *App) armarPlan(r *http.Request, yo int64) PlanAsesor {
+func (a *App) armarPlan(ctx context.Context, yo int64) PlanAsesor {
 	neg, giro := a.datosNegocio(yo)
 	p := PlanAsesor{Cifras: []CifraPlan{}, Alertas: []AlertaPlan{}, Recomendaciones: []Recomendacion{}}
 	nombre := strings.TrimSuffix(neg.Tienda, " (demo)")
@@ -109,6 +110,24 @@ func (a *App) armarPlan(r *http.Request, yo int64) PlanAsesor {
 		}
 	}
 	p.Cifras = append(p.Cifras, ci)
+	// Pronóstico de demanda (modelo entrenado con ventas reales): lo que venderás en 2 semanas.
+	pron := a.pronosticar(yo)
+	var esperado, sube int64
+	for _, pr := range neg.Productos {
+		if f, ok := pron[pr.ID]; ok {
+			esperado += int64(f.P50 * float64(pr.PrecioC))
+			if f.Tendencia == "sube" {
+				sube++
+			}
+		}
+	}
+	if len(pron) > 0 {
+		det := "según tu historial y el calendario"
+		if sube > 0 {
+			det = fmt.Sprintf("%d %s vendiéndose más", sube, plural(sube, "producto viene", "productos vienen"))
+		}
+		p.Cifras = append(p.Cifras, CifraPlan{Etiqueta: "Venderás en 2 semanas", Valor: pesosTxt(esperado / 100 * 100), Detalle: det, Tono: "bien"})
+	}
 	p.Cifras = append(p.Cifras, CifraPlan{Etiqueta: "Por surtir", Valor: fmt.Sprint(len(neg.BajoMinimo)),
 		Detalle: "productos en su mínimo", Tono: map[bool]string{true: "mal", false: "bien"}[len(neg.BajoMinimo) > 0]})
 
@@ -121,13 +140,21 @@ func (a *App) armarPlan(r *http.Request, yo int64) PlanAsesor {
 	// Lo que más vende y le queda poco (aunque no haya llegado al mínimo).
 	var urgentes []string
 	for _, pr := range neg.Productos {
-		if pr.Vendidos30 >= 10 && pr.Existencia != nil && *pr.Existencia > pr.Minimo && *pr.Existencia*30/pr.Vendidos30 < 7 {
+		if pr.Existencia == nil || *pr.Existencia <= pr.Minimo {
+			continue // ésos ya salen en «Se te está acabando»
+		}
+		if f, ok := pron[pr.ID]; ok {
+			if f.DiasAlcanza != nil && *f.DiasAlcanza < 7 && f.P50 >= 3 {
+				urgentes = append(urgentes, fmt.Sprintf("%s (te alcanza ~%d días; pide %d)", pr.Nombre, max(1, *f.DiasAlcanza), f.Pedir))
+			}
+		} else if pr.Vendidos30 >= 10 && *pr.Existencia*30/pr.Vendidos30 < 7 {
 			urgentes = append(urgentes, fmt.Sprintf("%s (te alcanza ~%d días)", pr.Nombre, max(1, *pr.Existencia*30/pr.Vendidos30)))
 		}
 	}
 	if len(urgentes) > 0 {
 		p.Alertas = append(p.Alertas, AlertaPlan{Tipo: "acaba", Titulo: "Tus estrellas van a faltar",
-			Texto: strings.Join(urgentes[:min(3, len(urgentes))], " · ") + ". Pídelas antes de quedarte sin ellas."})
+			Texto:  strings.Join(urgentes[:min(3, len(urgentes))], " · ") + ". Pídelas antes de quedarte sin ellas.",
+			Accion: "¿Cuánto pido de lo que se me va a acabar?"})
 	}
 	if len(neg.SinVenta30) > 0 {
 		p.Alertas = append(p.Alertas, AlertaPlan{Tipo: "parado", Titulo: "Dinero dormido en el anaquel",
@@ -152,7 +179,7 @@ func (a *App) armarPlan(r *http.Request, yo int64) PlanAsesor {
 	}
 
 	// ---- Recomendaciones del grafo.
-	if rs, err := a.recomendacionesGrafo(r.Context(), yo); err == nil {
+	if rs, err := a.recomendacionesGrafo(ctx, yo); err == nil {
 		p.Grafo = true
 		if len(rs) > 8 {
 			rs = rs[:8]
