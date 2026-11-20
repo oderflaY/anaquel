@@ -14,8 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.eter.mitienda.core.designsystem.components.BottomBarItem
-import com.eter.mitienda.core.designsystem.components.NeumorphicBottomBar
 import com.eter.mitienda.core.designsystem.theme.NeuColors
 import com.eter.mitienda.feature.orders.DueUrgency
 import com.eter.mitienda.feature.orders.OrderDates
@@ -28,11 +26,18 @@ import com.eter.mitienda.feature.stats.StatsViewModel
 import kotlinx.coroutines.flow.catch
 import mitienda.shared.generated.resources.Res
 import mitienda.shared.generated.resources.ic_inventory
-import mitienda.shared.generated.resources.ic_orders
 import mitienda.shared.generated.resources.ic_shelf
 import com.eter.mitienda.feature.anaquel.AnaquelRoute
 import com.eter.mitienda.feature.anaquel.ChatsRoute
 import com.eter.mitienda.feature.anaquel.InicioRoute
+import com.eter.mitienda.feature.anaquel.BarraTienda
+import com.eter.mitienda.feature.anaquel.HojaHerramientas
+import com.eter.mitienda.feature.anaquel.PestanaTienda
+import com.eter.mitienda.feature.anaquel.SeccionAnaquel
+import com.eter.mitienda.feature.anaquel.herramientasDe
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import mitienda.shared.generated.resources.ic_chat
 import mitienda.shared.generated.resources.ic_home
@@ -146,6 +151,8 @@ fun App(container: AppContainer) {
     val nube by anaquel.state.collectAsStateWithLifecycle()
     val chatsSinLeer = nube.inicio?.chatsSinLeer ?: nube.resumen?.chatsSinLeer ?: 0
 
+    var herramientas by remember { mutableStateOf(false) }
+
     MiTiendaTheme {
         // Las imágenes guardan rutas relativas; aquí se indica cómo resolverlas.
         CompositionLocalProvider(LocalImagePathResolver provides container.imageStorage::resolve) {
@@ -214,7 +221,7 @@ fun App(container: AppContainer) {
                         }
 
                         composable(Routes.ANAQUEL) {
-                            AnaquelRoute(viewModel = anaquel)
+                            AnaquelRoute(viewModel = anaquel, onHerramientas = { herramientas = true })
                         }
 
                         composable(Routes.STATS) {
@@ -303,26 +310,53 @@ fun App(container: AppContainer) {
                     }
                 }
 
+                val irPestana = { route: String ->
+                    navController.navigate(route) {
+                        // Pestañas: una sola copia de cada una y conservan su scroll/estado.
+                        popUpTo(Routes.INICIO) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
                 if (showBottomBar) {
-                    NeumorphicBottomBar(
-                        items = listOf(
-                            BottomBarItem(Routes.INICIO, "Inicio", painterResource(Res.drawable.ic_home)),
-                            BottomBarItem(Routes.CHATS, "Chats", painterResource(Res.drawable.ic_chat), badge = chatsSinLeer),
-                            BottomBarItem(Routes.ANAQUEL, "Mi tienda", painterResource(Res.drawable.ic_shelf), badge = nube.resumen?.sinPedir ?: 0),
-                            BottomBarItem(Routes.DASHBOARD, "Inventario", painterResource(Res.drawable.ic_inventory)),
-                            BottomBarItem(Routes.ORDERS, "Pedidos", painterResource(Res.drawable.ic_orders), badge = urgentOrders),
+                    BarraTienda(
+                        izquierda = listOf(
+                            PestanaTienda(Routes.INICIO, "Inicio", painterResource(Res.drawable.ic_home)),
+                            PestanaTienda(Routes.CHATS, "Chats", painterResource(Res.drawable.ic_chat), chatsSinLeer),
                         ),
-                        // Gráficas se abre desde Inventario; se marca esa pestaña.
-                        selectedKey = if (currentRoute == Routes.STATS) Routes.DASHBOARD else currentRoute,
-                        onSelect = { route ->
-                            navController.navigate(route) {
-                                // Pestañas: una sola copia de cada una y conservan su scroll/estado.
-                                popUpTo(Routes.INICIO) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
+                        derecha = listOf(
+                            PestanaTienda(Routes.DASHBOARD, "Inventario", painterResource(Res.drawable.ic_inventory)),
+                            PestanaTienda(Routes.ANAQUEL, "Mi tienda", painterResource(Res.drawable.ic_shelf), (nube.resumen?.sinPedir ?: 0) + urgentOrders),
+                        ),
+                        // Gráficas y encargos se abren desde Inventario / herramientas: se marca la pestaña más cercana.
+                        activa = when (currentRoute) { Routes.STATS -> Routes.DASHBOARD; Routes.ORDERS -> Routes.ANAQUEL; else -> currentRoute },
+                        onElegir = { irPestana(it) },
+                        onMas = { herramientas = true },
                     )
+                }
+                if (herramientas) {
+                    HojaHerramientas(herramientasDe(nube, urgentOrders), onCerrar = { herramientas = false }) { id ->
+                        herramientas = false
+                        val seccion = when (id) {
+                            "hoy" -> SeccionAnaquel.HOY; "foto" -> SeccionAnaquel.ANAQUELES; "pedidos" -> SeccionAnaquel.PEDIDOS
+                            "bodega" -> SeccionAnaquel.BODEGA; "red" -> SeccionAnaquel.RED; "tratos" -> SeccionAnaquel.TRATOS
+                            "asesor" -> SeccionAnaquel.ASESOR; else -> null
+                        }
+                        if (seccion != null) {
+                            anaquel.elegirSeccion(seccion)
+                            irPestana(Routes.ANAQUEL)
+                        } else when (id) {
+                            "vender" -> navController.navigate(Routes.SALE)
+                            "agregar" -> navController.navigate(Routes.productForm(null))
+                            "inventario" -> irPestana(Routes.DASHBOARD)
+                            "pedidos_clientes" -> irPestana(Routes.ORDERS)
+                            "chats" -> irPestana(Routes.CHATS)
+                            "graficas" -> navController.navigate(Routes.STATS)
+                            "categorias" -> navController.navigate(Routes.CATEGORIES)
+                            "bluetooth" -> navController.navigate(Routes.SYNC)
+                            "sincronizar" -> anaquel.sincronizarInventario()
+                        }
+                    }
                 }
             }
         }

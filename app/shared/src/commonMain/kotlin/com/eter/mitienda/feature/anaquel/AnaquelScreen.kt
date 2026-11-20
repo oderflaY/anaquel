@@ -1,5 +1,11 @@
 package com.eter.mitienda.feature.anaquel
 
+import androidx.compose.ui.semantics.contentDescription
+
+import androidx.compose.ui.semantics.semantics
+
+import androidx.compose.foundation.clickable
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,7 +74,7 @@ import org.jetbrains.compose.resources.painterResource
 private enum class Proposito { CREAR, HOY, REFERENCIA }
 
 @Composable
-fun AnaquelRoute(viewModel: AnaquelViewModel) {
+fun AnaquelRoute(viewModel: AnaquelViewModel, onHerramientas: () -> Unit = {}) {
     val st by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val uri = LocalUriHandler.current
@@ -101,7 +107,7 @@ fun AnaquelRoute(viewModel: AnaquelViewModel) {
             st.revisandoSesion -> Texto("Cargando…", Modifier.align(Alignment.Center))
             st.tienda == null -> Entrar(st, viewModel)
             abierto != null -> DetalleAnaquel(st, abierto, viewModel, tomarFoto)
-            else -> Principal(st, viewModel, onNuevo = { n -> nombreNuevo = n; tomarFoto(Proposito.CREAR) })
+            else -> Principal(st, viewModel, onHerramientas, onNuevo = { n -> nombreNuevo = n; tomarFoto(Proposito.CREAR) })
         }
         if (camara.isProcessing || st.ocupado == "foto" || st.ocupado == "crear") {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)), contentAlignment = Alignment.Center) {
@@ -188,27 +194,16 @@ internal fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
 // ---------------- Principal ----------------
 
 @Composable
-private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String) -> Unit) {
+private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: () -> Unit, onNuevo: (String) -> Unit) {
     var pedirNombre by remember { mutableStateOf(false) }
     var confirmarSalir by remember { mutableStateOf(false) }
     var negociando by remember { mutableStateOf<ResultadoRed?>(null) }
     var contra by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.padding(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceLg),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Mi tienda", style = MaterialTheme.typography.headlineMedium, color = NeuColors.TextPrimary)
-                    Texto(st.tienda?.nombre.orEmpty())
-                }
-                NeumorphicIconButton(painterResource(Res.drawable.ic_upload), "Sincronizar inventario", onClick = vm::sincronizarInventario)
-                Spacer(Modifier.width(NeuDimens.SpaceMd))
-                TextButton(onClick = { confirmarSalir = true }) { Text("Salir", color = NeuColors.TextSecondary) }
-            }
+            Perfil(st, vm, onHerramientas, onSalir = { confirmarSalir = true })
             LazyRow(
-                contentPadding = PaddingValues(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceXl, bottom = NeuDimens.SpaceSm),
+                contentPadding = PaddingValues(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceMd, bottom = NeuDimens.SpaceSm),
                 horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd),
             ) {
                 items(SeccionAnaquel.entries.filter { it != SeccionAnaquel.RED || st.seccion == SeccionAnaquel.RED }) { s ->
@@ -220,7 +215,7 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
                         SeccionAnaquel.RED -> st.resumen?.avisos ?: 0
                         SeccionAnaquel.ASESOR, SeccionAnaquel.BODEGA -> 0
                     }
-                    NeumorphicChip(if (n > 0) "${s.titulo} · $n" else s.titulo, selected = st.seccion == s, onClick = { vm.elegirSeccion(s) })
+                    NeumorphicChip(emojiSeccion(s) + " " + if (n > 0) "${s.titulo} · $n" else s.titulo, selected = st.seccion == s, onClick = { vm.elegirSeccion(s) })
                 }
             }
             if (st.seccion == SeccionAnaquel.BODEGA) {
@@ -673,5 +668,68 @@ private fun Bodega3D(vm: AnaquelViewModel, modifier: Modifier) {
         } else {
             Vista3D(url, Modifier.fillMaxWidth().weight(1f))
         }
+    }
+}
+
+internal fun emojiSeccion(s: SeccionAnaquel) = when (s) {
+    SeccionAnaquel.HOY -> "🛒"; SeccionAnaquel.BODEGA -> "🧊"; SeccionAnaquel.ASESOR -> "✨"; SeccionAnaquel.RED -> "🔎"
+    SeccionAnaquel.TRATOS -> "🤝"; SeccionAnaquel.ANAQUELES -> "📸"; SeccionAnaquel.PEDIDOS -> "🚚"
+}
+
+/** Encabezado tipo perfil: quién eres, tus números (se pueden tocar) y todas tus herramientas. */
+@Composable
+private fun Perfil(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: () -> Unit, onSalir: () -> Unit) {
+    val t = st.tienda
+    val r = st.resumen
+    val nombre = t?.nombre.orEmpty().removeSuffix(" (demo)")
+    Column(
+        Modifier.fillMaxWidth().padding(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceLg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.width(46.dp))
+            Spacer(Modifier.weight(1f))
+            Box(
+                Modifier.size(84.dp).background(
+                    androidx.compose.ui.graphics.Brush.linearGradient(listOf(NeuColors.Magenta, NeuColors.Blue)), androidx.compose.foundation.shape.CircleShape,
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    nombre.split(' ').filter { it.firstOrNull()?.isLetter() == true }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "🏪" },
+                    color = NeuColors.OnAccent, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            NeumorphicIconButton(painterResource(Res.drawable.ic_upload), "Respaldar inventario en la nube", onClick = vm::sincronizarInventario,
+                size = NeuDimens.IconButtonSmallSize, iconSize = NeuDimens.IconSmallSize)
+        }
+        Spacer(Modifier.height(NeuDimens.SpaceSm))
+        Text(nombre, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = NeuColors.TextPrimary, maxLines = 1)
+        t?.slug?.takeIf { it.isNotBlank() }?.let { Texto("@$it") }
+        Spacer(Modifier.height(NeuDimens.SpaceMd))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Cifra(r?.productos ?: 0, "Productos") { vm.elegirSeccion(SeccionAnaquel.BODEGA) }
+            Cifra(r?.sinPedir ?: 0, "Por pedir") { vm.elegirSeccion(SeccionAnaquel.HOY) }
+            Cifra(r?.pedidosAbiertos ?: 0, "Pedidos") { vm.elegirSeccion(SeccionAnaquel.PEDIDOS) }
+            Cifra(r?.tratosPendientes ?: 0, "Tratos") { vm.elegirSeccion(SeccionAnaquel.TRATOS) }
+        }
+        Spacer(Modifier.height(NeuDimens.SpaceMd))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
+            NeumorphicButton("Todas mis herramientas", onClick = onHerramientas, modifier = Modifier.weight(1f))
+            NeumorphicButton("Salir", onClick = onSalir, containerColor = NeuColors.Background)
+        }
+    }
+}
+
+@Composable
+private fun Cifra(n: Int, texto: String, onClick: () -> Unit) {
+    Column(
+        Modifier.clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp)
+            .semantics(mergeDescendants = true) { contentDescription = "$n $texto" },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("$n", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = NeuColors.TextPrimary)
+        Text(texto, style = MaterialTheme.typography.bodySmall, color = NeuColors.TextSecondary)
     }
 }

@@ -39,7 +39,7 @@ func nuevoModeloLocal() *modeloLocal {
 	if u == "" {
 		return nil
 	}
-	return &modeloLocal{url: u, nombre: env("LLM_MODELO", "anaquel-asesor"), http: &http.Client{Timeout: 150 * time.Second}}
+	return &modeloLocal{url: u, nombre: env("LLM_MODELO", "anaquel-asesor"), http: &http.Client{Timeout: 75 * time.Second}} // la pasarela corta a los 2 min
 }
 
 func pesosHoja(c int64) string {

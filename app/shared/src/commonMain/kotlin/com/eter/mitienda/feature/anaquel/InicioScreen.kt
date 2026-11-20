@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -122,8 +123,56 @@ fun InicioRoute(vm: AnaquelViewModel, onAbrirChats: () -> Unit) {
     }
 }
 
+/** Inicio con dos pestañas arriba: «Para ti» (feed vertical) y «Resumen» (todo en lista). */
 @Composable
 private fun Inicio(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () -> Unit) {
+    var pestana by rememberSaveable { mutableStateOf(0) }
+    var negociando by remember { mutableStateOf<ResultadoRed?>(null) }
+    val ini = st.inicio
+    val feed = remember(ini) { ini?.let(::feedDe).orEmpty() }
+    val chat = { tienda: Long, pedir: Boolean, producto: Long?, cantidad: Long ->
+        vm.chatCon(tienda, pedir, producto, cantidad); onAbrirChats()
+    }
+    Box(Modifier.fillMaxSize()) {
+        if (pestana == 0 && feed.isNotEmpty()) {
+            FeedParaTi(
+                feed,
+                onPedir = { pub ->
+                    when (pub) {
+                        is Publicacion.Proveedor -> chat(pub.p.id, true, null, 0)
+                        is Publicacion.Oferta -> {
+                            val r = pub.r
+                            val t = r.tienda
+                            if (r.tipo == "solicitud" || t == null) negociando = r
+                            else chat(t.id, true, r.id, (r.minimoMayoreo ?: 1).coerceAtLeast(1))
+                        }
+                    }
+                },
+                onChat = { chat(it, false, null, 0) },
+                onNegociar = { negociando = it },
+            )
+        } else {
+            Resumen(st, vm, onAbrirChats, arriba = 56.dp)
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.width(56.dp))
+            PestanasArriba(listOf("Para ti", "Resumen"), pestana, { pestana = it }, claro = pestana == 0 && feed.isNotEmpty(), modifier = Modifier.weight(1f))
+            val avisos = (ini?.chatsSinLeer ?: 0) + (ini?.pendientes ?: 0)
+            Box(Modifier.width(56.dp), contentAlignment = Alignment.Center) {
+                NeumorphicIconButton(painterResource(Res.drawable.ic_search), "Buscar en la red", onClick = { pestana = 1 },
+                    size = NeuDimens.IconButtonSmallSize, iconSize = NeuDimens.IconSmallSize)
+                if (avisos > 0) Box(Modifier.align(Alignment.TopEnd)) { Pastilla("$avisos", NeuColors.Magenta, NeuColors.OnAccent) }
+            }
+        }
+        if (pestana == 0 && feed.isEmpty() && ini == null) Txt("Cargando lo que te conviene…", secundario = true, modifier = Modifier.align(Alignment.Center))
+    }
+    negociando?.let { r ->
+        DialogoNegociar(r, onCerrar = { negociando = null }) { n, pc, msg -> negociando = null; vm.negociar(r, n, pc, msg) }
+    }
+}
+
+@Composable
+private fun Resumen(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () -> Unit, arriba: androidx.compose.ui.unit.Dp) {
     val ini = st.inicio
     var q by remember { mutableStateOf(st.consultaRed) }
     var negociando by remember { mutableStateOf<ResultadoRed?>(null) }
@@ -133,22 +182,14 @@ private fun Inicio(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () ->
     }
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceLg, bottom = NeuDimens.SpaceXxl * 2),
+        contentPadding = PaddingValues(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = arriba, bottom = NeuDimens.SpaceXxl * 2),
         verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceLg),
     ) {
         item(key = "cabeza") {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Inicio", style = MaterialTheme.typography.headlineMedium, color = NeuColors.TextPrimary)
-                    Txt(ini?.saludo?.takeIf { it.isNotBlank() } ?: st.tienda?.nombre.orEmpty(), secundario = true, lineas = 2)
-                }
-                val avisos = (ini?.chatsSinLeer ?: 0) + (ini?.pendientes ?: 0)
-                Box {
-                    NeumorphicIconButton(painterResource(Res.drawable.ic_chat), "Chats", onClick = onAbrirChats)
-                    if (avisos > 0) Box(Modifier.align(Alignment.TopEnd)) { Pastilla("$avisos", NeuColors.Magenta, NeuColors.OnAccent) }
-                }
-                Spacer(Modifier.width(NeuDimens.SpaceMd))
-                NeumorphicIconButton(painterResource(Res.drawable.ic_refresh), "Actualizar", onClick = vm::cargarInicio)
+                Txt(ini?.saludo?.takeIf { it.isNotBlank() } ?: st.tienda?.nombre.orEmpty(), Modifier.weight(1f), negritas = true, lineas = 2)
+                NeumorphicIconButton(painterResource(Res.drawable.ic_refresh), "Actualizar", onClick = vm::cargarInicio,
+                    size = NeuDimens.IconButtonSmallSize, iconSize = NeuDimens.IconSmallSize)
             }
         }
         item(key = "buscar") {
