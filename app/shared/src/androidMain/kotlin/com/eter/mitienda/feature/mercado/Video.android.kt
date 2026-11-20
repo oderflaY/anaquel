@@ -29,9 +29,10 @@ actual val SUBIR_VIDEO_DISPONIBLE: Boolean = true
 actual fun ReproductorVideo(url: String, token: String?, reproducir: Boolean, silencio: Boolean, modifier: Modifier) {
     val ctx = LocalContext.current
     val jugador = remember(url) {
-        val fuente = DefaultHttpDataSource.Factory().apply {
+        // Por red con la sesión; en el modo demo el video viene empaquetado en la app.
+        val fuente = if (url.startsWith("http")) DefaultHttpDataSource.Factory().apply {
             token?.let { setDefaultRequestProperties(mapOf("Authorization" to "Bearer $it")) }
-        }
+        } else androidx.media3.datasource.DefaultDataSource.Factory(ctx)
         ExoPlayer.Builder(ctx).build().apply {
             setMediaSource(ProgressiveMediaSource.Factory(fuente).createMediaSource(MediaItem.fromUri(Uri.parse(url))))
             repeatMode = Player.REPEAT_MODE_ONE

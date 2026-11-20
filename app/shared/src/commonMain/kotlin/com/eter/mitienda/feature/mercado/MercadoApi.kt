@@ -179,21 +179,31 @@ class MercadoApi(base: String) {
         expectSuccess = false
     }
 
-    fun url(ruta: String) = base + ruta
+    /** Servidor simulado dentro de la app (modo demo, ver DemoServidor). */
+    private val demo by lazy { DemoServidor(json, { guardarDemo(it) }, { leerDemo() }) }
+    /** Dónde guarda el demo su estado (lo pone MercadoSesion con el almacén cifrado). */
+    var guardarDemo: (String?) -> Unit = {}
+    var leerDemo: () -> String? = { null }
+    suspend fun reiniciarDemo() = demo.reiniciar()
+    val enDemo get() = esDemo(base)
 
-    private suspend fun revisar(r: HttpResponse): String {
-        val texto = r.bodyAsText()
-        if (!r.status.isSuccess()) {
+    fun url(ruta: String) = if (enDemo && ruta.startsWith("/api/reels/media/")) uriDemo(ruta) else base + ruta
+
+    private suspend fun revisar(r: HttpResponse): String = revisarTexto(r.status.value, r.bodyAsText())
+
+    private fun revisarTexto(status: Int, texto: String): String {
+        if (status !in 200..299) {
             val obj = runCatching { json.parseToJsonElement(texto).jsonObject }.getOrNull()
             val msg = obj?.get("error")?.jsonPrimitive?.content
             val clave = obj?.get("codigo")?.jsonPrimitive?.content
-            if (r.status.value == 401 || clave == "en_revision" || clave == "suspendida") alPerderSesion(clave ?: "sin_sesion")
-            throw MercadoError(msg ?: "Algo salió mal (${r.status.value}). Intenta de nuevo.", r.status.value, clave)
+            if (status == 401 || clave == "en_revision" || clave == "suspendida") alPerderSesion(clave ?: "sin_sesion")
+            throw MercadoError(msg ?: "Algo salió mal ($status). Intenta de nuevo.", status, clave)
         }
         return texto
     }
 
     suspend fun llamar(metodo: HttpMethod, ruta: String, cuerpo: String? = null): String {
+        if (enDemo) demo.atender(metodo.value, ruta, cuerpo, token).let { return revisarTexto(it.status, it.cuerpo) }
         val r = try {
             http.request(base + "/api" + ruta) {
                 method = metodo
@@ -232,6 +242,7 @@ class MercadoApi(base: String) {
     private var bytesEnCache = 0L
     suspend fun bajar(ruta: String): ByteArray {
         candado.withLock { cache[ruta]?.let { return it } }
+        if (enDemo) return demo.foto(ruta) ?: throw MercadoError("No disponible en el modo demo", 404)
         val r = try {
             http.request(base + ruta) {
                 method = HttpMethod.Get
@@ -347,6 +358,7 @@ class MercadoApi(base: String) {
 
     // ---- subidas (multipart) ----
     private suspend fun subirTexto(ruta: String, campo: String, nombre: String, tipo: String, datos: ByteArray, extra: Map<String, String>): String {
+        if (enDemo) demo.subirFoto(ruta, datos, extra["alt"].orEmpty(), token).let { return revisarTexto(it.status, it.cuerpo) }
         val r = try {
             http.submitFormWithBinaryData(base + "/api" + ruta, formData {
                 extra.forEach { (k, v) -> append(k, v) }

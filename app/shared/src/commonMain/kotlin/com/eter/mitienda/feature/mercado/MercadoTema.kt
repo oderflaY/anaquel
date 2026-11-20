@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.datetime.toLocalDateTime
 
 /**
- * Tokens de diseño del mercado: los mismos de la web (web/src/mercado/tokens.css)
- * para que app y web se vean como un solo producto. Paleta cálida y local:
- * verde Anaquel, terracota y arena. Todos los pares texto/fondo cumplen AA.
+ * Tokens de diseño del mercado: los mismos de la app Anaquel (core/designsystem/theme),
+ * para que las dos se vean como un solo producto. Fondo gris verdoso, tarjetas blancas,
+ * verde de la marca y un naranja para lo patrocinado. Todos los pares texto/fondo cumplen AA.
  */
 @Immutable
 data class ColoresMercado(
@@ -33,14 +33,14 @@ data class ColoresMercado(
 )
 
 val ColoresClaros = ColoresMercado(
-    marca = Color(0xFF0E7C5A), marcaSuave = Color(0xFFEBF6F0), sobreMarca = Color.White,
-    acento = Color(0xFFA3461F), acentoSuave = Color(0xFFFBE9DF),
-    fondo = Color(0xFFF7F4EF), superficie = Color.White, superficie2 = Color(0xFFF1ECE4),
-    borde = Color(0xFFE6DFD4), bordeFuerte = Color(0xFFCDC3B4),
-    texto = Color(0xFF22201C), texto2 = Color(0xFF5C564D), texto3 = Color(0xFF6E675D),
-    exito = Color(0xFF13795B), exitoSuave = Color(0xFFE1F3EA), aviso = Color(0xFF8F5D00), avisoSuave = Color(0xFFFBF0D9),
-    error = Color(0xFFB42318), errorSuave = Color(0xFFFDE8E6), info = Color(0xFF2D6A7A), infoSuave = Color(0xFFE3F0F3),
-    esqueleto = Color(0xFFEBE5DC), esqueletoBrillo = Color(0xFFF5F1EB),
+    marca = Color(0xFF0E7C5A), marcaSuave = Color(0xFFDFF3EA), sobreMarca = Color.White,
+    acento = Color(0xFFC2410C), acentoSuave = Color(0xFFFFEDD5),
+    fondo = Color(0xFFF2F5F3), superficie = Color.White, superficie2 = Color(0xFFEAEFEC),
+    borde = Color(0xFFE3E9E6), bordeFuerte = Color(0xFFD5DDD8),
+    texto = Color(0xFF17251F), texto2 = Color(0xFF5F6F68), texto3 = Color(0xFF66766F),
+    exito = Color(0xFF0A5F45), exitoSuave = Color(0xFFDFF3EA), aviso = Color(0xFF8F5D00), avisoSuave = Color(0xFFFDF1D6),
+    error = Color(0xFFC53030), errorSuave = Color(0xFFFED7D7), info = Color(0xFF2F5DA8), infoSuave = Color(0xFFE3ECF9),
+    esqueleto = Color(0xFFE4E9E6), esqueletoBrillo = Color(0xFFF8FAF9),
 )
 
 val ColoresOscuros = ColoresMercado(
@@ -57,7 +57,7 @@ val ColoresOscuros = ColoresMercado(
 /** Espaciado (base 4), bordes y tamaños: un solo lugar para toda la app. */
 object E {
     val x1 = 4.dp; val x2 = 8.dp; val x3 = 12.dp; val x4 = 16.dp; val x6 = 24.dp; val x8 = 32.dp; val x12 = 48.dp
-    val radioControl = 12.dp; val radioCard = 16.dp; val radioModal = 20.dp
+    val radioControl = 14.dp; val radioCard = 18.dp; val radioModal = 28.dp
     val tactil = 48.dp // objetivo táctil mínimo en Android
 }
 
@@ -69,15 +69,15 @@ object M {
 
 private val familia = FontFamily.SansSerif
 val TipografiaMercado = Typography(
-    headlineMedium = TextStyle(fontFamily = familia, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = (-0.3).sp),
-    titleLarge = TextStyle(fontFamily = familia, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 26.sp),
-    titleMedium = TextStyle(fontFamily = familia, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 22.sp),
+    headlineMedium = TextStyle(fontFamily = familia, fontWeight = FontWeight.Black, fontSize = 26.sp, lineHeight = 31.sp, letterSpacing = (-0.4).sp),
+    titleLarge = TextStyle(fontFamily = familia, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.2).sp),
+    titleMedium = TextStyle(fontFamily = familia, fontWeight = FontWeight.Bold, fontSize = 16.sp, lineHeight = 22.sp),
     bodyLarge = TextStyle(fontFamily = familia, fontSize = 16.sp, lineHeight = 24.sp),
     bodyMedium = TextStyle(fontFamily = familia, fontSize = 14.sp, lineHeight = 20.sp),
     bodySmall = TextStyle(fontFamily = familia, fontSize = 12.sp, lineHeight = 16.sp),
-    labelLarge = TextStyle(fontFamily = familia, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp),
-    labelMedium = TextStyle(fontFamily = familia, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 18.sp),
-    labelSmall = TextStyle(fontFamily = familia, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp),
+    labelLarge = TextStyle(fontFamily = familia, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, lineHeight = 20.sp),
+    labelMedium = TextStyle(fontFamily = familia, fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 18.sp),
+    labelSmall = TextStyle(fontFamily = familia, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 16.sp),
 )
 
 /**

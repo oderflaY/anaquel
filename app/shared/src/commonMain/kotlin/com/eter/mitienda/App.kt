@@ -120,6 +120,11 @@ private fun encodeQueryValue(value: String): String = buildString {
  */
 @Composable
 fun App(container: AppContainer) {
+    // «Anaquel Mercado» es la app de los clientes: abre directo en el mercado.
+    if (com.eter.mitienda.feature.mercado.SOLO_COMPRAS) {
+        com.eter.mitienda.feature.mercado.MercadoApp(container.mercado)
+        return
+    }
     val repository = container.productRepository
 
     // Al abrir la app se reprograman los avisos de pedidos (cubre reinstalaciones y relojes cambiados).

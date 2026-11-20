@@ -2,4 +2,6 @@
 <paths>
     <!-- Solo la carpeta temporal de la foto cruda de la cámara (cacheDir/camera). -->
     <cache-path name="camera" path="camera/" />
+    <!-- APK de una actualización, para pasárselo al instalador del sistema. -->
+    <cache-path name="actualizacion" path="actualizacion/" />
 </paths>

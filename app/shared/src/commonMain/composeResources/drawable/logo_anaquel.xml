@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo de Anaquel (el mismo de web/public/favicon.svg): anaqueles con productos. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="64dp" android:viewportWidth="64" android:viewportHeight="64">
+    <path android:pathData="M14,0 H50 A14,14 0 0 1 64,14 V50 A14,14 0 0 1 50,64 H14 A14,14 0 0 1 0,50 V14 A14,14 0 0 1 14,0 Z" android:fillColor="#FF0E7C5A" />
+    <path android:pathData="M12,22h40M12,38h40M12,54h40" android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineCap="round" />
+    <path android:pathData="M17.5,10 H22.5 A1.5,1.5 0 0 1 24,11.5 V18.5 A1.5,1.5 0 0 1 22.5,20 H17.5 A1.5,1.5 0 0 1 16,18.5 V11.5 A1.5,1.5 0 0 1 17.5,10 Z" android:fillColor="#FFF2B233" />
+    <path android:pathData="M28.5,12 H33.5 A1.5,1.5 0 0 1 35,13.5 V18.5 A1.5,1.5 0 0 1 33.5,20 H28.5 A1.5,1.5 0 0 1 27,18.5 V13.5 A1.5,1.5 0 0 1 28.5,12 Z" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M41.5,26 H46.5 A1.5,1.5 0 0 1 48,27.5 V34.5 A1.5,1.5 0 0 1 46.5,36 H41.5 A1.5,1.5 0 0 1 40,34.5 V27.5 A1.5,1.5 0 0 1 41.5,26 Z" android:fillColor="#FFF2B233" />
+    <path android:pathData="M17.5,27 H22.5 A1.5,1.5 0 0 1 24,28.5 V34.5 A1.5,1.5 0 0 1 22.5,36 H17.5 A1.5,1.5 0 0 1 16,34.5 V28.5 A1.5,1.5 0 0 1 17.5,27 Z" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M31.5,43 H36.5 A1.5,1.5 0 0 1 38,44.5 V50.5 A1.5,1.5 0 0 1 36.5,52 H31.5 A1.5,1.5 0 0 1 30,50.5 V44.5 A1.5,1.5 0 0 1 31.5,43 Z" android:fillColor="#FFFFFFFF" />
+</vector>

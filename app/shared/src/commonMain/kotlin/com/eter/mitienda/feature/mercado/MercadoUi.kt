@@ -76,7 +76,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.shadow
 import org.jetbrains.compose.resources.decodeToImageBitmap
+
+/** Sombra suave de las tarjetas (la misma de Anaquel). */
+val SombraSuave = Color(0x330B3D2E)
 
 // ===================== Íconos (mismos trazos que la web) =====================
 
@@ -117,6 +122,7 @@ private val trazos = mapOf(
     "casa" to "M3 11 12 4l9 7M5 9.5V20h5v-5h4v5h5V9.5",
     "herramienta" to "M14.5 6.5a4 4 0 0 1 5-5L17 4l.5 2.5L20 7l2.5-2.5a4 4 0 0 1-5 5L8 19a2.1 2.1 0 0 1-3-3l9.5-9.5Z",
     "todo" to "M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z",
+    "descargar" to "M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14",
 )
 
 private val iconosCache = HashMap<String, ImageVector>()
@@ -162,21 +168,24 @@ fun Boton(
         Variante.Peligro -> Triple(c.superficie, c.error, c.error.copy(alpha = .45f))
     }
     val interaccion = remember { MutableInteractionSource() }
-    val presionado by interaccion.collectIsPressedAsState()
+    val forma = RoundedCornerShape(16.dp)
+    val primario = variante == Variante.Primario
     Surface(
         onClick = onClick, enabled = activo, interactionSource = interaccion,
-        shape = RoundedCornerShape(E.radioControl), color = fondo, contentColor = frente,
-        border = borde?.let { BorderStroke(1.dp, it) },
+        shape = forma, color = if (primario) Color.Transparent else fondo, contentColor = frente,
+        border = borde?.let { BorderStroke(1.dp, if (variante == Variante.Secundario) c.borde else it) },
         modifier = modifier
-            .heightIn(min = if (chico) 40.dp else E.tactil)
-            .scale(if (presionado) .98f else 1f)
+            .rebote(interaccion, 0.95f)
+            .then(if (primario && activo) Modifier.shadow(8.dp, forma, spotColor = c.marca) else Modifier)
+            .heightIn(min = if (chico) 42.dp else 54.dp)
             .semantics {
                 if (cargando) stateDescription = "Cargando"
-            }
-            .then(if (!activo) Modifier.background(Color.Transparent) else Modifier),
+            },
     ) {
         Row(
-            Modifier.padding(horizontal = if (chico) E.x3 else E.x4).heightIn(min = if (chico) 40.dp else E.tactil).let { if (!activo) it.background(Color.Transparent) else it },
+            Modifier
+                .then(if (primario) Modifier.background(Brush.horizontalGradient(listOf(VerdeClaro, c.marca)), forma).let { if (!activo) it.background(Color.White.copy(alpha = .45f), forma) else it } else Modifier)
+                .padding(horizontal = if (chico) E.x3 else E.x4).heightIn(min = if (chico) 42.dp else 54.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
         ) {
             val alfa = if (activo || cargando) 1f else .5f
@@ -216,7 +225,7 @@ fun Campo(
             trailingIcon = if (contrasena) {
                 { BotonIcono(if (ver) "Ocultar contraseña" else "Mostrar contraseña", if (ver) "ojoNo" else "ojo", { ver = !ver }) }
             } else null,
-            shape = RoundedCornerShape(E.radioControl),
+            shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = c.marca, unfocusedBorderColor = c.bordeFuerte, errorBorderColor = c.error,
                 focusedLabelColor = c.marca, cursorColor = c.marca, focusedContainerColor = c.superficie, unfocusedContainerColor = c.superficie,
@@ -236,7 +245,8 @@ fun Campo(
 
 @Composable
 fun Tarjeta(modifier: Modifier = Modifier, padding: Dp = E.x4, contenido: @Composable () -> Unit) {
-    Surface(shape = RoundedCornerShape(E.radioCard), color = M.c.superficie, border = BorderStroke(1.dp, M.c.borde), modifier = modifier) {
+    Surface(shape = RoundedCornerShape(E.radioCard), color = M.c.superficie, border = BorderStroke(1.dp, M.c.borde),
+        modifier = modifier.shadow(6.dp, RoundedCornerShape(E.radioCard), ambientColor = SombraSuave, spotColor = SombraSuave)) {
         Column(Modifier.padding(padding), verticalArrangement = Arrangement.spacedBy(E.x3)) { contenido() }
     }
 }
@@ -270,11 +280,12 @@ fun Insignia(texto: String, tono: String = "neutro", modifier: Modifier = Modifi
 @Composable
 fun Chip(texto: String, seleccionado: Boolean, onClick: () -> Unit, icono: String? = null) {
     val c = M.c
+    val fuente = remember { MutableInteractionSource() }
     Surface(
-        onClick = onClick, shape = CircleShape,
-        color = if (seleccionado) c.texto else c.superficie, contentColor = if (seleccionado) c.superficie else c.texto2,
-        border = BorderStroke(1.dp, if (seleccionado) c.texto else c.borde),
-        modifier = Modifier.heightIn(min = 40.dp).semantics {
+        onClick = onClick, shape = CircleShape, interactionSource = fuente,
+        color = if (seleccionado) c.marca else c.superficie, contentColor = if (seleccionado) Color.White else c.texto2,
+        border = BorderStroke(1.dp, if (seleccionado) c.marca else c.borde),
+        modifier = Modifier.rebote(fuente, 0.93f).heightIn(min = 40.dp).semantics {
             stateDescription = if (seleccionado) "Seleccionado" else "No seleccionado"
             role = Role.Button
         },
@@ -307,10 +318,7 @@ fun Alerta(texto: String, tipo: String = "info", modifier: Modifier = Modifier) 
 
 @Composable
 fun Avatar(nombre: String, tam: Dp = 44.dp) {
-    Box(Modifier.size(tam).clip(CircleShape).background(M.c.acentoSuave).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
-        Text(iniciales(nombre).ifEmpty { "·" }, color = M.c.acento, fontWeight = FontWeight.Bold,
-            style = if (tam > 50.dp) MaterialTheme.typography.titleLarge else MaterialTheme.typography.labelMedium)
-    }
+    AvatarMarca(nombre, tam)
 }
 
 // ===================== Carga con esqueleto =====================
@@ -372,8 +380,8 @@ fun EsqueletoRenglones(n: Int = 4) {
 fun EstadoVacio(titulo: String, texto: String? = null, icono: String = "info", accion: (@Composable () -> Unit)? = null) {
     Column(Modifier.fillMaxWidth().padding(vertical = E.x12, horizontal = E.x4), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(E.x3)) {
-        Box(Modifier.size(64.dp).clip(CircleShape).background(M.c.superficie2), contentAlignment = Alignment.Center) {
-            Icon(icono(icono), null, Modifier.size(28.dp), tint = M.c.texto2)
+        Box(Modifier.size(68.dp).pop().clip(RoundedCornerShape(22.dp)).background(M.c.marcaSuave), contentAlignment = Alignment.Center) {
+            Icon(icono(icono), null, Modifier.size(30.dp), tint = M.c.marca)
         }
         Text(titulo, style = MaterialTheme.typography.titleLarge, color = M.c.texto, textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
         if (texto != null) Text(texto, style = MaterialTheme.typography.bodyMedium, color = M.c.texto2, textAlign = TextAlign.Center)
@@ -451,10 +459,12 @@ fun InsigniaExistencias(p: Publicacion, modifier: Modifier = Modifier) {
 fun TarjetaProducto(api: MercadoApi, p: Publicacion, onClick: () -> Unit, modifier: Modifier = Modifier, patrocinado: Boolean = false) {
     val c = M.c
     val lugar = p.distanciaKm?.let { d -> "${p.vendedor.colonia} · " + if (d < 1) "a menos de 1 km" else "a ${d} km" } ?: p.vendedor.colonia
+    val fuente = remember { MutableInteractionSource() }
     Surface(
-        onClick = onClick, shape = RoundedCornerShape(E.radioCard), color = c.superficie,
+        onClick = onClick, shape = RoundedCornerShape(E.radioCard), color = c.superficie, interactionSource = fuente,
         border = BorderStroke(1.dp, if (patrocinado) c.acento.copy(alpha = .35f) else c.borde),
-        modifier = modifier.semantics(mergeDescendants = true) {
+        modifier = modifier.rebote(fuente, 0.96f).shadow(6.dp, RoundedCornerShape(E.radioCard), ambientColor = SombraSuave, spotColor = SombraSuave)
+            .semantics(mergeDescendants = true) {
             contentDescription = (if (patrocinado) "Patrocinado. " else "") + "${p.titulo}, ${pesos(p.precioC)} por ${unidad(p.unidad)}, ${p.vendedor.nombre}, $lugar"
         },
     ) {
@@ -462,11 +472,12 @@ fun TarjetaProducto(api: MercadoApi, p: Publicacion, onClick: () -> Unit, modifi
             Box {
                 ImagenMercado(api, p.foto, p.categoria, Modifier.fillMaxWidth().aspectRatio(1f), conAlt = false)
                 InsigniaExistencias(p, Modifier.padding(E.x2))
+                if (patrocinado) Text("Patrocinado", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(E.x2).background(c.acento, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp))
             }
             Column(Modifier.padding(E.x3), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (patrocinado) Text("Patrocinado", style = MaterialTheme.typography.labelSmall, color = c.acento)
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(pesos(p.precioC), style = MaterialTheme.typography.titleLarge, color = c.texto)
+                    Text(pesos(p.precioC), fontSize = 20.sp, fontWeight = FontWeight.Black, color = c.texto)
                     Text(" / ${unidad(p.unidad)}", style = MaterialTheme.typography.bodySmall, color = c.texto3)
                 }
                 Text(p.titulo, style = MaterialTheme.typography.bodyMedium, color = c.texto, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis)
@@ -485,7 +496,7 @@ fun Separador() { Box(Modifier.fillMaxWidth().height(1.dp).background(M.c.borde)
 fun BarraAtras(titulo: String, onAtras: () -> Unit, acciones: @Composable () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(horizontal = E.x1, vertical = E.x1), verticalAlignment = Alignment.CenterVertically) {
         BotonIcono("Atrás", "atras", onAtras, tinte = M.c.texto)
-        Text(titulo, style = MaterialTheme.typography.titleMedium, color = M.c.texto, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        Text(titulo, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = M.c.texto, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).semantics { heading() })
         acciones()
     }
@@ -512,19 +523,22 @@ fun Borde(modifier: Modifier = Modifier) = Box(modifier.border(1.dp, M.c.borde, 
 fun BannerPatrocinado(api: MercadoApi, b: Patrocinado, onClick: () -> Unit) {
     val c = M.c
     val p = b.publicacion
+    val fuente = remember { MutableInteractionSource() }
     Surface(
-        onClick = onClick, shape = RoundedCornerShape(E.radioCard), color = c.acentoSuave,
-        border = BorderStroke(1.dp, c.acento.copy(alpha = .25f)),
-        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+        onClick = onClick, shape = RoundedCornerShape(20.dp), color = Color.Transparent, interactionSource = fuente,
+        modifier = Modifier.fillMaxWidth().entrada().rebote(fuente, 0.97f).shadow(10.dp, RoundedCornerShape(20.dp), spotColor = c.marca)
+            .background(Brush.linearGradient(listOf(c.marca, VerdeOscuro)), RoundedCornerShape(20.dp)).semantics(mergeDescendants = true) {
             contentDescription = "Anuncio patrocinado de ${p.vendedor.nombre}: ${b.mensaje.ifBlank { p.titulo }}. ${p.titulo}, ${pesos(p.precioC)}"
         },
     ) {
         Row(Modifier.padding(E.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(E.x3)) {
             ImagenMercado(api, p.foto, p.categoria, Modifier.size(88.dp).clip(RoundedCornerShape(E.radioControl)), conAlt = false)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Patrocinado · ${p.vendedor.nombre}", style = MaterialTheme.typography.labelSmall, color = c.acento, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(b.mensaje.ifBlank { p.titulo }, style = MaterialTheme.typography.titleMedium, color = c.texto, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("${p.titulo} · ${pesos(p.precioC)} / ${unidad(p.unidad)}", style = MaterialTheme.typography.bodySmall, color = c.texto3, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("PATROCINADO · ${p.vendedor.nombre.uppercase()}", fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp,
+                    color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.background(Color.White.copy(alpha = .18f), CircleShape).padding(horizontal = 8.dp, vertical = 2.dp))
+                Text(b.mensaje.ifBlank { p.titulo }, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 21.sp)
+                Text("${p.titulo} · ${pesos(p.precioC)} / ${unidad(p.unidad)}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .85f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

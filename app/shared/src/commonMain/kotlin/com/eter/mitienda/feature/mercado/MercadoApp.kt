@@ -34,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +57,9 @@ class MercadoSesion(val api: MercadoApi, private val almacen: AlmacenSeguro) {
     init {
         almacen.leer("servidor")?.let { api.base = it }
         api.token = almacen.leer("token")
+        // v2: los productos de ejemplo ya traen foto (el estado guardado antes no las tenía).
+        api.guardarDemo = { almacen.guardar("demo_estado_v2", it) }
+        api.leerDemo = { almacen.leer("demo_estado_v2") }
         api.alPerderSesion = { clave ->
             if (clave == "sin_sesion") cerrarLocal() else cuenta = cuenta?.copy(estado = if (clave == "suspendida") "suspendida" else "pendiente")
         }
@@ -139,6 +143,8 @@ fun MercadoApp(sesion: MercadoSesion) {
     val alcance = rememberCoroutineScope()
     val avisar: (String, Boolean) -> Unit = { t, _ -> alcance.launch { snack.showSnackbar(t) } }
     LaunchedEffect(Unit) { if (!sesion.revisada) sesion.restaurar() }
+    // Cada vez que se abre la app: ¿hay una versión nueva en los releases del repo?
+    LaunchedEffect(Unit) { Actualizaciones.revisar(alAbrir = true) }
 
     MercadoTema {
         CompositionLocalProvider(LocalAvisar provides avisar) {
@@ -150,6 +156,7 @@ fun MercadoApp(sesion: MercadoSesion) {
                     !cuenta.verificada -> Revision(cuenta) { alcance.launch { sesion.salir() } }
                     else -> Principal(sesion, cuenta)
                 }
+                VentanaActualizacion()
                 SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(E.x4)) { d ->
                     Snackbar(d, containerColor = M.c.texto, contentColor = M.c.superficie, shape = androidx.compose.foundation.shape.RoundedCornerShape(E.radioControl))
                 }
@@ -162,7 +169,7 @@ fun MercadoApp(sesion: MercadoSesion) {
 private fun CargandoInicio() {
     Cargando("Abriendo el mercado…") {
         Column(Modifier.fillMaxSize().padding(E.x4), verticalArrangement = Arrangement.spacedBy(E.x4)) {
-            Esqueleto(Modifier.fillMaxWidth(.6f).height(28.dp))
+            MarcaAnaquel(Modifier.latido(0.03f))
             Esqueleto(Modifier.fillMaxWidth().height(48.dp), androidx.compose.foundation.shape.CircleShape)
             Row(horizontalArrangement = Arrangement.spacedBy(E.x3)) {
                 EsqueletoProducto(Modifier.weight(1f)); EsqueletoProducto(Modifier.weight(1f))
@@ -177,17 +184,28 @@ private fun Principal(sesion: MercadoSesion, cuenta: Cuenta) {
     val ir = remember(nav) { Ir(nav) }
     val api = sesion.api
     val ruta = nav.currentBackStackEntryAsState().value?.destination?.route ?: Rutas.EXPLORAR
-    val pestanas = buildList {
-        add(Triple("Explorar", "tienda", Rutas.EXPLORAR))
-        add(Triple("Reels", "video", Rutas.REELS))
-        add(Triple("Órdenes", "recibo", Rutas.ORDENES))
-        if (cuenta.vende) add(Triple("Vender", "etiqueta", Rutas.VENDER))
+    val vende = cuenta.vende && !SOLO_COMPRAS
+    val principales = buildList {
+        add(Rutas.EXPLORAR); add(Rutas.REELS); add(Rutas.ORDENES); add(Rutas.CUENTA)
+        if (vende) add(Rutas.VENDER)
     }
-    val principal = pestanas.indexOfFirst { it.third == ruta }
+    val principal = ruta in principales
     val avisar = LocalAvisar.current
+    var hoja by remember { mutableStateOf(false) }
+    // Compras que esperan pago: globo en la pestaña «Compras».
+    var porPagar by remember { mutableStateOf(0) }
+    LaunchedEffect(ruta) { runCatching { api.ordenes(false) }.onSuccess { l -> porPagar = l.count { it.estado == "pendiente" || it.estado == "por_cobrar" } } }
+    val categorias = rememberConsulta { api.categorias() }
+    fun irPestana(r: String) {
+        if (r == ruta) return
+        nav.navigate(when (r) { Rutas.EXPLORAR -> Rutas.explorar(); Rutas.ORDENES -> Rutas.ordenes(); Rutas.VENDER -> Rutas.vender(); else -> r }) {
+            popUpTo(nav.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true; restoreState = true
+        }
+    }
 
     // «Pago recibido»: el registro de cobros del sistema de pagos se revisa cada 10 s.
-    if (cuenta.vende) LaunchedEffect(cuenta.id) {
+    if (vende) LaunchedEffect(cuenta.id) {
         var ultimo: Long? = null
         while (true) {
             runCatching { api.registros(ultimo?.takeIf { it > 0 }) }.onSuccess { r ->
@@ -201,36 +219,7 @@ private fun Principal(sesion: MercadoSesion, cuenta: Cuenta) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        if (principal >= 0) {
-            Row(Modifier.fillMaxWidth().padding(start = E.x4, end = E.x2, top = E.x2), verticalAlignment = Alignment.CenterVertically) {
-                Text("Anaquel ", style = MaterialTheme.typography.titleLarge, color = M.c.texto)
-                Text("Mercado", style = MaterialTheme.typography.titleLarge, color = M.c.acento, modifier = Modifier.weight(1f))
-                Surface(onClick = { ir.cuenta() }, shape = androidx.compose.foundation.shape.CircleShape, color = M.c.fondo,
-                    modifier = Modifier.semantics { contentDescription = "Mi cuenta: ${cuenta.nombre}" }) {
-                    Box(Modifier.padding(2.dp)) { Avatar(cuenta.nombre, 40.dp) }
-                }
-            }
-            SecondaryScrollableTabRow(
-                selectedTabIndex = principal, containerColor = M.c.fondo, contentColor = M.c.marca, edgePadding = E.x2,
-                indicator = { TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(principal), height = 3.dp, color = M.c.marca) },
-                divider = { Separador() },
-            ) {
-                pestanas.forEachIndexed { i, (txt, ic, r) ->
-                    Tab(
-                        selected = i == principal,
-                        onClick = {
-                            if (i != principal) nav.navigate(when (r) { Rutas.EXPLORAR -> Rutas.explorar(); Rutas.ORDENES -> Rutas.ordenes(); Rutas.VENDER -> Rutas.vender(); else -> r }) {
-                                popUpTo(nav.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true; restoreState = true
-                            }
-                        },
-                        selectedContentColor = M.c.marca, unselectedContentColor = M.c.texto2,
-                        text = { Text(txt, fontWeight = if (i == principal) FontWeight.Bold else FontWeight.SemiBold) },
-                        icon = { Icon(icono(ic), null, Modifier.size(20.dp)) },
-                    )
-                }
-            }
-        }
+        if (principal && ruta != Rutas.REELS) EncabezadoMercado(cuenta, api.enDemo) { irPestana(Rutas.EXPLORAR) }
         NavHost(nav, startDestination = Rutas.EXPLORAR, modifier = Modifier.weight(1f)) {
             composable(Rutas.EXPLORAR, arguments = listOf(
                 navArgument("q") { type = NavType.StringType; defaultValue = "" },
@@ -259,6 +248,40 @@ private fun Principal(sesion: MercadoSesion, cuenta: Cuenta) {
             }
             composable(Rutas.TERMINAL) { TerminalVirtual(api, ir) }
             composable(Rutas.CUENTA) { PaginaCuenta(sesion, ir) }
+        }
+        if (principal) BarraMercado(
+            izquierda = listOf(PestanaMercado(Rutas.EXPLORAR, "Inicio", "casa"), PestanaMercado(Rutas.REELS, "Reels", "video")),
+            derecha = listOf(PestanaMercado(Rutas.ORDENES, "Compras", "recibo", porPagar), PestanaMercado(Rutas.CUENTA, "Cuenta", "usuario", if (Actualizaciones.disponible != null) 1 else 0)),
+            activa = ruta, onElegir = ::irPestana, onMas = { hoja = true },
+        )
+    }
+    if (hoja) HojaAccesos(
+        listOf(
+            GrupoAtajos("Comprar", listOf(
+                Atajo("buscar", "buscar", Color(0xFF2F80ED), "Buscar producto"),
+                Atajo("reels", "video", Color(0xFF8E44AD), "Ver reels"),
+                Atajo("todo", "tienda", Color(0xFF0E7C5A), "Todo el mercado"),
+            )),
+            GrupoAtajos("Categorías", categorias.datos.orEmpty().map { c ->
+                Atajo("cat:" + c.clave, ICONO_CATEGORIA[c.clave] ?: c.icono, TONOS[c.clave] ?: TONOS.getValue("otros"), c.nombre)
+            }),
+            GrupoAtajos("Mis compras", listOf(
+                Atajo("compras", "recibo", Color(0xFFE0871B), "Por pagar", porPagar),
+                Atajo("cuenta", "usuario", Color(0xFF3F51B5), "Mi cuenta"),
+                Atajo("invitar", "invitar", Color(0xFF00897B), "Invitar negocio"),
+                Atajo("actualizar", "descargar", Color(0xFF2F5DA8), "Actualizar app", if (Actualizaciones.disponible != null) 1 else 0),
+            )),
+        ),
+        onCerrar = { hoja = false },
+    ) { id ->
+        hoja = false
+        when {
+            id.startsWith("cat:") -> ir.explorar(categoria = id.removePrefix("cat:"))
+            id == "buscar" || id == "todo" -> ir.explorar()
+            id == "reels" -> irPestana(Rutas.REELS)
+            id == "compras" -> irPestana(Rutas.ORDENES)
+            id == "actualizar" && Actualizaciones.disponible != null -> Actualizaciones.mostrarVentana = true
+            else -> irPestana(Rutas.CUENTA)
         }
     }
 }

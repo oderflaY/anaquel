@@ -3,6 +3,8 @@
 
     <!-- Anaquel: subir fotos del anaquel y pedidos al servidor. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Abrir el instalador con la versión nueva bajada de los releases del repo. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Escáner de códigos de barras (permiso en tiempo de ejecución). -->
     <uses-permission android:name="android.permission.CAMERA" />

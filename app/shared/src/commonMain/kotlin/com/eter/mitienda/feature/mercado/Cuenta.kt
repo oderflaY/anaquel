@@ -18,6 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -33,9 +34,13 @@ fun PaginaCuenta(sesion: MercadoSesion, ir: Ir) {
     val api = sesion.api
     val alcance = rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
-        BarraAtras("Mi cuenta", ir::atras)
+        if (SOLO_COMPRAS) TituloSeccion("usuario", Color(0xFF3F51B5), "Mi cuenta", "Tu negocio, tu acceso y tus invitaciones", Modifier.padding(horizontal = E.x4, vertical = E.x2))
+        else BarraAtras("Mi cuenta", ir::atras)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = E.x4).padding(bottom = E.x8), verticalArrangement = Arrangement.spacedBy(E.x4)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(E.x3)) {
+            if (SOLO_COMPRAS) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(E.x3)) {
+                Text(c.email, style = MaterialTheme.typography.bodyMedium, color = M.c.texto2, modifier = Modifier.weight(1f))
+                if (c.verificada) Insignia("Cuenta verificada", "exito") else Insignia("En revisión", "aviso")
+            } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(E.x3)) {
                 Avatar(c.nombre, 72.dp())
                 Column(verticalArrangement = Arrangement.spacedBy(E.x1)) {
                     Titulo(c.nombre, grande = false)
@@ -43,11 +48,13 @@ fun PaginaCuenta(sesion: MercadoSesion, ir: Ir) {
                     if (c.verificada) Insignia("Cuenta verificada", "exito") else Insignia("En revisión", "aviso")
                 }
             }
+            if (SOLO_COMPRAS) TarjetaActualizaciones()
             if (c.verificada) Invitaciones(api)
             Perfil(sesion)
             Contrasena(api)
             Sesiones(api)
             if (c.rol == "admin") Admin(api)
+            if (api.enDemo) CreditosFotos()
             Boton("Salir", { alcance.launch { sesion.salir() } }, Modifier.fillMaxWidth(), Variante.Secundario, icono = "salir")
         }
     }
@@ -199,6 +206,27 @@ private fun Admin(api: MercadoApi) {
                     }
                     Separador()
                 }
+            }
+        }
+    }
+}
+
+/** Créditos de las fotos de ejemplo (lo piden sus licencias). */
+@Composable
+private fun CreditosFotos() {
+    val q = rememberConsulta { creditosFotos() }
+    var abierto by remember { mutableStateOf(false) }
+    Tarjeta {
+        Fila {
+            Titulo("Créditos de las fotos", grande = false)
+            Boton(if (abierto) "Ocultar" else "Ver", { abierto = !abierto }, variante = Variante.Fantasma, chico = true)
+        }
+        Text("Fotos de ejemplo de Wikimedia Commons, con licencia libre.", style = MaterialTheme.typography.bodySmall, color = M.c.texto3)
+        if (abierto) q.datos.orEmpty().forEach { cr ->
+            Column {
+                Text(cr.producto, style = MaterialTheme.typography.labelMedium, color = M.c.texto)
+                Text("${cr.autor.take(70)} · ${cr.licencia}", style = MaterialTheme.typography.bodySmall, color = M.c.texto2)
+                Text(cr.fuente, style = MaterialTheme.typography.bodySmall, color = M.c.texto3)
             }
         }
     }

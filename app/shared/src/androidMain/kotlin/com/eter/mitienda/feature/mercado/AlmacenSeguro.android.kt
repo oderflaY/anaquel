@@ -18,7 +18,8 @@ object ContextoMercado {
 }
 
 /** El emulador de Android ve a la computadora como 10.0.2.2. */
-actual val SERVIDOR_MERCADO_DEFECTO: String = "http://10.0.2.2:8080/anaquel"
+// Esta compilación es la versión de demostración: funciona sola, sin servidor.
+actual val SERVIDOR_MERCADO_DEFECTO: String = SERVIDOR_DEMO
 
 /**
  * AES-256-GCM con una llave del Android Keystore (no exportable). En las

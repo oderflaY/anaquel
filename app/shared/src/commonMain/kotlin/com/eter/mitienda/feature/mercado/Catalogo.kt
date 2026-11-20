@@ -100,7 +100,12 @@ fun Explorar(api: MercadoApi, ir: Ir, q: String, categoria: String) {
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(E.x3)) {
-                Titulo(if (q.isNotBlank()) "Resultados para «$q»" else nombreCat ?: "Hecho y vendido en Durango")
+                TituloSeccion(
+                    if (q.isNotBlank()) "buscar" else ICONO_CATEGORIA[categoria] ?: "tienda",
+                    if (categoria.isBlank()) M.c.marca else TONOS[categoria] ?: M.c.marca,
+                    if (q.isNotBlank()) "Resultados" else nombreCat ?: "Mercado local",
+                    if (q.isNotBlank()) "Para «$q»" else "Surte tu tienda con negocios de Durango",
+                )
                 OutlinedTextField(
                     texto, { texto = it.take(80) }, singleLine = true,
                     placeholder = { Text("Buscar gorras, queso, fletes…", color = M.c.texto3) },
@@ -108,18 +113,13 @@ fun Explorar(api: MercadoApi, ir: Ir, q: String, categoria: String) {
                     trailingIcon = if (texto.isNotEmpty()) { { BotonIcono("Borrar búsqueda", "cerrar", { texto = "" }) } } else null,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { ir.explorar(texto, categoria) }),
-                    shape = CircleShape,
-                    colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = M.c.superficie2, focusedContainerColor = M.c.superficie,
-                        unfocusedBorderColor = M.c.superficie2, focusedBorderColor = M.c.marca),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = M.c.superficie, focusedContainerColor = M.c.superficie,
+                        unfocusedBorderColor = M.c.bordeFuerte, focusedBorderColor = M.c.marca),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Buscar productos o negocios" },
                 )
-                if (cats.cargando) Row(horizontalArrangement = Arrangement.spacedBy(E.x2)) { repeat(4) { Esqueleto(Modifier.width(96.dp).height(40.dp), CircleShape) } }
-                else LazyRow(horizontalArrangement = Arrangement.spacedBy(E.x2)) {
-                    item { Chip("Todo", categoria.isEmpty(), { ir.explorar(q, "") }, "todo") }
-                    items(cats.datos ?: emptyList()) { c ->
-                        Chip(c.nombre, categoria == c.clave, { ir.explorar(q, if (categoria == c.clave) "" else c.clave) }, ICONO_CATEGORIA[c.clave] ?: c.icono)
-                    }
-                }
+                if (cats.cargando) Row(horizontalArrangement = Arrangement.spacedBy(E.x2)) { repeat(4) { Esqueleto(Modifier.size(78.dp, 76.dp), RoundedCornerShape(18.dp)) } }
+                else BarraCategorias(cats.datos.orEmpty(), categoria) { ir.explorar(q, it) }
             }
         }
         when {

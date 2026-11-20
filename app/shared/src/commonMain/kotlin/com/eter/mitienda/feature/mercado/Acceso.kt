@@ -68,6 +68,10 @@ private fun Entrar(sesion: MercadoSesion, irRegistro: () -> Unit) {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(E.x4), verticalArrangement = Arrangement.spacedBy(E.x6)) {
         Column(verticalArrangement = Arrangement.spacedBy(E.x3)) {
+            MarcaAnaquel(Modifier.padding(bottom = E.x2), 56.dp)
+            Actualizaciones.disponible?.let { v ->
+                Boton("Actualizar a la versión ${v.version}", { Actualizaciones.mostrarVentana = true }, Modifier.fillMaxWidth(), Variante.Secundario, icono = "descargar")
+            }
             Insignia("Solo negocios de Durango", "acento")
             Titulo("Compra y vende cerca de ti, entre negocios de confianza")
             listOf("escudo" to "Cada cuenta se verifica antes de entrar.",
@@ -100,7 +104,7 @@ private fun Entrar(sesion: MercadoSesion, irRegistro: () -> Unit) {
             config.datos?.demo == true -> Tarjeta {
                 Titulo("Probar con un negocio de demostración", grande = false)
                 Text("Contraseña de todas: demo1234", style = MaterialTheme.typography.bodySmall, color = M.c.texto3)
-                config.datos!!.cuentasDemo.forEach { d ->
+                config.datos!!.cuentasDemo.filter { !SOLO_COMPRAS || it.email in TIENDAS_DEMO }.forEach { d ->
                     Surface(onClick = { entrar(d.email, "demo1234", d.email) }, enabled = ocupado == null, shape = androidx.compose.foundation.shape.RoundedCornerShape(E.radioControl),
                         color = M.c.superficie, border = androidx.compose.foundation.BorderStroke(1.dp, M.c.borde)) {
                         Row(Modifier.fillMaxWidth().padding(E.x2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(E.x3)) {
@@ -121,15 +125,21 @@ private fun Entrar(sesion: MercadoSesion, irRegistro: () -> Unit) {
             var url by remember { mutableStateOf(api.base) }
             Tarjeta {
                 Titulo("Servidor del mercado", grande = false)
-                Campo("Dirección", url, { url = it }, teclado = KeyboardType.Uri, ayuda = "Emulador: http://10.0.2.2:8080/anaquel · Celular: la IP de la computadora")
+                Campo("Dirección", url, { url = it }, teclado = KeyboardType.Uri, ayuda = "«demo»: funciona sin servidor · Emulador: http://10.0.2.2:8080/anaquel · Celular: la IP de la computadora")
                 Row(horizontalArrangement = Arrangement.spacedBy(E.x2)) {
                     Boton("Cancelar", { servidorAbierto = false }, variante = Variante.Secundario, chico = true)
                     Boton("Guardar", { sesion.cambiarServidor(url); servidorAbierto = false; vuelta++ }, chico = true,
-                        habilitado = url.startsWith("http://") || url.startsWith("https://"))
+                        habilitado = esDemo(url) || url.startsWith("http://") || url.startsWith("https://"))
                 }
             }
         } else {
-            Boton("Servidor: ${api.base}", { servidorAbierto = true }, Modifier.fillMaxWidth(), Variante.Fantasma, icono = "servidor", chico = true)
+            Boton(if (api.enDemo) "Modo demo: funciona sin servidor" else "Servidor: ${api.base}", { servidorAbierto = true },
+                Modifier.fillMaxWidth(), Variante.Fantasma, icono = "servidor", chico = true)
+            if (api.enDemo) {
+                val alcanceDemo = androidx.compose.runtime.rememberCoroutineScope()
+                Boton("Reiniciar datos del demo", { alcanceDemo.launch { api.reiniciarDemo(); vuelta++ } },
+                    Modifier.fillMaxWidth(), Variante.Fantasma, icono = "reloj", chico = true)
+            }
         }
     }
 }
@@ -262,3 +272,6 @@ fun Linea(pasos: List<Pair<String, String>>, detalles: List<String?> = emptyList
         }
     }
 }
+
+/** Cuentas de demostración que son tiendas pequeñas (la app de clientes solo muestra estas). */
+private val TIENDAS_DEMO = setOf("demo@anaquel.mx", "papeleria@anaquel.mx", "ropa@anaquel.mx")

@@ -1,0 +1,1971 @@
+{
+ "config": {
+  "cuentas_demo": [
+   {
+    "email": "demo@anaquel.mx",
+    "nombre": "Abarrotes Doña Lupita",
+    "que": "Tiendita: compra a mayoristas y vende lo suyo"
+   },
+   {
+    "email": "ropa@anaquel.mx",
+    "nombre": "Boutique Alondra",
+    "que": "Ropa: busca chamarras para el frío"
+   },
+   {
+    "email": "mayoreo@anaquel.mx",
+    "nombre": "Gorras El Tunal",
+    "que": "Mayoreo: 1,200 gorras a la venta"
+   },
+   {
+    "email": "textiles@anaquel.mx",
+    "nombre": "Textiles Guadiana",
+    "que": "Mayorista de ropa de invierno"
+   },
+   {
+    "email": "papeleria@anaquel.mx",
+    "nombre": "Papelería El Estudiante",
+    "que": "Papelería: busca 1,000 gorras"
+   },
+   {
+    "email": "abarrotes.mayoreo@anaquel.mx",
+    "nombre": "Abarrotes Mayoreo Guadiana",
+    "que": "Abarrotes por caja y bulto"
+   },
+   {
+    "email": "fletes@anaquel.mx",
+    "nombre": "Fletes Durango Express",
+    "que": "Servicio de fletes"
+   },
+   {
+    "email": "imprenta@anaquel.mx",
+    "nombre": "Imprenta Rápida Guadiana",
+    "que": "Imprenta y bordado"
+   },
+   {
+    "email": "revision@anaquel.mx",
+    "nombre": "Cremería La Nueva",
+    "que": "Cuenta en revisión (para ver el protocolo)"
+   },
+   {
+    "email": "admin@anaquel.mx",
+    "nombre": "Administración Anaquel",
+    "que": "Administra y verifica cuentas"
+   }
+  ],
+  "demo": true
+ },
+ "cuentas": [
+  {
+   "id": 1,
+   "nombre": "Abarrotes Doña Lupita",
+   "slug": "dona-lupita",
+   "email": "demo@anaquel.mx",
+   "telefono": "6181234567",
+   "giro": "abarrotes",
+   "descripcion": "Tiendita de la esquina desde 1998.",
+   "colonia": "Zona Centro",
+   "rol": "cliente",
+   "estado": "verificada",
+   "vende": true,
+   "demo": true,
+   "tienda_slug": "dona-lupita"
+  },
+  {
+   "id": 2,
+   "nombre": "Boutique Alondra",
+   "slug": "boutique-alondra",
+   "email": "ropa@anaquel.mx",
+   "telefono": "6182345678",
+   "giro": "ropa",
+   "descripcion": "Ropa de dama y caballero.",
+   "colonia": "Zona Centro",
+   "rol": "cliente",
+   "estado": "verificada",
+   "vende": true,
+   "demo": true,
+   "tienda_slug": "boutique-alondra"
+  },
+  {
+   "id": 3,
+   "nombre": "Gorras El Tunal",
+   "slug": "gorras-el-tunal",
+   "email": "mayoreo@anaquel.mx",
+   "telefono": "6183456789",
+   "giro": "mayoreo",
+   "descripcion": "Gorras y uniformes por mayoreo. 1,200 gorras listas.",
+   "colonia": "El Tunal",
+   "rol": "cliente",
+   "estado": "verificada",
+   "vende": true,
+   "demo": true,
+   "tienda_slug": "gorras-el-tunal"
+  },
+  {
+   "id": 4,
+   "nombre": "Textiles Guadiana",
+   "slug": "textiles-guadiana",
+   "email": "textiles@anaquel.mx",
+   "telefono": "6184567890",
+   "giro": "mayoreo",
+   "descripcion": "Mayorista de ropa de invierno.",
+   "colonia": "Zona Centro",
+   "rol": "cliente",
+   "estado": "verificada",
+   "vende": true,
+   "demo": true,
+   "tienda_slug": "textiles-guadiana"
+  },
+  {
+   "id": 5,
+   "nombre": "Papelería El Estudiante",
+   "slug": "papeleria-el-estudiante",
+   "email": "papeleria@anaquel.mx",
+   "telefono": "6185678901",
+   "giro": "papeleria",
+   "descripcion": "Papelería y regalos.",
+   "colonia": "Nueva Vizcaya",
+   "rol": "cliente",
+   "estado": "verificada",
+   "vende": true,
+   "demo": true,
+   "tienda_slug": "papeleria-el-estudiante"
+  },
+  {
+   "id": 6,
+   "nombre": "Abarrotes Mayoreo Guadiana",
+   "slug": "abarrotes-mayoreo-guadiana",
+   "email": "abarrotes.mayoreo@anaquel.mx",
+   "telefono": "6186789012",
+   "giro": "mayoreo",
+   "descripcion": "Abarrotes por caja y bulto.",
+   "colonia": "Carretera a Mazatlán",
+   "rol": "cliente",
+   "estado": "verificada",
+   "vende": true,
+   "demo": true,
+   "tienda_slug": "abarrotes-mayoreo-guadiana"
+  },
+  {
+   "id": 7,
+   "nombre": "Fletes Durango Express",
+   "slug": "fletes-durango-express",
+   "email": "fletes@anaquel.mx",
+   "telefono": "6187890123",
+   "giro": "servicios",
+   "descripcion": "Fletes y mudanzas en la ciudad.",
+   "colonia": "Valle del Sur",
+   "rol": "cliente",
+   "estado": "verificada",
+   "vende": true,
+   "demo": true,
+   "tienda_slug": "fletes-durango-express"
+  },
+  {
+   "id": 8,
+   "nombre": "Imprenta Rápida Guadiana",
+   "slug": "imprenta-rapida-guadiana",
+   "email": "imprenta@anaquel.mx",
+   "telefono": "6188901234",
+   "giro": "servicios",
+   "descripcion": "Impresión y bordado de logos.",
+   "colonia": "Zona Centro",
+   "rol": "cliente",
+   "estado": "verificada",
+   "vende": true,
+   "demo": true,
+   "tienda_slug": "imprenta-rapida-guadiana"
+  },
+  {
+   "id": 9,
+   "nombre": "Cremería La Nueva",
+   "slug": "cremeria-la-nueva",
+   "email": "revision@anaquel.mx",
+   "telefono": "6189012345",
+   "giro": "comida",
+   "descripcion": "Cuenta recién registrada.",
+   "colonia": "Jardines de Durango",
+   "rol": "cliente",
+   "estado": "pendiente",
+   "vende": false,
+   "demo": true,
+   "tienda_slug": null
+  },
+  {
+   "id": 10,
+   "nombre": "Administración Anaquel",
+   "slug": "admin-anaquel",
+   "email": "admin@anaquel.mx",
+   "telefono": "",
+   "giro": "otro",
+   "descripcion": "",
+   "colonia": "Zona Centro",
+   "rol": "admin",
+   "estado": "verificada",
+   "vende": false,
+   "demo": true,
+   "tienda_slug": null
+  }
+ ],
+ "rechazos": {},
+ "categorias": [
+  {
+   "clave": "abarrotes",
+   "nombre": "Abarrotes",
+   "icono": "canasta"
+  },
+  {
+   "clave": "hecho-en-durango",
+   "nombre": "Hecho en Durango",
+   "icono": "hoja"
+  },
+  {
+   "clave": "ropa",
+   "nombre": "Ropa y calzado",
+   "icono": "camisa"
+  },
+  {
+   "clave": "mayoreo",
+   "nombre": "Mayoreo",
+   "icono": "caja"
+  },
+  {
+   "clave": "papeleria",
+   "nombre": "Papelería",
+   "icono": "lapiz"
+  },
+  {
+   "clave": "hogar",
+   "nombre": "Hogar y ferretería",
+   "icono": "casa"
+  },
+  {
+   "clave": "servicios",
+   "nombre": "Servicios",
+   "icono": "herramienta"
+  },
+  {
+   "clave": "otros",
+   "nombre": "Otros",
+   "icono": "etiqueta"
+  }
+ ],
+ "planes": [
+  {
+   "clave": "basico",
+   "nombre": "Básico",
+   "precio_semana_c": 4900,
+   "banner": false,
+   "en_busquedas": false,
+   "descripcion": "Tu producto aparece como patrocinado en Explorar y en su categoría, en rotación con otros negocios."
+  },
+  {
+   "clave": "destacado",
+   "nombre": "Destacado",
+   "precio_semana_c": 9900,
+   "banner": false,
+   "en_busquedas": true,
+   "descripcion": "Prioridad sobre el plan Básico y aparece también en las búsquedas relacionadas."
+  },
+  {
+   "clave": "premium",
+   "nombre": "Premium",
+   "precio_semana_c": 19900,
+   "banner": true,
+   "en_busquedas": true,
+   "descripcion": "Banner de tu negocio arriba de Explorar, máxima prioridad y presencia en búsquedas."
+  }
+ ],
+ "proveedores": [
+  {
+   "clave": "simulador",
+   "nombre": "Terminal virtual (demo)"
+  }
+ ],
+ "publicaciones": [
+  {
+   "publicacion": {
+    "id": 22,
+    "titulo": "Tarjetas de presentación (millar)",
+    "descripcion": "Papel couché, a color por ambos lados.",
+    "categoria": "papeleria",
+    "precio_c": 45000,
+    "unidad": "paquete",
+    "existencias": null,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9021,
+     "url": "/demo/img/p21.jpg",
+     "alt": "Tarjetas de presentación (millar)",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Imprenta Rápida Guadiana",
+     "slug": "imprenta-rapida-guadiana",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "imprenta@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9021,
+      "url": "/demo/img/p21.jpg",
+      "alt": "Tarjetas de presentación (millar)",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Imprenta Rápida Guadiana",
+    "slug": "imprenta-rapida-guadiana",
+    "colonia": "Zona Centro",
+    "giro": "servicios",
+    "descripcion": "Impresión y bordado de logos.",
+    "tienda_slug": "imprenta-rapida-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 21,
+    "titulo": "Bordado de logo en gorra",
+    "descripcion": "Precio por pieza, desde 50 piezas.",
+    "categoria": "servicios",
+    "precio_c": 3500,
+    "unidad": "pieza",
+    "existencias": null,
+    "minimo": 50,
+    "estado": "activa",
+    "foto": {
+     "id": 9020,
+     "url": "/demo/img/p20.jpg",
+     "alt": "Bordado de logo en gorra",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Imprenta Rápida Guadiana",
+     "slug": "imprenta-rapida-guadiana",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "imprenta@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9020,
+      "url": "/demo/img/p20.jpg",
+      "alt": "Bordado de logo en gorra",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Imprenta Rápida Guadiana",
+    "slug": "imprenta-rapida-guadiana",
+    "colonia": "Zona Centro",
+    "giro": "servicios",
+    "descripcion": "Impresión y bordado de logos.",
+    "tienda_slug": "imprenta-rapida-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 20,
+    "titulo": "Mudanza pequeña con 2 ayudantes",
+    "descripcion": "Hasta 4 horas.",
+    "categoria": "servicios",
+    "precio_c": 150000,
+    "unidad": "servicio",
+    "existencias": null,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9019,
+     "url": "/demo/img/p19.jpg",
+     "alt": "Mudanza pequeña con 2 ayudantes",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Fletes Durango Express",
+     "slug": "fletes-durango-express",
+     "colonia": "Valle del Sur"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "fletes@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9019,
+      "url": "/demo/img/p19.jpg",
+      "alt": "Mudanza pequeña con 2 ayudantes",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Fletes Durango Express",
+    "slug": "fletes-durango-express",
+    "colonia": "Valle del Sur",
+    "giro": "servicios",
+    "descripcion": "Fletes y mudanzas en la ciudad.",
+    "tienda_slug": "fletes-durango-express"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 19,
+    "titulo": "Flete local en camioneta de 3.5 t",
+    "descripcion": "Dentro de la ciudad de Durango. Incluye chofer.",
+    "categoria": "servicios",
+    "precio_c": 65000,
+    "unidad": "servicio",
+    "existencias": null,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9018,
+     "url": "/demo/img/p18.jpg",
+     "alt": "Flete local en camioneta de 3.5 t",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Fletes Durango Express",
+     "slug": "fletes-durango-express",
+     "colonia": "Valle del Sur"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "fletes@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9018,
+      "url": "/demo/img/p18.jpg",
+      "alt": "Flete local en camioneta de 3.5 t",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Fletes Durango Express",
+    "slug": "fletes-durango-express",
+    "colonia": "Valle del Sur",
+    "giro": "servicios",
+    "descripcion": "Fletes y mudanzas en la ciudad.",
+    "tienda_slug": "fletes-durango-express"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 18,
+    "titulo": "Impresión a color",
+    "descripcion": "Por hoja tamaño carta.",
+    "categoria": "papeleria",
+    "precio_c": 500,
+    "unidad": "pieza",
+    "existencias": null,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9017,
+     "url": "/demo/img/p17.jpg",
+     "alt": "Impresión a color",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Papelería El Estudiante",
+     "slug": "papeleria-el-estudiante",
+     "colonia": "Nueva Vizcaya"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "papeleria@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9017,
+      "url": "/demo/img/p17.jpg",
+      "alt": "Impresión a color",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Papelería El Estudiante",
+    "slug": "papeleria-el-estudiante",
+    "colonia": "Nueva Vizcaya",
+    "giro": "papeleria",
+    "descripcion": "Papelería y regalos.",
+    "tienda_slug": "papeleria-el-estudiante"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 17,
+    "titulo": "Paquete escolar básico",
+    "descripcion": "Cuadernos, lápices, colores y regla.",
+    "categoria": "papeleria",
+    "precio_c": 14500,
+    "unidad": "paquete",
+    "existencias": 60,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9016,
+     "url": "/demo/img/p16.jpg",
+     "alt": "Paquete escolar básico",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Papelería El Estudiante",
+     "slug": "papeleria-el-estudiante",
+     "colonia": "Nueva Vizcaya"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "papeleria@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9016,
+      "url": "/demo/img/p16.jpg",
+      "alt": "Paquete escolar básico",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Papelería El Estudiante",
+    "slug": "papeleria-el-estudiante",
+    "colonia": "Nueva Vizcaya",
+    "giro": "papeleria",
+    "descripcion": "Papelería y regalos.",
+    "tienda_slug": "papeleria-el-estudiante"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 16,
+    "titulo": "Chamarra de mezclilla",
+    "descripcion": "Corte clásico, forro de borrega.",
+    "categoria": "ropa",
+    "precio_c": 52000,
+    "unidad": "pieza",
+    "existencias": 8,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9015,
+     "url": "/demo/img/p15.jpg",
+     "alt": "Chamarra de mezclilla",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Boutique Alondra",
+     "slug": "boutique-alondra",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "ropa@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9015,
+      "url": "/demo/img/p15.jpg",
+      "alt": "Chamarra de mezclilla",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Boutique Alondra",
+    "slug": "boutique-alondra",
+    "colonia": "Zona Centro",
+    "giro": "ropa",
+    "descripcion": "Ropa de dama y caballero.",
+    "tienda_slug": "boutique-alondra"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 15,
+    "titulo": "Vestido casual de temporada",
+    "descripcion": "Tallas CH, M y G.",
+    "categoria": "ropa",
+    "precio_c": 39000,
+    "unidad": "pieza",
+    "existencias": 15,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9014,
+     "url": "/demo/img/p14.jpg",
+     "alt": "Vestido casual de temporada",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Boutique Alondra",
+     "slug": "boutique-alondra",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "ropa@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9014,
+      "url": "/demo/img/p14.jpg",
+      "alt": "Vestido casual de temporada",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Boutique Alondra",
+    "slug": "boutique-alondra",
+    "colonia": "Zona Centro",
+    "giro": "ropa",
+    "descripcion": "Ropa de dama y caballero.",
+    "tienda_slug": "boutique-alondra"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 14,
+    "titulo": "Miel del Mezquital (500 g)",
+    "descripcion": "Miel cruda de mezquite, frasco de vidrio.",
+    "categoria": "hecho-en-durango",
+    "precio_c": 12000,
+    "unidad": "pieza",
+    "existencias": 18,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9013,
+     "url": "/demo/img/p13.jpg",
+     "alt": "Miel del Mezquital (500 g)",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Abarrotes Doña Lupita",
+     "slug": "dona-lupita",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "demo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9013,
+      "url": "/demo/img/p13.jpg",
+      "alt": "Miel del Mezquital (500 g)",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Abarrotes Doña Lupita",
+    "slug": "dona-lupita",
+    "colonia": "Zona Centro",
+    "giro": "abarrotes",
+    "descripcion": "Tiendita de la esquina desde 1998.",
+    "tienda_slug": "dona-lupita"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 13,
+    "titulo": "Huevo de rancho",
+    "descripcion": "De la Granja Los Álamos, Valle del Sur.",
+    "categoria": "hecho-en-durango",
+    "precio_c": 4800,
+    "unidad": "docena",
+    "existencias": 30,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9012,
+     "url": "/demo/img/p12.jpg",
+     "alt": "Huevo de rancho",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Abarrotes Doña Lupita",
+     "slug": "dona-lupita",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "demo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9012,
+      "url": "/demo/img/p12.jpg",
+      "alt": "Huevo de rancho",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Abarrotes Doña Lupita",
+    "slug": "dona-lupita",
+    "colonia": "Zona Centro",
+    "giro": "abarrotes",
+    "descripcion": "Tiendita de la esquina desde 1998.",
+    "tienda_slug": "dona-lupita"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 12,
+    "titulo": "Tortilla de maíz de nixtamal",
+    "descripcion": "Hechas el mismo día por la Tortillería El Nixtamal.",
+    "categoria": "hecho-en-durango",
+    "precio_c": 2400,
+    "unidad": "kilo",
+    "existencias": null,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9011,
+     "url": "/demo/img/p11.jpg",
+     "alt": "Tortilla de maíz de nixtamal",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Abarrotes Doña Lupita",
+     "slug": "dona-lupita",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "demo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9011,
+      "url": "/demo/img/p11.jpg",
+      "alt": "Tortilla de maíz de nixtamal",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Abarrotes Doña Lupita",
+    "slug": "dona-lupita",
+    "colonia": "Zona Centro",
+    "giro": "abarrotes",
+    "descripcion": "Tiendita de la esquina desde 1998.",
+    "tienda_slug": "dona-lupita"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 11,
+    "titulo": "Queso menonita",
+    "descripcion": "Queso de Nuevo Ideal, por kilo.",
+    "categoria": "hecho-en-durango",
+    "precio_c": 16500,
+    "unidad": "kilo",
+    "existencias": 25,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": null,
+    "vendedor": {
+     "nombre": "Abarrotes Doña Lupita",
+     "slug": "dona-lupita",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "demo@anaquel.mx"
+   },
+   "vendedor": {
+    "nombre": "Abarrotes Doña Lupita",
+    "slug": "dona-lupita",
+    "colonia": "Zona Centro",
+    "giro": "abarrotes",
+    "descripcion": "Tiendita de la esquina desde 1998.",
+    "tienda_slug": "dona-lupita"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 10,
+    "titulo": "Refresco de 600 ml (paquete de 24)",
+    "descripcion": "Sabores surtidos.",
+    "categoria": "abarrotes",
+    "precio_c": 31000,
+    "unidad": "paquete",
+    "existencias": 0,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9009,
+     "url": "/demo/img/p09.jpg",
+     "alt": "Refresco de 600 ml (paquete de 24)",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Abarrotes Mayoreo Guadiana",
+     "slug": "abarrotes-mayoreo-guadiana",
+     "colonia": "Carretera a Mazatlán"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "abarrotes.mayoreo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9009,
+      "url": "/demo/img/p09.jpg",
+      "alt": "Refresco de 600 ml (paquete de 24)",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Abarrotes Mayoreo Guadiana",
+    "slug": "abarrotes-mayoreo-guadiana",
+    "colonia": "Carretera a Mazatlán",
+    "giro": "mayoreo",
+    "descripcion": "Abarrotes por caja y bulto.",
+    "tienda_slug": "abarrotes-mayoreo-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 9,
+    "titulo": "Azúcar estándar (bulto de 50 kg)",
+    "descripcion": "Precio de mayoreo para tienditas.",
+    "categoria": "abarrotes",
+    "precio_c": 115000,
+    "unidad": "bulto",
+    "existencias": 25,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9008,
+     "url": "/demo/img/p08.jpg",
+     "alt": "Azúcar estándar (bulto de 50 kg)",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Abarrotes Mayoreo Guadiana",
+     "slug": "abarrotes-mayoreo-guadiana",
+     "colonia": "Carretera a Mazatlán"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "abarrotes.mayoreo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9008,
+      "url": "/demo/img/p08.jpg",
+      "alt": "Azúcar estándar (bulto de 50 kg)",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Abarrotes Mayoreo Guadiana",
+    "slug": "abarrotes-mayoreo-guadiana",
+    "colonia": "Carretera a Mazatlán",
+    "giro": "mayoreo",
+    "descripcion": "Abarrotes por caja y bulto.",
+    "tienda_slug": "abarrotes-mayoreo-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 8,
+    "titulo": "Aceite vegetal (caja de 12 litros)",
+    "descripcion": "Caja con 12 botellas de 1 litro.",
+    "categoria": "abarrotes",
+    "precio_c": 52000,
+    "unidad": "caja",
+    "existencias": 58,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": null,
+    "vendedor": {
+     "nombre": "Abarrotes Mayoreo Guadiana",
+     "slug": "abarrotes-mayoreo-guadiana",
+     "colonia": "Carretera a Mazatlán"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "abarrotes.mayoreo@anaquel.mx"
+   },
+   "vendedor": {
+    "nombre": "Abarrotes Mayoreo Guadiana",
+    "slug": "abarrotes-mayoreo-guadiana",
+    "colonia": "Carretera a Mazatlán",
+    "giro": "mayoreo",
+    "descripcion": "Abarrotes por caja y bulto.",
+    "tienda_slug": "abarrotes-mayoreo-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 7,
+    "titulo": "Frijol pinto (bulto de 25 kg)",
+    "descripcion": "Frijol pinto saltillo de temporada, limpio.",
+    "categoria": "abarrotes",
+    "precio_c": 78000,
+    "unidad": "bulto",
+    "existencias": 40,
+    "minimo": 1,
+    "estado": "activa",
+    "foto": {
+     "id": 9006,
+     "url": "/demo/img/p06.jpg",
+     "alt": "Frijol pinto (bulto de 25 kg)",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Abarrotes Mayoreo Guadiana",
+     "slug": "abarrotes-mayoreo-guadiana",
+     "colonia": "Carretera a Mazatlán"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "abarrotes.mayoreo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9006,
+      "url": "/demo/img/p06.jpg",
+      "alt": "Frijol pinto (bulto de 25 kg)",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Abarrotes Mayoreo Guadiana",
+    "slug": "abarrotes-mayoreo-guadiana",
+    "colonia": "Carretera a Mazatlán",
+    "giro": "mayoreo",
+    "descripcion": "Abarrotes por caja y bulto.",
+    "tienda_slug": "abarrotes-mayoreo-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 6,
+    "titulo": "Bufanda tejida",
+    "descripcion": "Tejido grueso, colores de temporada.",
+    "categoria": "ropa",
+    "precio_c": 8500,
+    "unidad": "pieza",
+    "existencias": 4,
+    "minimo": 12,
+    "estado": "activa",
+    "foto": {
+     "id": 9005,
+     "url": "/demo/img/p05.jpg",
+     "alt": "Bufanda tejida",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Textiles Guadiana",
+     "slug": "textiles-guadiana",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "textiles@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9005,
+      "url": "/demo/img/p05.jpg",
+      "alt": "Bufanda tejida",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Textiles Guadiana",
+    "slug": "textiles-guadiana",
+    "colonia": "Zona Centro",
+    "giro": "mayoreo",
+    "descripcion": "Mayorista de ropa de invierno.",
+    "tienda_slug": "textiles-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 5,
+    "titulo": "Sudadera con capucha",
+    "descripcion": "Algodón perchado. Colores lisos.",
+    "categoria": "ropa",
+    "precio_c": 26000,
+    "unidad": "pieza",
+    "existencias": 150,
+    "minimo": 6,
+    "estado": "activa",
+    "foto": {
+     "id": 9004,
+     "url": "/demo/img/p04.jpg",
+     "alt": "Sudadera con capucha",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Textiles Guadiana",
+     "slug": "textiles-guadiana",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "textiles@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9004,
+      "url": "/demo/img/p04.jpg",
+      "alt": "Sudadera con capucha",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Textiles Guadiana",
+    "slug": "textiles-guadiana",
+    "colonia": "Zona Centro",
+    "giro": "mayoreo",
+    "descripcion": "Mayorista de ropa de invierno.",
+    "tienda_slug": "textiles-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 4,
+    "titulo": "Chamarra acolchada de invierno",
+    "descripcion": "Forro térmico, capucha desmontable. Tallas surtidas.",
+    "categoria": "ropa",
+    "precio_c": 42000,
+    "unidad": "pieza",
+    "existencias": 68,
+    "minimo": 6,
+    "estado": "activa",
+    "foto": {
+     "id": 9003,
+     "url": "/demo/img/p03.jpg",
+     "alt": "Chamarra acolchada de invierno",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Textiles Guadiana",
+     "slug": "textiles-guadiana",
+     "colonia": "Zona Centro"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "textiles@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9003,
+      "url": "/demo/img/p03.jpg",
+      "alt": "Chamarra acolchada de invierno",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Textiles Guadiana",
+    "slug": "textiles-guadiana",
+    "colonia": "Zona Centro",
+    "giro": "mayoreo",
+    "descripcion": "Mayorista de ropa de invierno.",
+    "tienda_slug": "textiles-guadiana"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 3,
+    "titulo": "Playera polo para uniforme",
+    "descripcion": "Tela piqué, tallas CH a XXL. Se puede bordar.",
+    "categoria": "ropa",
+    "precio_c": 13500,
+    "unidad": "pieza",
+    "existencias": 300,
+    "minimo": 12,
+    "estado": "activa",
+    "foto": {
+     "id": 9002,
+     "url": "/demo/img/p02.jpg",
+     "alt": "Playera polo para uniforme",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Gorras El Tunal",
+     "slug": "gorras-el-tunal",
+     "colonia": "El Tunal"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "mayoreo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9002,
+      "url": "/demo/img/p02.jpg",
+      "alt": "Playera polo para uniforme",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Gorras El Tunal",
+    "slug": "gorras-el-tunal",
+    "colonia": "El Tunal",
+    "giro": "mayoreo",
+    "descripcion": "Gorras y uniformes por mayoreo. 1,200 gorras listas.",
+    "tienda_slug": "gorras-el-tunal"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 2,
+    "titulo": "Gorra trucker lisa",
+    "descripcion": "Frente de espuma y malla trasera. Varios colores.",
+    "categoria": "mayoreo",
+    "precio_c": 4800,
+    "unidad": "pieza",
+    "existencias": 600,
+    "minimo": 20,
+    "estado": "activa",
+    "foto": {
+     "id": 9001,
+     "url": "/demo/img/p01.jpg",
+     "alt": "Gorra trucker lisa",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Gorras El Tunal",
+     "slug": "gorras-el-tunal",
+     "colonia": "El Tunal"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "mayoreo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9001,
+      "url": "/demo/img/p01.jpg",
+      "alt": "Gorra trucker lisa",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Gorras El Tunal",
+    "slug": "gorras-el-tunal",
+    "colonia": "El Tunal",
+    "giro": "mayoreo",
+    "descripcion": "Gorras y uniformes por mayoreo. 1,200 gorras listas.",
+    "tienda_slug": "gorras-el-tunal"
+   }
+  },
+  {
+   "publicacion": {
+    "id": 1,
+    "titulo": "Gorra bordada con tu logo",
+    "descripcion": "Gorra de gabardina con bordado de hasta 8 colores. Ideal para eventos, escuelas y negocios.",
+    "categoria": "mayoreo",
+    "precio_c": 6500,
+    "unidad": "pieza",
+    "existencias": 1100,
+    "minimo": 50,
+    "estado": "activa",
+    "foto": {
+     "id": 9000,
+     "url": "/demo/img/p00.jpg",
+     "alt": "Gorra bordada con tu logo",
+     "ancho": 640,
+     "alto": 640
+    },
+    "vendedor": {
+     "nombre": "Gorras El Tunal",
+     "slug": "gorras-el-tunal",
+     "colonia": "El Tunal"
+    },
+    "distancia_km": 0,
+    "es_mia": true,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "vendedor_email": "mayoreo@anaquel.mx",
+    "fotos": [
+     {
+      "id": 9000,
+      "url": "/demo/img/p00.jpg",
+      "alt": "Gorra bordada con tu logo",
+      "ancho": 640,
+      "alto": 640
+     }
+    ]
+   },
+   "vendedor": {
+    "nombre": "Gorras El Tunal",
+    "slug": "gorras-el-tunal",
+    "colonia": "El Tunal",
+    "giro": "mayoreo",
+    "descripcion": "Gorras y uniformes por mayoreo. 1,200 gorras listas.",
+    "tienda_slug": "gorras-el-tunal"
+   }
+  }
+ ],
+ "promos": {
+  "demo@anaquel.mx": [
+   {
+    "id": 3,
+    "plan": "basico",
+    "plan_nombre": "Básico",
+    "mensaje": "Queso fresco de Nuevo Ideal cada semana",
+    "publicacion": {
+     "id": 11,
+     "titulo": "Queso menonita",
+     "foto": null,
+     "categoria": "hecho-en-durango"
+    },
+    "semanas": 4,
+    "costo_c": 19600,
+    "inicio": "2026-11-20T02:31:09.717893Z",
+    "fin": "2026-12-18T02:31:09.717893Z",
+    "estado": "activa",
+    "vigente": true,
+    "impresiones": 22,
+    "clics": 0
+   }
+  ],
+  "ropa@anaquel.mx": [],
+  "mayoreo@anaquel.mx": [
+   {
+    "id": 1,
+    "plan": "premium",
+    "plan_nombre": "Premium",
+    "mensaje": "Gorras para tu evento desde 50 piezas, entrega en Durango",
+    "publicacion": {
+     "id": 1,
+     "titulo": "Gorra bordada con tu logo",
+     "foto": {
+      "id": 9000,
+      "url": "/demo/img/p00.jpg",
+      "alt": "Gorra bordada con tu logo",
+      "ancho": 640,
+      "alto": 640
+     },
+     "categoria": "mayoreo"
+    },
+    "semanas": 4,
+    "costo_c": 79600,
+    "inicio": "2026-11-20T02:31:09.717893Z",
+    "fin": "2026-12-18T02:31:09.717893Z",
+    "estado": "activa",
+    "vigente": true,
+    "impresiones": 24,
+    "clics": 0
+   }
+  ],
+  "textiles@anaquel.mx": [
+   {
+    "id": 2,
+    "plan": "destacado",
+    "plan_nombre": "Destacado",
+    "mensaje": "Llegó el frío: precio de mayoreo desde 6 piezas",
+    "publicacion": {
+     "id": 4,
+     "titulo": "Chamarra acolchada de invierno",
+     "foto": {
+      "id": 9003,
+      "url": "/demo/img/p03.jpg",
+      "alt": "Chamarra acolchada de invierno",
+      "ancho": 640,
+      "alto": 640
+     },
+     "categoria": "ropa"
+    },
+    "semanas": 4,
+    "costo_c": 39600,
+    "inicio": "2026-11-20T02:31:09.717893Z",
+    "fin": "2026-12-18T02:31:09.717893Z",
+    "estado": "activa",
+    "vigente": true,
+    "impresiones": 23,
+    "clics": 0
+   }
+  ],
+  "papeleria@anaquel.mx": [],
+  "abarrotes.mayoreo@anaquel.mx": [],
+  "fletes@anaquel.mx": [
+   {
+    "id": 4,
+    "plan": "basico",
+    "plan_nombre": "Básico",
+    "mensaje": "Llevamos tu mercancía dentro de la ciudad",
+    "publicacion": {
+     "id": 19,
+     "titulo": "Flete local en camioneta de 3.5 t",
+     "foto": {
+      "id": 9018,
+      "url": "/demo/img/p18.jpg",
+      "alt": "Flete local en camioneta de 3.5 t",
+      "ancho": 640,
+      "alto": 640
+     },
+     "categoria": "servicios"
+    },
+    "semanas": 4,
+    "costo_c": 19600,
+    "inicio": "2026-11-20T02:31:09.717893Z",
+    "fin": "2026-12-18T02:31:09.717893Z",
+    "estado": "activa",
+    "vigente": true,
+    "impresiones": 22,
+    "clics": 0
+   }
+  ],
+  "imprenta@anaquel.mx": [],
+  "revision@anaquel.mx": [],
+  "admin@anaquel.mx": []
+ },
+ "terminales": {
+  "demo@anaquel.mx": [],
+  "ropa@anaquel.mx": [],
+  "mayoreo@anaquel.mx": [],
+  "textiles@anaquel.mx": [],
+  "papeleria@anaquel.mx": [],
+  "abarrotes.mayoreo@anaquel.mx": [],
+  "fletes@anaquel.mx": [],
+  "imprenta@anaquel.mx": [
+   {
+    "id": 1,
+    "proveedor": "simulador",
+    "marca": "Terminal virtual (demo)",
+    "nombre": "Mostrador",
+    "dispositivo": "SIM-7FC5534733",
+    "creada": "2026-11-20T04:16:26.953709Z"
+   }
+  ],
+  "revision@anaquel.mx": [],
+  "admin@anaquel.mx": []
+ },
+ "ventas": {
+  "demo@anaquel.mx": [],
+  "ropa@anaquel.mx": [],
+  "mayoreo@anaquel.mx": [
+   {
+    "id": 1,
+    "rol": "venta",
+    "contraparte": "Papelería El Estudiante",
+    "contraparte_slug": "papeleria-el-estudiante",
+    "publicacion_id": 1,
+    "titulo": "Gorra bordada con tu logo",
+    "unidad": "pieza",
+    "cantidad": 100,
+    "precio_c": 6500,
+    "total_c": 650000,
+    "nota": "",
+    "estado": "pendiente",
+    "cobro_id": null,
+    "foto": null,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "actualizada": "2026-11-20T01:07:38.81801Z"
+   }
+  ],
+  "textiles@anaquel.mx": [
+   {
+    "id": 2,
+    "rol": "venta",
+    "contraparte": "Boutique Alondra",
+    "contraparte_slug": "boutique-alondra",
+    "publicacion_id": 4,
+    "titulo": "Chamarra acolchada de invierno",
+    "unidad": "pieza",
+    "cantidad": 12,
+    "precio_c": 42000,
+    "total_c": 504000,
+    "nota": "",
+    "estado": "pagada",
+    "cobro_id": "demo",
+    "foto": null,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "actualizada": "2026-11-20T01:07:38.81801Z"
+   }
+  ],
+  "papeleria@anaquel.mx": [],
+  "abarrotes.mayoreo@anaquel.mx": [
+   {
+    "id": 3,
+    "rol": "venta",
+    "contraparte": "Abarrotes Doña Lupita",
+    "contraparte_slug": "dona-lupita",
+    "publicacion_id": 8,
+    "titulo": "Aceite vegetal (caja de 12 litros)",
+    "unidad": "caja",
+    "cantidad": 2,
+    "precio_c": 52000,
+    "total_c": 104000,
+    "nota": "",
+    "estado": "entregada",
+    "cobro_id": "demo",
+    "foto": null,
+    "creada": "2026-11-20T01:07:38.81801Z",
+    "actualizada": "2026-11-20T01:07:38.81801Z"
+   }
+  ],
+  "fletes@anaquel.mx": [],
+  "imprenta@anaquel.mx": [
+   {
+    "id": 6,
+    "rol": "venta",
+    "contraparte": "Papelería El Estudiante",
+    "contraparte_slug": "papeleria-el-estudiante",
+    "publicacion_id": 22,
+    "titulo": "Tarjetas de presentación (millar)",
+    "unidad": "paquete",
+    "cantidad": 2,
+    "precio_c": 45000,
+    "total_c": 90000,
+    "nota": "",
+    "estado": "pagada",
+    "cobro_id": "b64fce55-d3a3-408e-aaea-f8799ef04496",
+    "foto": null,
+    "creada": "2026-11-20T06:20:34.844179Z",
+    "actualizada": "2026-11-20T06:22:28.629162Z"
+   },
+   {
+    "id": 5,
+    "rol": "venta",
+    "contraparte": "Papelería El Estudiante",
+    "contraparte_slug": "papeleria-el-estudiante",
+    "publicacion_id": 22,
+    "titulo": "Tarjetas de presentación (millar)",
+    "unidad": "paquete",
+    "cantidad": 2,
+    "precio_c": 45000,
+    "total_c": 90000,
+    "nota": "",
+    "estado": "entregada",
+    "cobro_id": "d2116dad-10e1-4816-b4b1-18334c995ff4",
+    "foto": null,
+    "creada": "2026-11-20T05:18:08.102622Z",
+    "actualizada": "2026-11-20T05:21:12.897733Z"
+   },
+   {
+    "id": 4,
+    "rol": "venta",
+    "contraparte": "Papelería El Estudiante",
+    "contraparte_slug": "papeleria-el-estudiante",
+    "publicacion_id": 22,
+    "titulo": "Tarjetas de presentación (millar)",
+    "unidad": "paquete",
+    "cantidad": 1,
+    "precio_c": 45000,
+    "total_c": 45000,
+    "nota": "",
+    "estado": "pagada",
+    "cobro_id": "41ace726-39f1-4cdc-ab85-e182b8d1a07a",
+    "foto": null,
+    "creada": "2026-11-20T04:01:15.726453Z",
+    "actualizada": "2026-11-20T04:23:12.556961Z"
+   }
+  ],
+  "revision@anaquel.mx": [],
+  "admin@anaquel.mx": []
+ },
+ "ordenes_detalle": {
+  "1": {
+   "id": 1,
+   "rol": "venta",
+   "contraparte": "Papelería El Estudiante",
+   "contraparte_slug": "papeleria-el-estudiante",
+   "publicacion_id": 1,
+   "titulo": "Gorra bordada con tu logo",
+   "unidad": "pieza",
+   "cantidad": 100,
+   "precio_c": 6500,
+   "total_c": 650000,
+   "nota": "",
+   "estado": "pendiente",
+   "cobro_id": null,
+   "foto": {
+    "id": 9000,
+    "url": "/demo/img/p00.jpg",
+    "alt": "Gorra bordada con tu logo",
+    "ancho": 640,
+    "alto": 640
+   },
+   "creada": "2026-11-20T01:07:38.81801Z",
+   "actualizada": "2026-11-20T01:07:38.81801Z",
+   "eventos": [
+    {
+     "estado": "pendiente",
+     "por": "comprador",
+     "nota": "",
+     "creado": "2026-11-20T01:07:38.81801Z"
+    }
+   ]
+  },
+  "2": {
+   "id": 2,
+   "rol": "venta",
+   "contraparte": "Boutique Alondra",
+   "contraparte_slug": "boutique-alondra",
+   "publicacion_id": 4,
+   "titulo": "Chamarra acolchada de invierno",
+   "unidad": "pieza",
+   "cantidad": 12,
+   "precio_c": 42000,
+   "total_c": 504000,
+   "nota": "",
+   "estado": "pagada",
+   "cobro_id": "demo",
+   "foto": {
+    "id": 9003,
+    "url": "/demo/img/p03.jpg",
+    "alt": "Chamarra acolchada de invierno",
+    "ancho": 640,
+    "alto": 640
+   },
+   "creada": "2026-11-20T01:07:38.81801Z",
+   "actualizada": "2026-11-20T01:07:38.81801Z",
+   "eventos": [
+    {
+     "estado": "pendiente",
+     "por": "comprador",
+     "nota": "",
+     "creado": "2026-11-20T01:07:38.81801Z"
+    },
+    {
+     "estado": "por_cobrar",
+     "por": "pagos",
+     "nota": "",
+     "creado": "2026-11-20T01:07:38.81801Z"
+    },
+    {
+     "estado": "pagada",
+     "por": "pagos",
+     "nota": "",
+     "creado": "2026-11-20T01:07:38.81801Z"
+    }
+   ]
+  },
+  "3": {
+   "id": 3,
+   "rol": "venta",
+   "contraparte": "Abarrotes Doña Lupita",
+   "contraparte_slug": "dona-lupita",
+   "publicacion_id": 8,
+   "titulo": "Aceite vegetal (caja de 12 litros)",
+   "unidad": "caja",
+   "cantidad": 2,
+   "precio_c": 52000,
+   "total_c": 104000,
+   "nota": "",
+   "estado": "entregada",
+   "cobro_id": "demo",
+   "foto": null,
+   "creada": "2026-11-20T01:07:38.81801Z",
+   "actualizada": "2026-11-20T01:07:38.81801Z",
+   "eventos": [
+    {
+     "estado": "pendiente",
+     "por": "comprador",
+     "nota": "",
+     "creado": "2026-11-20T01:07:38.81801Z"
+    },
+    {
+     "estado": "por_cobrar",
+     "por": "pagos",
+     "nota": "",
+     "creado": "2026-11-20T01:07:38.81801Z"
+    },
+    {
+     "estado": "pagada",
+     "por": "pagos",
+     "nota": "",
+     "creado": "2026-11-20T01:07:38.81801Z"
+    },
+    {
+     "estado": "entregada",
+     "por": "vendedor",
+     "nota": "",
+     "creado": "2026-11-20T01:07:38.81801Z"
+    }
+   ]
+  },
+  "4": {
+   "id": 4,
+   "rol": "venta",
+   "contraparte": "Papelería El Estudiante",
+   "contraparte_slug": "papeleria-el-estudiante",
+   "publicacion_id": 22,
+   "titulo": "Tarjetas de presentación (millar)",
+   "unidad": "paquete",
+   "cantidad": 1,
+   "precio_c": 45000,
+   "total_c": 45000,
+   "nota": "",
+   "estado": "pagada",
+   "cobro_id": "41ace726-39f1-4cdc-ab85-e182b8d1a07a",
+   "foto": {
+    "id": 9021,
+    "url": "/demo/img/p21.jpg",
+    "alt": "Tarjetas de presentación (millar)",
+    "ancho": 640,
+    "alto": 640
+   },
+   "creada": "2026-11-20T04:01:15.726453Z",
+   "actualizada": "2026-11-20T04:23:12.556961Z",
+   "eventos": [
+    {
+     "estado": "pendiente",
+     "por": "comprador",
+     "nota": "",
+     "creado": "2026-11-20T04:01:15.726453Z"
+    },
+    {
+     "estado": "por_cobrar",
+     "por": "pagos",
+     "nota": "",
+     "creado": "2026-11-20T04:22:37.901093Z"
+    },
+    {
+     "estado": "pagada",
+     "por": "pagos",
+     "nota": "Pago aprobado",
+     "creado": "2026-11-20T04:23:12.556961Z"
+    }
+   ]
+  },
+  "5": {
+   "id": 5,
+   "rol": "venta",
+   "contraparte": "Papelería El Estudiante",
+   "contraparte_slug": "papeleria-el-estudiante",
+   "publicacion_id": 22,
+   "titulo": "Tarjetas de presentación (millar)",
+   "unidad": "paquete",
+   "cantidad": 2,
+   "precio_c": 45000,
+   "total_c": 90000,
+   "nota": "",
+   "estado": "entregada",
+   "cobro_id": "d2116dad-10e1-4816-b4b1-18334c995ff4",
+   "foto": {
+    "id": 9021,
+    "url": "/demo/img/p21.jpg",
+    "alt": "Tarjetas de presentación (millar)",
+    "ancho": 640,
+    "alto": 640
+   },
+   "creada": "2026-11-20T05:18:08.102622Z",
+   "actualizada": "2026-11-20T05:21:12.897733Z",
+   "eventos": [
+    {
+     "estado": "pendiente",
+     "por": "comprador",
+     "nota": "",
+     "creado": "2026-11-20T05:18:08.102622Z"
+    },
+    {
+     "estado": "por_cobrar",
+     "por": "pagos",
+     "nota": "",
+     "creado": "2026-11-20T05:20:11.523797Z"
+    },
+    {
+     "estado": "pagada",
+     "por": "pagos",
+     "nota": "Pago aprobado",
+     "creado": "2026-11-20T05:20:28.56789Z"
+    },
+    {
+     "estado": "entregada",
+     "por": "vendedor",
+     "nota": "",
+     "creado": "2026-11-20T05:21:12.897733Z"
+    }
+   ]
+  },
+  "6": {
+   "id": 6,
+   "rol": "venta",
+   "contraparte": "Papelería El Estudiante",
+   "contraparte_slug": "papeleria-el-estudiante",
+   "publicacion_id": 22,
+   "titulo": "Tarjetas de presentación (millar)",
+   "unidad": "paquete",
+   "cantidad": 2,
+   "precio_c": 45000,
+   "total_c": 90000,
+   "nota": "",
+   "estado": "pagada",
+   "cobro_id": "b64fce55-d3a3-408e-aaea-f8799ef04496",
+   "foto": {
+    "id": 9021,
+    "url": "/demo/img/p21.jpg",
+    "alt": "Tarjetas de presentación (millar)",
+    "ancho": 640,
+    "alto": 640
+   },
+   "creada": "2026-11-20T06:20:34.844179Z",
+   "actualizada": "2026-11-20T06:22:28.629162Z",
+   "eventos": [
+    {
+     "estado": "pendiente",
+     "por": "comprador",
+     "nota": "",
+     "creado": "2026-11-20T06:20:34.844179Z"
+    },
+    {
+     "estado": "por_cobrar",
+     "por": "pagos",
+     "nota": "",
+     "creado": "2026-11-20T06:22:13.403715Z"
+    },
+    {
+     "estado": "pagada",
+     "por": "pagos",
+     "nota": "Pago aprobado",
+     "creado": "2026-11-20T06:22:28.629162Z"
+    }
+   ]
+  }
+ },
+ "reels": [
+  {
+   "id": 3,
+   "url": "/api/reels/media/07402fb1a72d04df138b3a1dcee9dabb.mp4",
+   "descripcion": "Chamarras acolchadas para el frío, precio de mayoreo desde 6 piezas.",
+   "duracion_ms": 8000,
+   "ancho": 540,
+   "alto": 960,
+   "vendedor": {
+    "nombre": "Textiles Guadiana",
+    "slug": "textiles-guadiana"
+   },
+   "publicacion": {
+    "id": 4,
+    "titulo": "Chamarra acolchada de invierno",
+    "precio_c": 42000,
+    "unidad": "pieza"
+   },
+   "es_mio": false,
+   "creado": "2026-11-20T01:07:40.394899Z"
+  },
+  {
+   "id": 2,
+   "url": "/api/reels/media/f767ab0a2a2373f7a33e8c1dc4a3d9d7.mp4",
+   "descripcion": "Queso menonita fresco de Nuevo Ideal, por kilo, en Abarrotes Doña Lupita.",
+   "duracion_ms": 8000,
+   "ancho": 540,
+   "alto": 960,
+   "vendedor": {
+    "nombre": "Abarrotes Doña Lupita",
+    "slug": "dona-lupita"
+   },
+   "publicacion": {
+    "id": 11,
+    "titulo": "Queso menonita",
+    "precio_c": 16500,
+    "unidad": "kilo"
+   },
+   "es_mio": true,
+   "creado": "2026-11-20T01:07:40.391887Z"
+  },
+  {
+   "id": 1,
+   "url": "/api/reels/media/1b50253c0d52584e4aa4c09e626c42ac.mp4",
+   "descripcion": "Gorras bordadas con el logo de tu negocio o evento, desde 50 piezas. Entregamos en Durango.",
+   "duracion_ms": 8000,
+   "ancho": 540,
+   "alto": 960,
+   "vendedor": {
+    "nombre": "Gorras El Tunal",
+    "slug": "gorras-el-tunal"
+   },
+   "publicacion": {
+    "id": 1,
+    "titulo": "Gorra bordada con tu logo",
+    "precio_c": 6500,
+    "unidad": "pieza"
+   },
+   "es_mio": false,
+   "creado": "2026-11-20T01:07:40.382976Z"
+  }
+ ],
+ "creditos_fotos": [
+  {
+   "producto": "Gorra bordada con tu logo",
+   "autor": "K-Products, Inc",
+   "licencia": "Public domain",
+   "fuente": "https://commons.wikimedia.org/wiki/File:St._Louis_Hummers_Baseball_Cap_-_DPLA_-_8a5e67c9fa37d943ceb646df13682c0e_(page_3).jpg"
+  },
+  {
+   "producto": "Gorra trucker lisa",
+   "autor": "I would appreciate being notified if you use my work outside Wikimedia. Do not copy this image illegally by ignoring the terms of the license below, as it is not in the public domain. If you would like special permission to use, license, or purchase the image please contact me to negotiate terms. More of my work can be found in my personal gallery.",
+   "licencia": "CC BY-SA 3.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Cap_on_the_wall.JPG"
+  },
+  {
+   "producto": "Playera polo para uniforme",
+   "autor": "Quercus acuta",
+   "licencia": "CC BY-SA 4.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Vintage_90%27s_Lacoste_Polo_Shirt.jpg"
+  },
+  {
+   "producto": "Chamarra acolchada de invierno",
+   "autor": "Matti Blume",
+   "licencia": "CC BY-SA 4.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:OutDoor_2018,_Friedrichshafen_(1X7A0285).jpg"
+  },
+  {
+   "producto": "Sudadera con capucha",
+   "autor": "FastColors",
+   "licencia": "CC BY-SA 2.5",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Fastcolors-men_fashion_sweatshirt-back-printed.jpg"
+  },
+  {
+   "producto": "Bufanda tejida",
+   "autor": "Tobias ToMar Maier",
+   "licencia": "CC BY-SA 4.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Knit_cap_and_loop_scarf_set.jpg"
+  },
+  {
+   "producto": "Frijol pinto (bulto de 25 kg)",
+   "autor": "Sanjay Acharya",
+   "licencia": "CC BY-SA 4.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Pinto_Beans_Seeds.jpg"
+  },
+  {
+   "producto": "Azúcar estándar (bulto de 50 kg)",
+   "autor": "Markadan",
+   "licencia": "CC BY-SA 3.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Sacks_of_raw_sugar_in_the_Philippines.jpg"
+  },
+  {
+   "producto": "Refresco de 600 ml (paquete de 24)",
+   "autor": "binelli2011",
+   "licencia": "CC BY 2.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Towne_Club_soda_crates.jpg"
+  },
+  {
+   "producto": "Tortilla de maíz de nixtamal",
+   "autor": "Vigilantcosmicpenguin",
+   "licencia": "CC BY 4.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Stacks_of_corn_tortillas_and_flour_tortillas,_top_view.jpg"
+  },
+  {
+   "producto": "Huevo de rancho",
+   "autor": "Evan-Amos",
+   "licencia": "Public domain",
+   "fuente": "https://commons.wikimedia.org/wiki/File:6-Pack-Chicken-Eggs.jpg"
+  },
+  {
+   "producto": "Miel del Mezquital (500 g)",
+   "autor": "Cindy Shebley",
+   "licencia": "CC BY 2.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Antique_Glass_Honey_Jar_With_Rusted_Metal_Cap_(31009798197).jpg"
+  },
+  {
+   "producto": "Vestido casual de temporada",
+   "autor": "Autor desconocido",
+   "licencia": "Public domain",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Summer_Dress_LACMA_M.2007.211.740_(1_of_5).jpg"
+  },
+  {
+   "producto": "Chamarra de mezclilla",
+   "autor": "NikosLikomitros",
+   "licencia": "CC0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Jean_jacket.jpg"
+  },
+  {
+   "producto": "Paquete escolar básico",
+   "autor": "TheUltimateGrass",
+   "licencia": "CC0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:School_Supplies.jpg"
+  },
+  {
+   "producto": "Impresión a color",
+   "autor": "Leo13",
+   "licencia": "CC BY 3.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Epson_PM-700C.jpg"
+  },
+  {
+   "producto": "Flete local en camioneta de 3.5 t",
+   "autor": "Gzzz",
+   "licencia": "CC BY-SA 4.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Furgoneta_Mexico.jpg"
+  },
+  {
+   "producto": "Mudanza pequeña con 2 ayudantes",
+   "autor": "MoveON moving",
+   "licencia": "CC BY-SA 4.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Moving-boxes.jpg"
+  },
+  {
+   "producto": "Bordado de logo en gorra",
+   "autor": "USAID Pakistan",
+   "licencia": "Public domain",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Industrial_embroidery_machine.jpg"
+  },
+  {
+   "producto": "Tarjetas de presentación (millar)",
+   "autor": "Autor desconocido",
+   "licencia": "CC BY 4.0",
+   "fuente": "https://commons.wikimedia.org/wiki/File:Three_business_cards_Wellcome_L0044087.jpg"
+  }
+ ]
+}

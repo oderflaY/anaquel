@@ -36,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -50,7 +51,8 @@ import kotlinx.coroutines.launch
 fun Ordenes(api: MercadoApi, ir: Ir, cuenta: Cuenta, ventas: Boolean) {
     val q = rememberConsulta(ventas) { api.ordenes(ventas) }
     Column(Modifier.fillMaxSize()) {
-        if (cuenta.vende) SecondaryTabRow(selectedTabIndex = if (ventas) 1 else 0, containerColor = M.c.fondo, contentColor = M.c.marca) {
+        if (SOLO_COMPRAS) TituloSeccion("recibo", Color(0xFFE0871B), "Mis compras", "Lo que apartaste y cómo va", Modifier.padding(horizontal = E.x4, vertical = E.x2))
+        if (cuenta.vende && !SOLO_COMPRAS) SecondaryTabRow(selectedTabIndex = if (ventas) 1 else 0, containerColor = M.c.fondo, contentColor = M.c.marca) {
             Tab(!ventas, { if (ventas) ir.ordenes(false) }, text = { Text("Compras") }, selectedContentColor = M.c.marca, unselectedContentColor = M.c.texto2)
             Tab(ventas, { if (!ventas) ir.ordenes(true) }, text = { Text("Ventas") }, selectedContentColor = M.c.marca, unselectedContentColor = M.c.texto2)
         }
