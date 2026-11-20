@@ -68,5 +68,5 @@ env "${comun[@]}" BD_DSN="$(dsn acceso "$PG_ACCESO_PASSWORD")" bin/acceso > dato
 env "${comun[@]}" BD_DSN="$(dsn mercado "$PG_MERCADO_PASSWORD")" DATOS=datos/mercado bin/mercado > datos/mercado.log 2>&1 & echo $! >> $PIDS
 env "${comun[@]}" BD_DSN="$(dsn reels "$PG_REELS_PASSWORD")" DATOS=datos/reels bin/reels > datos/reels.log 2>&1 & echo $! >> $PIDS
 env "${comun[@]}" BD_DSN="$(dsn pagos "$PG_PAGOS_PASSWORD")" bin/pagos > datos/pagos.log 2>&1 & echo $! >> $PIDS
-env "${comun[@]}" ORIGENES_PERMITIDOS=http://localhost:5173 bin/pasarela > datos/pasarela.log 2>&1 & echo $! >> $PIDS
+env "${comun[@]}" CONFIAR_PROXY="${CONFIAR_PROXY:-0}" ORIGENES_PERMITIDOS=http://localhost:5173 bin/pasarela > datos/pasarela.log 2>&1 & echo $! >> $PIDS
 echo "Listo: http://localhost:8080/anaquel/mercado  (bitácoras en services/datos/*.log)"

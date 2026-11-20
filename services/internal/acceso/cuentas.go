@@ -439,6 +439,23 @@ func (s *Servicio) registro(w http.ResponseWriter, r *http.Request) {
 	plataforma.Manejar(w, r, map[string]any{"cuenta": s.publica(nueva)}, nil)
 }
 
+// sesionActual responde 200 siempre: {cuenta} o {cuenta: null}. La web la usa
+// al abrir para decidir qué mostrar sin generar errores 401 en la consola.
+func (s *Servicio) sesionActual(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie(s.nombreCookie())
+	if err != nil || c.Value == "" || len(c.Value) > 128 {
+		plataforma.Manejar(w, r, map[string]any{"cuenta": nil}, nil)
+		return
+	}
+	cu, err := s.cuentaDeSesion(r.Context(), hashToken(c.Value))
+	if err != nil {
+		s.borrarCookie(w)
+		plataforma.Manejar(w, r, map[string]any{"cuenta": nil}, nil)
+		return
+	}
+	plataforma.Manejar(w, r, map[string]any{"cuenta": s.publica(cu)}, nil)
+}
+
 // ---- handlers con sesión ----
 
 func (s *Servicio) yo(w http.ResponseWriter, r *http.Request) {

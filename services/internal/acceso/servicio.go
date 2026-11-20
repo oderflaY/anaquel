@@ -68,6 +68,7 @@ func (s *Servicio) Rutas() http.Handler {
 	m.HandleFunc("POST /registro", s.registro)
 	m.HandleFunc("POST /salir", s.salir)
 
+	m.HandleFunc("GET /sesion", s.sesionActual)
 	m.HandleFunc("GET /yo", s.conSesion(nil, s.yo))
 	m.HandleFunc("PUT /yo", s.conSesion(nil, s.actualizarYo))
 	m.HandleFunc("PUT /contrasena", s.conSesion(nil, s.cambiarPass))

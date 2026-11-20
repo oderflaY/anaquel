@@ -414,7 +414,7 @@ func (s *Servicio) borrarPublicacion(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		for _, f := range fotos {
-			_ = os.Remove(filepath.Join(s.fotos, filepath.Base(f.URL)))
+			_ = s.fotos.Remove(filepath.Base(f.URL))
 		}
 	}
 	plataforma.Manejar(w, r, nil, err)
@@ -470,7 +470,7 @@ func (s *Servicio) subirFoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nombre := plataforma.Aleatorio(16) + ".jpg"
-	if err := escribirAtomico(filepath.Join(s.fotos, nombre), res.JPEG); err != nil {
+	if err := escribirAtomico(s.fotos, nombre, res.JPEG); err != nil {
 		plataforma.Manejar(w, r, nil, err)
 		return
 	}
@@ -478,7 +478,7 @@ func (s *Servicio) subirFoto(w http.ResponseWriter, r *http.Request) {
 	err = s.bd.QueryRow(ctx, `INSERT INTO fotos (publicacion_id, archivo, alt, ancho, alto, orden) VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`, pid, nombre, alt, res.Ancho, res.Alto, n).Scan(&f.ID)
 	if err != nil {
-		_ = os.Remove(filepath.Join(s.fotos, nombre))
+		_ = s.fotos.Remove(nombre)
 		plataforma.Manejar(w, r, nil, err)
 		return
 	}
@@ -486,12 +486,12 @@ func (s *Servicio) subirFoto(w http.ResponseWriter, r *http.Request) {
 	plataforma.Manejar(w, r, f, nil)
 }
 
-func escribirAtomico(ruta string, datos []byte) error {
-	tmp := ruta + ".tmp"
-	if err := os.WriteFile(tmp, datos, 0o640); err != nil {
+func escribirAtomico(raiz *os.Root, nombre string, datos []byte) error {
+	tmp := nombre + ".tmp"
+	if err := raiz.WriteFile(tmp, datos, 0o600); err != nil {
 		return err
 	}
-	return os.Rename(tmp, ruta)
+	return raiz.Rename(tmp, nombre)
 }
 
 func (s *Servicio) borrarFoto(w http.ResponseWriter, r *http.Request) {
@@ -507,7 +507,7 @@ func (s *Servicio) borrarFoto(w http.ResponseWriter, r *http.Request) {
 		WHERE f.id = $1 AND f.publicacion_id = $2 AND p.id = f.publicacion_id AND p.vendedor_id = $3 RETURNING f.archivo`,
 		fid, pid, id.Cuenta).Scan(&archivo)
 	if err == nil {
-		_ = os.Remove(filepath.Join(s.fotos, archivo))
+		_ = s.fotos.Remove(archivo)
 	}
 	plataforma.Manejar(w, r, nil, err)
 }
@@ -527,7 +527,7 @@ func (s *Servicio) servirFoto(w http.ResponseWriter, r *http.Request) {
 		plataforma.Manejar(w, r, nil, plataforma.Fallo(404, "Foto no encontrada"))
 		return
 	}
-	f, err := os.Open(filepath.Join(s.fotos, nombre))
+	f, err := s.fotos.Open(nombre)
 	if err != nil {
 		plataforma.Manejar(w, r, nil, plataforma.Fallo(404, "Foto no encontrada"))
 		return

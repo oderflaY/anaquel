@@ -22,6 +22,8 @@ import RedPublica from './pages/RedPublica'
 
 // El 3D (three.js) se baja solo cuando se abre.
 const Bodega3D = lazy(() => import('./pages/Bodega3D'))
+// El mercado (servicios en services/) también se baja solo cuando se abre.
+const Mercado = lazy(() => import('./mercado/Mercado'))
 
 export type Sesion = { tienda: Tienda; resumen: Resumen | null; refrescar: () => void; salir: () => void }
 
@@ -46,6 +48,11 @@ export default function App() {
 
   const salir = () => { guardarToken(null); setTienda(null); setResumen(null); ir('/') }
   const entrar = (t: Tienda) => { setTienda(t); ir('/panel') }
+
+  // Anaquel Mercado: tiene su propio encabezado, sesión (cookie) y diseño.
+  if (camino === '/mercado' || camino.startsWith('/mercado/')) {
+    return <Suspense fallback={null}><Mercado ruta={ruta} /></Suspense>
+  }
 
   // Páginas públicas
   let pagina: React.ReactNode
@@ -118,6 +125,7 @@ export default function App() {
             </Enlace>
           ) : (
             <nav className="nav" aria-label="Principal">
+              <Enlace href="/mercado">Mercado</Enlace>
               <Enlace href="/red" className={camino === '/red' ? 'activo' : ''}>Red local</Enlace>
               <Enlace href="/productores" className={camino === '/productores' ? 'activo' : ''}>Productores</Enlace>
               <Enlace href={tienda ? '/panel' : '/entrar'}>{tienda ? 'Mi panel' : 'Entrar'}</Enlace>

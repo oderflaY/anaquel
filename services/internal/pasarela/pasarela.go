@@ -99,6 +99,11 @@ func proxy(destino *url.URL, quitar string, esNucleo bool) *httputil.ReverseProx
 			return nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			var mb *http.MaxBytesError
+			if errors.As(err, &mb) { // el cuerpo excedió el límite a media lectura
+				plataforma.Responder(w, http.StatusRequestEntityTooLarge, plataforma.ErrHTTP{Msg: "El archivo o los datos son demasiado grandes", Clave: "muy_grande"})
+				return
+			}
 			slog.Error("pasarela: servicio no disponible", "ruta", r.URL.Path, "err", err)
 			plataforma.Responder(w, http.StatusBadGateway, plataforma.ErrHTTP{
 				Msg: "El servicio no está disponible en este momento. Intenta en unos segundos.", Clave: "no_disponible"})
@@ -163,6 +168,11 @@ func (p *Pasarela) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	limite := int64(256 << 10)
 	if r.Method == http.MethodPost && (strings.HasSuffix(interna, "/fotos") || interna == "/subir") {
 		limite = 64 << 20 // fotos y videos
+	}
+	// Si el tamaño declarado ya excede el límite, se responde 413 sin leer nada.
+	if r.ContentLength > limite {
+		plataforma.Responder(w, http.StatusRequestEntityTooLarge, plataforma.ErrHTTP{Msg: "El archivo o los datos son demasiado grandes", Clave: "muy_grande"})
+		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, limite)
 

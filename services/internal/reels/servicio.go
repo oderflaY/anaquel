@@ -37,12 +37,16 @@ type Servicio struct {
 	bd      *pgxpool.Pool
 	firma   *plataforma.Firmante
 	mercado *plataforma.ClienteInterno
-	videos  string
+	videos  *os.Root // carpeta de videos: ninguna operación puede salir de ella
 }
 
 func Nuevo(bd *pgxpool.Pool, firma *plataforma.Firmante, urlMercado, carpeta string) (*Servicio, error) {
-	v := filepath.Join(carpeta, "videos")
-	if err := os.MkdirAll(v, 0o750); err != nil {
+	dir := filepath.Join(carpeta, "videos")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return nil, err
+	}
+	v, err := os.OpenRoot(dir)
+	if err != nil {
 		return nil, err
 	}
 	return &Servicio{bd: bd, firma: firma, mercado: plataforma.NuevoClienteInterno(urlMercado, "reels", firma), videos: v}, nil
@@ -169,7 +173,7 @@ func (s *Servicio) subir(w http.ResponseWriter, r *http.Request) {
 	var tam int64
 	defer func() {
 		if tmp != "" {
-			_ = os.Remove(tmp)
+			_ = s.videos.Remove(tmp)
 		}
 	}()
 	for {
@@ -197,7 +201,7 @@ func (s *Servicio) subir(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		p.Close()
+		_ = p.Close()
 	}
 	desc = limpiar(desc)
 	if n := utf8.RuneCountInString(desc); n < 10 || n > 300 {
@@ -208,13 +212,13 @@ func (s *Servicio) subir(w http.ResponseWriter, r *http.Request) {
 		plataforma.Manejar(w, r, nil, plataforma.Fallo(400, "Elige un video"))
 		return
 	}
-	f, err := os.Open(tmp)
+	f, err := s.videos.Open(tmp)
 	if err != nil {
 		plataforma.Manejar(w, r, nil, err)
 		return
 	}
 	info, err := analizarMP4(f, tam)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		plataforma.Manejar(w, r, nil, plataforma.Fallo(400, err.Error()))
 		return
@@ -246,8 +250,8 @@ func (s *Servicio) subir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nombre := plataforma.Aleatorio(16) + ".mp4"
-	final := filepath.Join(s.videos, nombre)
-	if err := os.Rename(tmp, final); err != nil {
+	final := nombre
+	if err := s.videos.Rename(tmp, final); err != nil {
 		plataforma.Manejar(w, r, nil, err)
 		return
 	}
@@ -263,7 +267,7 @@ func (s *Servicio) subir(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
 		id.Cuenta, id.Nombre, id.Slug, pid, titulo, precio, unidad, nombre, tam, info.DuracionMs, info.Ancho, info.Alto, desc).Scan(&nuevo)
 	if err != nil {
-		_ = os.Remove(final)
+		_ = s.videos.Remove(final)
 	}
 	plataforma.Manejar(w, r, map[string]int64{"id": nuevo}, err)
 }
@@ -274,29 +278,25 @@ func campo(p *multipart.Part, max int64) string {
 }
 
 func (s *Servicio) guardarTemporal(p *multipart.Part) (string, int64, error) {
-	f, err := os.CreateTemp(s.videos, "subida-*.tmp")
+	nombre := "subida-" + plataforma.Aleatorio(12) + ".tmp"
+	f, err := s.videos.OpenFile(nombre, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return "", 0, err
 	}
 	n, err := io.Copy(f, io.LimitReader(p, maxBytes+1))
 	cerr := f.Close()
-	if err != nil {
-		_ = os.Remove(f.Name())
+	if err != nil || cerr != nil || n > maxBytes {
+		_ = s.videos.Remove(nombre)
 		var mb *http.MaxBytesError
-		if errors.As(err, &mb) {
+		if n > maxBytes || errors.As(err, &mb) {
 			return "", 0, plataforma.Fallo(413, "El video pesa demasiado (máximo 50 MB)")
+		}
+		if err == nil {
+			err = cerr
 		}
 		return "", 0, err
 	}
-	if cerr != nil {
-		_ = os.Remove(f.Name())
-		return "", 0, cerr
-	}
-	if n > maxBytes {
-		_ = os.Remove(f.Name())
-		return "", 0, plataforma.Fallo(413, "El video pesa demasiado (máximo 50 MB)")
-	}
-	return f.Name(), n, nil
+	return nombre, n, nil
 }
 
 func limpiar(s string) string {
@@ -318,7 +318,7 @@ func (s *Servicio) borrar(w http.ResponseWriter, r *http.Request) {
 	var archivo string
 	err = s.bd.QueryRow(r.Context(), "DELETE FROM reels WHERE id = $1 AND cuenta_id = $2 RETURNING archivo", rid, plataforma.IdentidadDe(r).Cuenta).Scan(&archivo)
 	if err == nil {
-		_ = os.Remove(filepath.Join(s.videos, archivo))
+		_ = s.videos.Remove(archivo)
 	}
 	plataforma.Manejar(w, r, nil, err)
 }
@@ -338,7 +338,7 @@ func (s *Servicio) servir(w http.ResponseWriter, r *http.Request) {
 		plataforma.Manejar(w, r, nil, plataforma.Fallo(404, "Video no encontrado"))
 		return
 	}
-	f, err := os.Open(filepath.Join(s.videos, nombre))
+	f, err := s.videos.Open(nombre)
 	if err != nil {
 		plataforma.Manejar(w, r, nil, plataforma.Fallo(404, "Video no encontrado"))
 		return
@@ -434,7 +434,7 @@ func (s *Servicio) SembrarDemo(ctx context.Context, acceso *plataforma.ClienteIn
 				}
 			}
 			nombre := plataforma.Aleatorio(16) + ".mp4"
-			if err := os.WriteFile(filepath.Join(s.videos, nombre), datos, 0o640); err != nil {
+			if err := s.videos.WriteFile(nombre, datos, 0o600); err != nil {
 				continue
 			}
 			_, _ = s.bd.Exec(ctx, `INSERT INTO reels (cuenta_id, vendedor_nombre, vendedor_slug, publicacion_id, publicacion_titulo,

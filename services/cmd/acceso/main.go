@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 
 	"anaquel/servicios/internal/acceso"
 	"anaquel/servicios/internal/plataforma"
@@ -31,6 +32,9 @@ func main() {
 		if err := s.SembrarDemo(context.Background()); err != nil {
 			plataforma.Morir("demo", err)
 		}
+	}
+	if plataforma.Env("COOKIE_INSEGURA", "0") == "1" {
+		slog.Warn("COOKIE_INSEGURA=1: la cookie de sesión NO lleva Secure. Úsalo solo en desarrollo por http://localhost")
 	}
 	plataforma.Arrancar("acceso", plataforma.Env("ADDR", ":8101"), s.Rutas())
 }

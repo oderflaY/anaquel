@@ -1,0 +1,138 @@
+/* ==========================================================================
+   Tokens de diseño de Anaquel Mercado
+   Paleta cálida y local (no la del marketplace de Facebook):
+   - Marca: verde pino de Anaquel (el mismo del panel y la bodega 3D).
+   - Acento: terracota, como el barro y la cantera de Durango.
+   - Neutros: arena cálida en lugar de grises fríos.
+   Todos los pares texto/fondo cumplen WCAG AA (≥ 4.5:1).
+   ========================================================================== */
+:root {
+  /* Color · marca */
+  --color-marca: #0e7c5a;          /* 5.2:1 sobre blanco */
+  --color-marca-hover: #0b6a4d;
+  --color-marca-activo: #09583f;
+  --color-marca-suave: #ebf6f0;    /* marca sobre este fondo: 4.7:1 */
+  --color-sobre-marca: #ffffff;
+  /* Color · acento */
+  --color-acento: #a3461f;         /* 6.1:1 sobre blanco, 5.2:1 sobre acento-suave */
+  --color-acento-suave: #fbe9df;
+  /* Color · neutros */
+  --color-fondo: #f7f4ef;
+  --color-superficie: #ffffff;
+  --color-superficie-2: #f1ece4;
+  --color-borde: #e6dfd4;
+  --color-borde-fuerte: #cdc3b4;
+  --color-texto: #22201c;          /* 15:1 */
+  --color-texto-2: #5c564d;        /* 7.1:1 */
+  --color-texto-3: #6e675d;        /* 5.1:1 sobre fondo */
+  /* Color · estados */
+  --color-exito: #13795b;
+  --color-exito-suave: #e1f3ea;
+  --color-aviso: #8f5d00;
+  --color-aviso-suave: #fbf0d9;
+  --color-error: #b42318;
+  --color-error-suave: #fde8e6;
+  --color-info: #2d6a7a;
+  --color-info-suave: #e3f0f3;
+  --color-foco: #0e7c5a;
+  --color-velo: rgb(24 20 14 / 52%);
+  --color-esqueleto: #ebe5dc;
+  --color-esqueleto-brillo: #f5f1eb;
+
+  /* Tipografía */
+  --fuente: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --texto-12: .75rem;
+  --texto-14: .875rem;
+  --texto-16: 1rem;
+  --texto-20: 1.25rem;
+  --texto-24: 1.5rem;
+  --texto-32: 2rem;
+  --peso-normal: 400;
+  --peso-medio: 600;
+  --peso-fuerte: 700;
+  --interlineado: 1.5;
+  --interlineado-titulo: 1.2;
+
+  /* Espaciado (base 4 px) */
+  --e-1: 4px;
+  --e-2: 8px;
+  --e-3: 12px;
+  --e-4: 16px;
+  --e-6: 24px;
+  --e-8: 32px;
+  --e-12: 48px;
+
+  /* Bordes */
+  --radio-control: 12px;
+  --radio-card: 16px;
+  --radio-modal: 20px;
+  --radio-pastilla: 999px;
+  --borde: 1px solid var(--color-borde);
+
+  /* Sombras */
+  --sombra-1: 0 1px 2px rgb(40 30 15 / 6%), 0 2px 8px rgb(40 30 15 / 6%);
+  --sombra-2: 0 12px 32px rgb(40 30 15 / 16%), 0 2px 8px rgb(40 30 15 / 8%);
+
+  /* Movimiento */
+  --dur-rapida: 150ms;
+  --dur-normal: 250ms;
+  --curva: cubic-bezier(.2, .7, .2, 1);
+
+  /* Tamaños */
+  --tactil: 44px;      /* objetivo táctil mínimo */
+  --ancho-max: 1180px;
+  --capa-barra: 600;
+  --capa-modal: 1000;
+  --capa-toast: 1100;
+}
+
+/* Tema oscuro: por preferencia del sistema o forzado con data-theme="dark". */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-marca: #4cc79a;
+    --color-marca-hover: #66d3ab;
+    --color-marca-activo: #7fdcb9;
+    --color-marca-suave: #173229;
+    --color-sobre-marca: #072519;
+    --color-acento: #ec9469;
+    --color-acento-suave: #3a2318;
+    --color-fondo: #151412;
+    --color-superficie: #1e1c19;
+    --color-superficie-2: #27241f;
+    --color-borde: #36322c;
+    --color-borde-fuerte: #4a453d;
+    --color-texto: #f1ece4;
+    --color-texto-2: #c4bbad;
+    --color-texto-3: #a69d90;
+    --color-exito: #5fcf9f;
+    --color-exito-suave: #16302a;
+    --color-aviso: #f0bf5a;
+    --color-aviso-suave: #35290f;
+    --color-error: #f28b80;
+    --color-error-suave: #3d1c18;
+    --color-info: #7cc3d4;
+    --color-info-suave: #18303a;
+    --color-foco: #4cc79a;
+    --color-velo: rgb(0 0 0 / 62%);
+    --color-esqueleto: #2a2722;
+    --color-esqueleto-brillo: #34302a;
+    --sombra-1: 0 1px 2px rgb(0 0 0 / 40%);
+    --sombra-2: 0 12px 32px rgb(0 0 0 / 55%);
+  }
+}
+:root[data-theme='dark'] {
+  --color-marca: #4cc79a; --color-marca-hover: #66d3ab; --color-marca-activo: #7fdcb9; --color-marca-suave: #173229;
+  --color-sobre-marca: #072519; --color-acento: #ec9469; --color-acento-suave: #3a2318;
+  --color-fondo: #151412; --color-superficie: #1e1c19; --color-superficie-2: #27241f;
+  --color-borde: #36322c; --color-borde-fuerte: #4a453d;
+  --color-texto: #f1ece4; --color-texto-2: #c4bbad; --color-texto-3: #a69d90;
+  --color-exito: #5fcf9f; --color-exito-suave: #16302a; --color-aviso: #f0bf5a; --color-aviso-suave: #35290f;
+  --color-error: #f28b80; --color-error-suave: #3d1c18; --color-info: #7cc3d4; --color-info-suave: #18303a;
+  --color-foco: #4cc79a; --color-velo: rgb(0 0 0 / 62%);
+  --color-esqueleto: #2a2722; --color-esqueleto-brillo: #34302a;
+  --sombra-1: 0 1px 2px rgb(0 0 0 / 40%); --sombra-2: 0 12px 32px rgb(0 0 0 / 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-rapida: 0ms; --dur-normal: 0ms; }
+}

@@ -28,13 +28,17 @@ type Servicio struct {
 	bd     *pgxpool.Pool
 	firma  *plataforma.Firmante
 	acceso *plataforma.ClienteInterno
-	fotos  string // carpeta de fotos
+	fotos  *os.Root // carpeta de fotos: ninguna operación puede salir de ella
 	demo   bool
 }
 
 func Nuevo(bd *pgxpool.Pool, firma *plataforma.Firmante, urlAcceso, carpeta string, demo bool) (*Servicio, error) {
-	fotos := filepath.Join(carpeta, "fotos")
-	if err := os.MkdirAll(fotos, 0o750); err != nil {
+	dir := filepath.Join(carpeta, "fotos")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return nil, err
+	}
+	fotos, err := os.OpenRoot(dir)
+	if err != nil {
 		return nil, err
 	}
 	return &Servicio{bd: bd, firma: firma, acceso: plataforma.NuevoClienteInterno(urlAcceso, "mercado", firma), fotos: fotos, demo: demo}, nil

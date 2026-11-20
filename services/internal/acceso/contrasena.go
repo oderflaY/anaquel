@@ -62,7 +62,7 @@ func verificarPass(guardado, pass string) (ok, recifrar bool) {
 	e := base64.RawStdEncoding
 	salt, err1 := e.DecodeString(partes[4])
 	esperado, err2 := e.DecodeString(partes[5])
-	if err1 != nil || err2 != nil || len(esperado) == 0 {
+	if err1 != nil || err2 != nil || len(esperado) < 16 || len(esperado) > 64 || len(salt) > 64 {
 		return false, false
 	}
 	semaforoHash <- struct{}{}

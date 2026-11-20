@@ -82,7 +82,7 @@ func (s *Simulador) notificar(ctx context.Context, txID string) error {
 	if err != nil {
 		return err
 	}
-	res.Body.Close()
+	_ = res.Body.Close()
 	if res.StatusCode >= 300 {
 		return errors.New("el webhook respondió " + res.Status)
 	}

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"log/slog"
 	"strings"
 
 	"anaquel/servicios/internal/pasarela"
@@ -31,6 +32,9 @@ func main() {
 	}, f)
 	if err != nil {
 		plataforma.Morir("configuración", err)
+	}
+	if plataforma.Env("COOKIE_INSEGURA", "0") == "1" {
+		slog.Warn("COOKIE_INSEGURA=1: la cookie de sesión NO lleva Secure. Úsalo solo en desarrollo por http://localhost")
 	}
 	plataforma.Arrancar("pasarela", plataforma.Env("ADDR", ":8080"), p)
 }
