@@ -14,7 +14,7 @@ import { encerrados, trazar, type Ruta } from '../tienda3d/ruta'
 import { ICONO_2D, Plano2D, vistaInicial, type Herramienta } from '../tienda3d/Plano2D'
 import {
   alturaHablada, calcularHuecos, describirLugar, estadoDe, huella, LADOS, normalizar, pesos, singular, TIPOS, unidades,
-  type DatosBodega, type Lugar, type Mueble, type Pared, type Plano, type TipoMueble,
+  normalizarDatos, type DatosBodega, type Lugar, type Mueble, type Pared, type Plano, type TipoMueble,
 } from '../tienda3d/tipos'
 
 // ---------------------------------------------------------------- voz
@@ -182,7 +182,7 @@ const LEYENDA: Record<Exclude<Modo, 'normal'>, [string, string][]> = {
 export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: string }) {
   const publica = !!slug
   const tema = useTema()
-  const { datos, error, setDatos } = useDatos(() => api.get<DatosBodega>(publica ? `/publico/tiendas/${encodeURIComponent(slug!)}/bodega` : '/bodega'), [slug])
+  const { datos, error, setDatos } = useDatos(() => api.get<DatosBodega>(publica ? `/publico/tiendas/${encodeURIComponent(slug!)}/bodega` : '/bodega').then(normalizarDatos), [slug])
   const caja = useRef<HTMLDivElement>(null)
   const escena = useRef<Tienda3D | null>(null)
   const [webgl, setWebgl] = useState(true)
@@ -348,7 +348,7 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
     if (conVoz && r) hablar(r.pasos.map((x) => x.voz), setPaso)
   }
 
-  const nuevaInfo = (d: DatosBodega) => { setDatos(d); sesion?.refrescar() }
+  const nuevaInfo = (d: DatosBodega) => { setDatos(normalizarDatos(d)); sesion?.refrescar() }
 
   // ---------------------------------------------------------------- vista
   const elegidoP = datos?.productos.find((p) => p.id === elegido) ?? null
@@ -370,7 +370,7 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
     <div className={`columna bodega3d ${publica ? 'publica' : ''}`} style={{ gap: '1rem' }}>
       <div className="renglon">
         <div>
-          <h1 style={{ marginBottom: '.2rem' }}>{publica ? datos?.tienda.nombre ?? 'Recorrido 3D' : 'Bodega 3D'}</h1>
+          <h1 style={{ marginBottom: '.2rem' }}>{publica ? datos?.tienda.nombre ?? 'Recorrido 3D' : 'Mi bodega'}</h1>
           <p className="secundario" style={{ margin: 0 }}>
             {publica ? 'Recorre la tienda, busca un producto y te digo dónde está y cómo llegar.'
               : 'Tu tienda a escala: cada producto en su entrepaño con lo que de verdad te queda. Pregúntale dónde está algo y te lleva.'}

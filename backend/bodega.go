@@ -226,7 +226,22 @@ func mueble(id, tipo, nombre string, x, z float64, rot int, ancho float64) Muebl
 
 // planoAuto arma un local típico del giro, con los anaqueles fotografiados
 // colgados en la pared del fondo (así la foto del día pinta el 3D).
+// planoAuto arma el plano inicial; las listas van vacías (no null) para el cliente.
 func planoAuto(giro string, anaqueles []Anaquel) Plano {
+	p := planoAutoBase(giro, anaqueles)
+	if p.Areas == nil {
+		p.Areas = []Area{}
+	}
+	if p.Paredes == nil {
+		p.Paredes = []Pared{}
+	}
+	if p.Columnas == nil {
+		p.Columnas = []Columna{}
+	}
+	return p
+}
+
+func planoAutoBase(giro string, anaqueles []Anaquel) Plano {
 	var p Plano
 	switch giro {
 	case "ropa":

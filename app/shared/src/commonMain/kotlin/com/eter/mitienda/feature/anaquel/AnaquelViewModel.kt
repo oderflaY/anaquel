@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class SeccionAnaquel(val titulo: String) {
-    HOY("Hoy"), BODEGA("Bodega 3D"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"),
+    HOY("Hoy"), BODEGA("Mi bodega"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"),
 }
 
 data class AnaquelUiState(

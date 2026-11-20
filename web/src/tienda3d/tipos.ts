@@ -202,3 +202,10 @@ export function unidades(n: number, u: string) {
   const plural = uno ? nombre : /([aeiou]|t)$/.test(nombre) ? nombre + 's' : /s$/.test(nombre) ? nombre : nombre + 'es'
   return `${n.toLocaleString('es-MX')} ${plural}`
 }
+
+/** El servidor puede mandar listas vacías como null (planos viejos o automáticos). */
+export function normalizarDatos(d: DatosBodega): DatosBodega {
+  const p = d.plano
+  return { ...d, productos: d.productos ?? [], anaqueles: d.anaqueles ?? [],
+    plano: { ...p, muebles: p.muebles ?? [], areas: p.areas ?? [], paredes: p.paredes ?? [], columnas: p.columnas ?? [] } }
+}

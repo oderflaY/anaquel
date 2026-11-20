@@ -1,5 +1,6 @@
 package com.eter.mitienda.feature.anaquel
 
+import androidx.compose.runtime.key
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.semantics.contentDescription
 
@@ -202,38 +203,24 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
     var contra by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Perfil(st, vm, onHerramientas, onSalir = { confirmarSalir = true })
-            LazyRow(
-                contentPadding = PaddingValues(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceMd, bottom = NeuDimens.SpaceSm),
-                horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd),
-            ) {
-                items(SeccionAnaquel.entries.filter { it != SeccionAnaquel.RED || st.seccion == SeccionAnaquel.RED }) { s ->
-                    val n = when (s) {
-                        SeccionAnaquel.HOY -> st.resumen?.sinPedir ?: 0
-                        SeccionAnaquel.PEDIDOS -> st.resumen?.atrasados ?: 0
-                        SeccionAnaquel.ANAQUELES -> st.resumen?.sinFotoHoy ?: 0
-                        SeccionAnaquel.TRATOS -> st.resumen?.tratosPendientes ?: 0
-                        SeccionAnaquel.RED -> st.resumen?.avisos ?: 0
-                        SeccionAnaquel.ASESOR, SeccionAnaquel.BODEGA -> 0
-                    }
-                    NeumorphicChip(if (n > 0) "${s.titulo} · $n" else s.titulo, selected = st.seccion == s, onClick = { vm.elegirSeccion(s) })
-                }
-            }
+            EncabezadoTienda(
+                st, onRespaldar = vm::sincronizarInventario, onHerramientas = onHerramientas, onSalir = { confirmarSalir = true },
+                onReiniciarDemo = if (st.tienda?.slug == "dona-lupita") vm::reiniciarDemo else null,
+            )
+            BarraSecciones(SeccionAnaquel.entries.filter { it != SeccionAnaquel.RED || st.seccion == SeccionAnaquel.RED }, st.seccion, st) { vm.elegirSeccion(it) }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(NeuColors.TextSecondary.copy(alpha = 0.12f)))
             if (st.seccion == SeccionAnaquel.BODEGA) {
                 Bodega3D(vm, Modifier.weight(1f))
-            } else LazyColumn(
+            } else key(st.seccion) { LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(
-                    start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceXl,
+                    start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceLg,
                     bottom = NeuDimens.FabSize + NeuDimens.ScreenPadding * 2,
                 ),
                 verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceXl),
             ) {
-                if (st.tienda?.slug == "dona-lupita" && st.seccion == SeccionAnaquel.HOY) {
-                    item(key = "demo") {
-                        NeumorphicChip("↺ Reiniciar demo", selected = false, onClick = vm::reiniciarDemo)
-                    }
-                }
+                item(key = "titulo") { TituloSeccion(st.seccion) }
+                if (st.seccion == SeccionAnaquel.HOY) item(key = "cifras-color") { TarjetasCifras(st) { vm.elegirSeccion(it) } }
                 if (st.error != null && st.resumen == null) {
                     item { Errores(st.error, vm::refrescar) }
                 }
@@ -246,7 +233,7 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
                     SeccionAnaquel.TRATOS -> tratos(st, vm) { contra = true }
                     SeccionAnaquel.BODEGA -> Unit
                 }
-            }
+            } }
         }
         if (st.seccion == SeccionAnaquel.ANAQUELES) {
             NeumorphicFab(painterResource(Res.drawable.ic_add), "Nuevo anaquel", onClick = { pedirNombre = true },
@@ -310,11 +297,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.hoy(st: AnaquelUiStat
     val r = st.resumen
     if (r != null) {
         item(key = "cifras") {
+            // «Por pedir» y «pedidos» ya están en las tarjetas de color de arriba.
             Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceLg)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceLg)) {
-                    Cifra("${r.sinPedir}", "por pedir", r.sinPedir > 0, Modifier.weight(1f))
-                    Cifra("${r.pedidosAbiertos}", "en camino", false, Modifier.weight(1f))
-                }
                 Row(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceLg)) {
                     Cifra("${r.atrasados}", "no han llegado", r.atrasados > 0, Modifier.weight(1f))
                     Cifra("${r.anaqueles - r.sinFotoHoy}/${r.anaqueles}", "fotos de hoy", false, Modifier.weight(1f))
@@ -676,59 +660,3 @@ private fun Bodega3D(vm: AnaquelViewModel, modifier: Modifier) {
 
 
 /** Encabezado tipo perfil: quién eres, tus números (se pueden tocar) y todas tus herramientas. */
-@Composable
-private fun Perfil(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: () -> Unit, onSalir: () -> Unit) {
-    val t = st.tienda
-    val r = st.resumen
-    val nombre = t?.nombre.orEmpty().removeSuffix(" (demo)")
-    Column(
-        Modifier.fillMaxWidth().padding(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceLg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.width(46.dp))
-            Spacer(Modifier.weight(1f))
-            Box(
-                Modifier.size(84.dp).background(
-                    androidx.compose.ui.graphics.Brush.linearGradient(listOf(NeuColors.Magenta, NeuColors.Blue)), androidx.compose.foundation.shape.CircleShape,
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    nombre.split(' ').filter { it.firstOrNull()?.isLetter() == true }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "T" },
-                    color = NeuColors.OnAccent, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            NeumorphicIconButton(painterResource(Res.drawable.ic_upload), "Respaldar inventario en la nube", onClick = vm::sincronizarInventario,
-                size = NeuDimens.IconButtonSmallSize, iconSize = NeuDimens.IconSmallSize)
-        }
-        Spacer(Modifier.height(NeuDimens.SpaceSm))
-        Text(nombre, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = NeuColors.TextPrimary, maxLines = 1)
-        t?.slug?.takeIf { it.isNotBlank() }?.let { Texto("@$it") }
-        Spacer(Modifier.height(NeuDimens.SpaceMd))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Cifra(r?.productos ?: 0, "Productos") { vm.elegirSeccion(SeccionAnaquel.BODEGA) }
-            Cifra(r?.sinPedir ?: 0, "Por pedir") { vm.elegirSeccion(SeccionAnaquel.HOY) }
-            Cifra(r?.pedidosAbiertos ?: 0, "Pedidos") { vm.elegirSeccion(SeccionAnaquel.PEDIDOS) }
-            Cifra(r?.tratosPendientes ?: 0, "Tratos") { vm.elegirSeccion(SeccionAnaquel.TRATOS) }
-        }
-        Spacer(Modifier.height(NeuDimens.SpaceMd))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
-            NeumorphicButton("Todas mis herramientas", onClick = onHerramientas, modifier = Modifier.weight(1f))
-            NeumorphicButton("Salir", onClick = onSalir, containerColor = NeuColors.Background)
-        }
-    }
-}
-
-@Composable
-private fun Cifra(n: Int, texto: String, onClick: () -> Unit) {
-    Column(
-        Modifier.clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp)
-            .semantics(mergeDescendants = true) { contentDescription = "$n $texto" },
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        NumeroAnimado(n, NeuColors.TextPrimary, MaterialTheme.typography.titleLarge.fontSize, estilo = MaterialTheme.typography.titleLarge)
-        Text(texto, style = MaterialTheme.typography.bodySmall, color = NeuColors.TextSecondary)
-    }
-}
