@@ -72,6 +72,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.navigation.compose)
+            // Íconos de Material (en lugar de emojis).
+            implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
             // Fechas locales (días, zona horaria) para gráficas y fechas de entrega.
             implementation(libs.kotlinx.datetime)
             // SQL crudo multiplataforma (sin ORM). Driver: AndroidSQLiteDriver / NativeSQLiteDriver.

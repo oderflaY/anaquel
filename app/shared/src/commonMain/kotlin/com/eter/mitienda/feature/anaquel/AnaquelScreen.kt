@@ -216,7 +216,7 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
                         SeccionAnaquel.RED -> st.resumen?.avisos ?: 0
                         SeccionAnaquel.ASESOR, SeccionAnaquel.BODEGA -> 0
                     }
-                    NeumorphicChip(emojiSeccion(s) + " " + if (n > 0) "${s.titulo} · $n" else s.titulo, selected = st.seccion == s, onClick = { vm.elegirSeccion(s) })
+                    NeumorphicChip(if (n > 0) "${s.titulo} · $n" else s.titulo, selected = st.seccion == s, onClick = { vm.elegirSeccion(s) })
                 }
             }
             if (st.seccion == SeccionAnaquel.BODEGA) {
@@ -369,7 +369,7 @@ private fun GrupoCard(g: GrupoPedido, st: AnaquelUiState, vm: AnaquelViewModel) 
         Texto(
             when {
                 s == null -> "Agrégale proveedor desde la web (Productos o Proveedores)."
-                s.tipo == "productor" -> "🌱 Productor local" + (s.distanciaKm?.let { " · a $it km" } ?: "") + (s.lugar?.let { " · $it" } ?: "")
+                s.tipo == "productor" -> "Productor local" + (s.distanciaKm?.let { " · a $it km" } ?: "") + (s.lugar?.let { " · $it" } ?: "")
                 else -> "Proveedor"
             },
         )
@@ -395,7 +395,7 @@ private fun GrupoCard(g: GrupoPedido, st: AnaquelUiState, vm: AnaquelViewModel) 
                     val elegida = f.sugerencias.firstOrNull { it.clave == (st.eleccion[f.producto.id] ?: f.sugerencias.first().clave) } ?: f.sugerencias.first()
                     NeumorphicDropdown(
                         selected = elegida, options = f.sugerencias,
-                        optionLabel = { (if (it.tipo == "productor") "🌱 " else "") + it.nombre + (it.distanciaKm?.let { d -> " ($d km)" } ?: "") },
+                        optionLabel = { (if (it.tipo == "productor") "Local · " else "") + it.nombre + (it.distanciaKm?.let { d -> " ($d km)" } ?: "") },
                         onSelect = { vm.elegir(f.producto.id, it.clave) },
                         modifier = Modifier.weight(1f),
                     )
@@ -456,7 +456,7 @@ private fun PedidoCard(p: Pedido, st: AnaquelUiState, vm: AnaquelViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Titulo("#${p.id} · ${p.destino}")
-                Texto((if (p.tipo == "productor") "🌱 Local · " else "") + "pedido ${hace(p.creado)}" +
+                Texto((if (p.tipo == "productor") "Local · " else "") + "pedido ${hace(p.creado)}" +
                     if (p.estado == "llego" && p.llegoAuto) " · confirmado por foto" else "")
             }
             EtiquetaNivel(p.estado)
@@ -674,10 +674,6 @@ private fun Bodega3D(vm: AnaquelViewModel, modifier: Modifier) {
     }
 }
 
-internal fun emojiSeccion(s: SeccionAnaquel) = when (s) {
-    SeccionAnaquel.HOY -> "🛒"; SeccionAnaquel.BODEGA -> "🧊"; SeccionAnaquel.ASESOR -> "✨"; SeccionAnaquel.RED -> "🔎"
-    SeccionAnaquel.TRATOS -> "🤝"; SeccionAnaquel.ANAQUELES -> "📸"; SeccionAnaquel.PEDIDOS -> "🚚"
-}
 
 /** Encabezado tipo perfil: quién eres, tus números (se pueden tocar) y todas tus herramientas. */
 @Composable
@@ -699,7 +695,7 @@ private fun Perfil(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: () 
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    nombre.split(' ').filter { it.firstOrNull()?.isLetter() == true }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "🏪" },
+                    nombre.split(' ').filter { it.firstOrNull()?.isLetter() == true }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "T" },
                     color = NeuColors.OnAccent, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
                 )
             }

@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -182,7 +183,7 @@ private fun BotonMas(onClick: () -> Unit, modifier: Modifier) {
 // ---------------- Hoja de acciones ----------------
 
 /** Una herramienta del vendedor. */
-data class Herramienta(val id: String, val emoji: String, val titulo: String, val detalle: String, val burbuja: Int = 0)
+data class Herramienta(val id: String, val icono: ImageVector, val color: Color, val titulo: String, val detalle: String, val burbuja: Int = 0)
 
 data class GrupoHerramientas(val titulo: String, val herramientas: List<Herramienta>)
 
@@ -191,28 +192,28 @@ fun herramientasDe(st: AnaquelUiState, urgentes: Int): List<GrupoHerramientas> {
     val r = st.resumen
     return listOf(
         GrupoHerramientas("Vender", listOf(
-            Herramienta("vender", "🧾", "Cobrar", "Caja: escanea y cobra"),
-            Herramienta("agregar", "➕", "Nuevo producto", "Alta con foto y código"),
-            Herramienta("inventario", "📦", "Inventario", "Existencias y precios"),
-            Herramienta("pedidos_clientes", "📋", "Encargos", "Pedidos de tus clientes", urgentes),
+            Herramienta("vender", Ico.Cobrar, Color(0xFF0E7C5A), "Cobrar", "Caja: escanea y cobra"),
+            Herramienta("agregar", Ico.Nuevo, Color(0xFF2F80ED), "Nuevo producto", "Alta con foto y código"),
+            Herramienta("inventario", Ico.Inventario, Color(0xFFE0871B), "Inventario", "Existencias y precios"),
+            Herramienta("pedidos_clientes", Ico.Encargos, Color(0xFF7B3FC4), "Encargos", "Pedidos de tus clientes", urgentes),
         )),
         GrupoHerramientas("Surtir", listOf(
-            Herramienta("hoy", "🛒", "Qué pedir hoy", "Lo que se te acaba", r?.sinPedir ?: 0),
-            Herramienta("foto", "📸", "Foto del anaquel", "Revisa qué falta", r?.sinFotoHoy ?: 0),
-            Herramienta("pedidos", "🚚", "Pedidos a proveedor", "Lo que ya pediste", r?.atrasados ?: 0),
-            Herramienta("bodega", "🧊", "Bodega 3D", "Dónde está cada cosa"),
+            Herramienta("hoy", Ico.PedirHoy, Color(0xFFE5484D), "Qué pedir hoy", "Lo que se te acaba", r?.sinPedir ?: 0),
+            Herramienta("foto", Ico.Foto, Color(0xFF00897B), "Foto del anaquel", "Revisa qué falta", r?.sinFotoHoy ?: 0),
+            Herramienta("pedidos", Ico.Camion, Color(0xFF2F5DA8), "Pedidos a proveedor", "Lo que ya pediste", r?.atrasados ?: 0),
+            Herramienta("bodega", Ico.Bodega, Color(0xFF0097A7), "Mi bodega", "Ármala en 3D o 2D"),
         )),
         GrupoHerramientas("Red de comercio", listOf(
-            Herramienta("red", "🔎", "Buscar en la red", "Quién lo tiene más barato", r?.avisos ?: 0),
-            Herramienta("chats", "💬", "Chats", "Proveedores y tiendas", r?.chatsSinLeer ?: 0),
-            Herramienta("tratos", "🤝", "Tratos", "Negociaciones abiertas", r?.tratosPendientes ?: 0),
-            Herramienta("asesor", "✨", "Asesor", "Pregúntale a tu negocio"),
+            Herramienta("red", Ico.Buscar, Color(0xFF3F51B5), "Buscar en la red", "Quién lo tiene más barato", r?.avisos ?: 0),
+            Herramienta("chats", Ico.Chat, Color(0xFF0E7C5A), "Chats", "Proveedores y tiendas", r?.chatsSinLeer ?: 0),
+            Herramienta("tratos", Ico.Trato, Color(0xFFE0871B), "Tratos", "Negociaciones abiertas", r?.tratosPendientes ?: 0),
+            Herramienta("asesor", Ico.Asesor, Color(0xFF8E44AD), "Asesor", "Pregúntale a tu negocio"),
         )),
         GrupoHerramientas("Mi negocio", listOf(
-            Herramienta("graficas", "📈", "Gráficas", "Ventas y ganancias"),
-            Herramienta("categorias", "🗂️", "Categorías", "Ordena tus productos"),
-            Herramienta("sincronizar", "☁️", "Respaldar", "Sube tu inventario"),
-            Herramienta("bluetooth", "📶", "Otro teléfono", "Pasa datos por Bluetooth"),
+            Herramienta("graficas", Ico.Graficas, Color(0xFF2F80ED), "Gráficas", "Ventas y ganancias"),
+            Herramienta("categorias", Ico.Categorias, Color(0xFFC2185B), "Categorías", "Ordena tus productos"),
+            Herramienta("sincronizar", Ico.Nube, Color(0xFF0097A7), "Respaldar", "Sube tu inventario"),
+            Herramienta("bluetooth", Ico.Bluetooth, Color(0xFF3F51B5), "Otro teléfono", "Pasa datos por Bluetooth"),
         )),
     )
 }
@@ -265,9 +266,10 @@ private fun Mosaico(h: Herramienta, indice: Int, onClick: () -> Unit) {
     ) {
         Box {
             Box(
-                Modifier.size(58.dp).shadow(6.dp, RoundedCornerShape(18.dp)).background(Color.White, RoundedCornerShape(18.dp)),
+                Modifier.size(58.dp).shadow(8.dp, RoundedCornerShape(18.dp), spotColor = h.color)
+                    .background(Brush.linearGradient(listOf(h.color.copy(alpha = 0.85f), h.color)), RoundedCornerShape(18.dp)),
                 contentAlignment = Alignment.Center,
-            ) { Text(h.emoji, fontSize = 26.sp) }
+            ) { Icon(h.icono, null, tint = Color.White, modifier = Modifier.size(28.dp)) }
             if (h.burbuja > 0) Text(
                 "${h.burbuja}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White,
                 modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).latido()
@@ -307,31 +309,6 @@ fun feedDe(ini: Inicio): List<Publicacion> {
     return out
 }
 
-private val tonos = listOf(
-    listOf(Color(0xFF0E7C5A), Color(0xFF0B3D2E)), listOf(Color(0xFF2F5DA8), Color(0xFF14284D)),
-    listOf(Color(0xFF8E44AD), Color(0xFF3B1C4A)), listOf(Color(0xFFD35400), Color(0xFF5A2300)),
-    listOf(Color(0xFFC0392B), Color(0xFF4D1610)), listOf(Color(0xFF16A085), Color(0xFF0A3F35)),
-)
-
-/** Un dibujo para cada producto (no hay fotos en la red todavía). */
-fun emojiDe(t: String, tipo: String = "producto"): String {
-    val n = t.lowercase()
-    val mapa = listOf(
-        "leche" to "🥛", "yogurt" to "🥛", "queso" to "🧀", "mantequilla" to "🧈", "jamón" to "🥓", "salchicha" to "🌭",
-        "agua" to "💧", "refresco" to "🥤", "jugo" to "🧃", "cerveza" to "🍺", "café" to "☕", "azúcar" to "🍚", "arroz" to "🍚",
-        "frijol" to "🫘", "huevo" to "🥚", "atún" to "🐟", "sardina" to "🐟", "aceite" to "🫒", "pan" to "🍞", "galleta" to "🍪",
-        "papas" to "🥔", "cacahuate" to "🥜", "botana" to "🥨", "chocolate" to "🍫", "dulce" to "🍬", "paleta" to "🍭",
-        "pasta" to "🍝", "sopa" to "🍜", "harina" to "🌽", "maíz" to "🌽", "sal " to "🧂", "papel higiénico" to "🧻",
-        "jabón" to "🧼", "cloro" to "🧴", "detergente" to "🧺", "cuaderno" to "📓", "pluma" to "🖊️", "lápiz" to "✏️",
-        "cinta" to "📎", "tijera" to "✂️", "mochila" to "🎒", "papel" to "📄", "hojas" to "📄", "gorra" to "🧢",
-        "playera" to "👕", "sudadera" to "🧥", "pantalón" to "👖", "vestido" to "👗", "zapato" to "👟", "calcet" to "🧦",
-        "piñata" to "🪅", "flete" to "🚚", "impres" to "🖨️", "foco" to "💡", "pintura" to "🎨", "martillo" to "🔨",
-    )
-    return mapa.firstOrNull { n.contains(it.first) }?.second ?: when (tipo) {
-        "solicitud" -> "🔎"; "anuncio" -> "🏷️"; "productor" -> "🌾"; else -> "📦"
-    }
-}
-
 @Composable
 fun FeedParaTi(
     feed: List<Publicacion>, modifier: Modifier = Modifier,
@@ -353,113 +330,6 @@ fun FeedParaTi(
 }
 
 private fun PagerState.desfase(pagina: Int): Float = (currentPage - pagina) + currentPageOffsetFraction
-
-@Composable
-private fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, onPedir: () -> Unit, onChat: (Long) -> Unit, onNegociar: (ResultadoRed) -> Unit) {
-    val tono = tonos[(pub.clave.hashCode() and 0x7fffffff) % tonos.size]
-    val tienda: TiendaCorta?; val titulo: String; val emoji: String; val etiqueta: String
-    val precio: String?; val detalle: String?; val km: Double?
-    when (pub) {
-        is Publicacion.Oferta -> {
-            val r = pub.r
-            tienda = r.tienda; titulo = r.titulo; emoji = emojiDe(r.titulo, r.tipo); etiqueta = pub.etiqueta
-            val costo = if ((r.precioMayoreoC ?: 0) > 0) r.precioMayoreoC!! else r.precioC ?: 0
-            precio = when {
-                costo > 0 -> "${formatPrice(costo)} c/u" + ((r.minimoMayoreo ?: 0).takeIf { it > 0 }?.let { " desde $it ${r.unidad ?: "pza"}" } ?: "")
-                !r.precio.isNullOrBlank() -> r.precio
-                else -> null
-            }
-            detalle = listOfNotNull(pub.motivo?.takeIf { it.isNotBlank() }, r.detalle.takeIf { it.isNotBlank() },
-                r.disponible?.let { "Hay $it disponibles" }).joinToString(" · ").ifBlank { null }
-            km = r.distanciaKm
-        }
-        is Publicacion.Proveedor -> {
-            val p = pub.p
-            tienda = TiendaCorta(p.id, p.nombre, p.slug, p.giro, p.telefono); titulo = p.nombre.removeSuffix(" (demo)")
-            emoji = "🏭"; etiqueta = "Proveedor grande"
-            precio = p.promocion?.takeIf { it.isNotBlank() }
-            detalle = "${p.productos} productos · ${p.afines} de lo que tú vendes" +
-                p.destacados.take(3).joinToString("") { d -> "\n• ${d.titulo} ${formatPrice(if ((d.precioMayoreoC ?: 0) > 0) d.precioMayoreoC!! else d.precioC ?: 0)}" }
-            km = p.distanciaKm
-        }
-    }
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(tono))) {
-        // Dibujo grande al centro, como la «foto» de la publicación.
-        Text(emoji, fontSize = 140.sp, modifier = Modifier.align(Alignment.Center).offset(y = (-60).dp).pop().flotar().clearAndSetSemantics { })
-        // Contador y etiqueta arriba.
-        Row(Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 64.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(etiqueta, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                modifier = Modifier.background(Color.Black.copy(alpha = 0.28f), RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 5.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("${i + 1} de $total", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
-        }
-        // Texto abajo a la izquierda, sobre un velo oscuro para que se lea.
-        Column(
-            Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
-                .padding(start = 18.dp, end = 96.dp, top = 40.dp, bottom = 22.dp),
-        ) {
-            tienda?.let {
-                Text("@${it.slug.ifBlank { it.nombre }}" + (km(km)?.let { k -> " · $k" } ?: ""), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(titulo, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, lineHeight = 28.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.entrada(1))
-            precio?.let {
-                Spacer(Modifier.height(8.dp))
-                Text(it, color = Color(0xFF0B3D2E), fontWeight = FontWeight.Bold, fontSize = 15.sp,
-                    modifier = Modifier.entrada(2).latido(activa, 0.04f).background(Color(0xFFB8F5DC), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 4.dp))
-            }
-            detalle?.let {
-                Spacer(Modifier.height(8.dp))
-                Text(it, color = Color.White.copy(alpha = 0.92f), fontSize = 14.sp, lineHeight = 19.sp, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.entrada(3))
-            }
-            if (i == 0 && total > 1) {
-                Spacer(Modifier.height(10.dp))
-                Text("Desliza hacia arriba para ver más ↑", color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp, modifier = Modifier.flotar(5f, 900))
-            }
-        }
-        // Barra de acciones a la derecha.
-        Column(
-            Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 26.dp),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            tienda?.let { t ->
-                Box(
-                    Modifier.size(52.dp).pop(1).latido(activa, 0.06f).border(2.dp, Color.White, CircleShape).background(Color.White.copy(alpha = 0.2f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(t.nombre.removeSuffix(" (demo)").split(' ').filter { it.firstOrNull()?.isLetter() == true }.take(2).joinToString("") { it.first().uppercase() },
-                        color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            }
-            val pedirTxt = if (pub is Publicacion.Oferta && pub.r.tipo == "solicitud") "Ofrecer" else if (pub is Publicacion.Proveedor) "Catálogo" else "Pedir"
-            AccionLateral(painterResource(Res.drawable.ic_cart), pedirTxt, onPedir)
-            tienda?.let { t -> AccionLateral(painterResource(Res.drawable.ic_chat), "Chat") { onChat(t.id) } }
-            if (pub is Publicacion.Oferta && pub.r.negociable) AccionLateral(null, "Negociar", emoji = "🤝") { onNegociar(pub.r) }
-            if (pub is Publicacion.Proveedor) AccionLateral(painterResource(Res.drawable.ic_store), "Tienda") { onChat(pub.p.id) }
-        }
-    }
-}
-
-@Composable
-private fun AccionLateral(icono: Painter?, texto: String, onClick: () -> Unit) = AccionLateral(icono, texto, null, onClick)
-
-@Composable
-private fun AccionLateral(icono: Painter?, texto: String, emoji: String?, onClick: () -> Unit) {
-    val fuente = remember { MutableInteractionSource() }
-    Column(
-        Modifier.pop(2).rebote(fuente, 0.8f).clickable(interactionSource = fuente, indication = null, onClick = onClick)
-            .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = texto },
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(Modifier.size(50.dp).background(Color.Black.copy(alpha = 0.25f), CircleShape), contentAlignment = Alignment.Center) {
-            if (icono != null) Icon(icono, null, tint = Color.White, modifier = Modifier.size(26.dp))
-            else Text(emoji.orEmpty(), fontSize = 24.sp)
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(texto, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
 
 /** Pestañas de texto arriba, centradas, con rayita bajo la activa. */
 @Composable
