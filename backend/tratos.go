@@ -235,7 +235,7 @@ func (a *App) abrirTrato(yo int64, d datosTrato, avisarOtra bool) (int64, int64,
 		var mayoreo, menudeo, minimo int64
 		err := a.db.QueryRow("SELECT tienda_id, nombre, publicado, precio_mayoreo_c, precio_c, minimo_mayoreo FROM productos WHERE id = ?", d.ProductoID).
 			Scan(&vendedor, &titulo, &publicado, &mayoreo, &menudeo, &minimo)
-		if err != nil || !publicado {
+		if err != nil || !publicado || !a.puedeVer(yo, d.ProductoID) {
 			return 0, 0, fallo(404, "Ese producto ya no está en la red")
 		}
 		if d.PrecioC <= 0 {

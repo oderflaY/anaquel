@@ -24,8 +24,15 @@ var fotoPorNombre = []struct{ trae, archivo string }{
 	{"leche en polvo", "leche-polvo"}, {"leche deslactosada", "leche-deslactosada"}, {"leche entera", "leche"},
 	{"galletas marías", "galletas-marias"}, {"galletas con chocolate", "galletas-chocolate"}, {"jabón de lavandería", "jabon"},
 	{"papas fritas", "papas"}, {"cacahuate", "cacahuate"}, {"palomitas", "palomitas"}, {"chicles", "chicles"},
-	{"paletas", "paletas"}, {"chocolate de leche", "chocolate"}, {"yogurt", "yogurt"}, {"queso panela", "queso-panela"},
-	{"queso fresco", "queso-fresco"}, {"crema", "crema"}, {"jamón", "jamon"}, {"salchicha", "salchicha"}, {"chorizo", "chorizo"},
+	{"paletas", "paletas"}, {"chocolate de leche", "chocolate"}, {"queso panela", "queso-panela"},
+	{"queso fresco", "queso-fresco"}, {"queso manchego", "queso-manchego"}, {"media crema", "media-crema"},
+	{"frijoles refritos", "frijoles-refritos"}, {"puré de tomate", "pure-tomate"}, {"mole", "mole"}, {"mayonesa", "mayonesa"},
+	{"catsup", "catsup"}, {"salsa picante", "salsa-picante"}, {"mermelada", "mermelada"}, {"consomé", "consome"},
+	{"sopa instantánea", "sopa-instantanea"}, {"avena", "avena"}, {"cereal", "cereal"}, {"fécula", "fecula"},
+	{"leche condensada", "leche-condensada"}, {"leche evaporada", "leche-evaporada"}, {"7 azahares", "te"}, {"pan blanco", "pan-blanco"},
+	{"agua mineral", "agua-mineral"}, {"lima-limón", "refresco-limon"}, {"hidratante", "isotonica"}, {"néctar de uva", "jugo-mango"},
+	{"frituras de maíz", "frituras-chile"}, {"totopos", "totopos"}, {"mazapán", "mazapan"}, {"pastelito", "pastelito"},
+	{"margarina", "margarina"}, {"yogurt natural", "yogurt-natural"}, {"bolonia", "bolonia"}, {"yogurt", "yogurt"}, {"crema", "crema"}, {"jamón", "jamon"}, {"salchicha", "salchicha"}, {"chorizo", "chorizo"},
 }
 
 func fotoDe(nombre string) string {
@@ -182,7 +189,7 @@ func (a *App) perfilTienda(w http.ResponseWriter, r *http.Request) {
 			p.Etiquetas = append(p.Etiquetas, e)
 		}
 	}
-	a.db.QueryRow("SELECT COUNT(*) FROM productos WHERE tienda_id = ? AND publicado = 1", id).Scan(&p.Productos)
+	a.db.QueryRow("SELECT COUNT(*) FROM productos p WHERE p.tienda_id = ? AND p.publicado = 1 AND "+visibleSQL("p"), id, yo, yo).Scan(&p.Productos)
 	a.db.QueryRow("SELECT COUNT(*) FROM tratos WHERE (comprador_id = ? OR vendedor_id = ?) AND estado = 'entregado'", id, id).Scan(&p.Tratos)
 	campos := []bool{p.Descripcion != "", p.Direccion != "", p.Portada != "", p.Horario != "", p.Entrega != "", p.Credito != "",
 		p.Pagos != "", p.Zona != "", p.Telefono != "", p.Productos > 0}
@@ -196,7 +203,7 @@ func (a *App) perfilTienda(w http.ResponseWriter, r *http.Request) {
 		p.DistanciaKm = &d
 	}
 	// Sin vitrina no es error aquí: el perfil se muestra igual, solo sin catálogo.
-	cat, _ := a.miCatalogo(id, nil, true)
+	cat, _ := a.miCatalogo(id, yo, nil, true)
 	p.Catalogo = cat
 	if p.Catalogo == nil {
 		p.Catalogo = []ItemCatalogo{}

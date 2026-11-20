@@ -38,6 +38,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -369,8 +371,37 @@ private fun DialogoPedido(p: PedidoEnCurso, ocupado: Boolean, vm: AnaquelViewMod
     HojaAnaquel("Pedir a ${p.tienda.removeSuffix(" (demo)")}", "Nuevo pedido", onCerrar = vm::cancelarPedido) {
         Text("Pon cuántas quieres de cada uno. El mayoreo se aplica solo al llegar al mínimo.", fontSize = 13.sp, color = NeuColors.TextSecondary)
         Spacer(Modifier.height(12.dp))
+        var busca by remember(p.chatId) { mutableStateOf("") }
+        var cat by remember(p.chatId) { mutableStateOf<String?>(null) }
+        val categorias = remember(p.items) { p.items.map { it.categoria }.filter { it.isNotBlank() }.distinct() }
+        if (p.items.size > 8) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 46.dp).background(Color.White, RoundedCornerShape(14.dp))
+                    .border(1.dp, NeuColors.Hairline, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Rounded.Search, null, tint = NeuColors.TextSecondary, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(10.dp))
+                BasicTextField(
+                    busca, { busca = it }, Modifier.weight(1f), singleLine = true,
+                    textStyle = TextStyle(fontSize = 15.sp, color = NeuColors.TextPrimary), cursorBrush = SolidColor(VerdeMarca),
+                    decorationBox = { campo -> if (busca.isEmpty()) Text("Buscar en ${p.items.size} productos", color = NeuColors.TextSecondary, fontSize = 15.sp); campo() },
+                )
+            }
+            if (categorias.size > 1) {
+                Spacer(Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    item { ChipVerde("Todo", cat == null) { cat = null } }
+                    items(categorias) { c -> ChipVerde(c, cat == c) { cat = if (cat == c) null else c } }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+        val q = busca.trim().lowercase()
+        val visibles = p.items.filter { (cat == null || it.categoria == cat) && (q.isEmpty() || it.nombre.lowercase().contains(q)) }
         LazyColumn(Modifier.heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(p.items, key = { it.productoId }) { i ->
+            if (visibles.isEmpty()) item { Text("Nada con «$busca».", color = NeuColors.TextSecondary, fontSize = 14.sp) }
+            items(visibles, key = { it.productoId }) { i ->
                 val n = p.cantidades[i.productoId] ?: 0
                 val elegido = n > 0
                 Column(

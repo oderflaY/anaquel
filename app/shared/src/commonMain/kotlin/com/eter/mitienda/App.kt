@@ -375,7 +375,7 @@ fun App(container: AppContainer) {
                         val seccion = when (id) {
                             "hoy" -> SeccionAnaquel.HOY; "foto" -> SeccionAnaquel.ANAQUELES; "pedidos" -> SeccionAnaquel.PEDIDOS
                             "bodega" -> SeccionAnaquel.BODEGA; "red" -> SeccionAnaquel.RED; "tratos" -> SeccionAnaquel.TRATOS
-                            "asesor" -> SeccionAnaquel.ASESOR; else -> null
+                            "asesor" -> SeccionAnaquel.ASESOR; "mayoreo" -> SeccionAnaquel.MAYOREO; else -> null
                         }
                         if (seccion != null) {
                             anaquel.elegirSeccion(seccion)

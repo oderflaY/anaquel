@@ -262,6 +262,16 @@ ALTER TABLE tiendas ADD COLUMN calificacion REAL NOT NULL DEFAULT 0;
 ALTER TABLE tiendas ADD COLUMN resenas INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE tiendas ADD COLUMN etiquetas TEXT NOT NULL DEFAULT '';
 `,
+	`
+-- Mayoreo con audiencia: 'todos' (toda la red) o 'elegidos' (solo las tiendas de producto_audiencia).
+ALTER TABLE productos ADD COLUMN audiencia TEXT NOT NULL DEFAULT 'todos';
+CREATE TABLE producto_audiencia (
+	producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+	tienda_id   INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	PRIMARY KEY (producto_id, tienda_id)
+);
+CREATE INDEX producto_audiencia_tienda ON producto_audiencia(tienda_id);
+`,
 }
 
 func abrirDB(ruta string) (*sql.DB, error) {

@@ -116,7 +116,7 @@ var redDemo = []demoTienda{
 	},
 	{
 		email: "distribuidora@anaquel.mx", nombre: "Distribuidora Abarrotera del Guadiana (demo)", slug: "distribuidora-abarrotera-guadiana", giro: "mayoreo",
-		desc: "Proveedor grande de abarrotes: más de 30 productos básicos, crédito a 15 días para tienditas y reparto diario en la ciudad.", tel: "6181300001",
+		desc: "Proveedor grande de abarrotes: más de 35 productos básicos, crédito a 15 días para tienditas y reparto diario en la ciudad.", tel: "6181300001",
 		dir: "Parque Industrial Durango, Lote 14", lat: 24.0712, lng: -104.6203,
 		articulos: []demoArticulo{
 			{"Arroz súper extra 1 kg", "Abarrotes", "pza", "", 3300, 2350, 24, 2400, 24, 900, true},
@@ -139,6 +139,23 @@ var redDemo = []demoTienda{
 			{"Cloro 1 L", "Limpieza", "pza", "", 1900, 1350, 24, 1300, 24, 480, true},
 			{"Papel higiénico 4 rollos", "Higiene", "paquete", "", 3400, 2550, 12, 1500, 12, 620, true},
 			{"Servilletas 500 hojas", "Higiene", "paquete", "", 3000, 2200, 12, 700, 12, 210, true},
+			{"Frijoles refritos bayos 430 g", "Enlatados", "lata", "Lata abre fácil.", 2400, 1800, 24, 1200, 24, 380, true},
+			{"Puré de tomate condimentado 210 g", "Enlatados", "pza", "Caja de 24 piezas.", 900, 640, 48, 3000, 48, 1100, true},
+			{"Mole rojo en pasta 235 g", "Abarrotes", "frasco", "Rinde 10 porciones.", 5200, 4100, 12, 600, 12, 260, true},
+			{"Mayonesa con limón 390 g", "Abarrotes", "frasco", "", 4300, 3350, 12, 900, 12, 340, true},
+			{"Catsup 320 g", "Abarrotes", "pza", "", 2600, 1950, 24, 800, 24, 300, true},
+			{"Salsa picante 370 ml", "Abarrotes", "pza", "La salsa de botana más pedida.", 1900, 1400, 24, 1500, 24, 520, true},
+			{"Mermelada de fresa 270 g", "Abarrotes", "frasco", "", 3600, 2750, 12, 450, 12, 140, true},
+			{"Consomé de pollo en polvo 100 g", "Abarrotes", "pza", "", 2400, 1800, 24, 1100, 24, 450, true},
+			{"Sopa instantánea de camarón 64 g", "Abarrotes", "pza", "Caja de 12 vasos.", 1500, 1080, 24, 3600, 24, 1500, true},
+			{"Avena en hojuelas 400 g", "Desayuno", "pza", "", 2600, 1950, 24, 900, 24, 300, true},
+			{"Cereal de hojuelas de maíz 500 g", "Desayuno", "caja", "", 5900, 4650, 12, 600, 12, 210, true},
+			{"Fécula de maíz para atole 47 g", "Desayuno", "sobre", "Sabores surtidos para la temporada de frío.", 900, 620, 48, 2500, 48, 900, true},
+			{"Leche condensada 387 g", "Repostería", "lata", "Para postres de temporada.", 3400, 2650, 24, 900, 24, 360, true},
+			{"Leche evaporada 360 g", "Repostería", "lata", "", 2500, 1900, 24, 900, 24, 300, true},
+			{"Media crema 225 g", "Repostería", "pza", "", 2200, 1650, 24, 800, 24, 260, true},
+			{"Té de 7 azahares 25 sobres", "Desayuno", "caja", "", 3200, 2400, 12, 300, 12, 80, true},
+			{"Pan blanco grande 680 g", "Panadería", "pza", "Entrega diaria, caducidad de 7 días.", 4800, 4000, 10, 400, 10, 300, true},
 		},
 		anuncios: []demoAnuncio{{"promocion", "Semana del básico", "Arroz, frijol y azúcar a precio de mayoreo desde 24 piezas. Reparto sin costo desde $2,000.", "Envío gratis desde $2,000"}},
 	},
@@ -161,6 +178,14 @@ var redDemo = []demoTienda{
 			{"Paletas de dulce bolsa 50", "Dulces", "bolsa", "", 7500, 5600, 6, 400, 10, 140, true},
 			{"Chocolate de leche 40 g", "Dulces", "pza", "", 1600, 1150, 24, 1800, 24, 600, true},
 			{"Galletas con chocolate 4 piezas", "Galletas", "pza", "", 1700, 1250, 24, 2200, 24, 750, true},
+			{"Agua mineral 600 ml", "Bebidas", "pza", "", 1900, 1400, 24, 2400, 24, 900, true},
+			{"Refresco lima-limón 600 ml", "Bebidas", "pza", "", 1800, 1300, 24, 2000, 24, 700, true},
+			{"Bebida hidratante 600 ml", "Bebidas", "pza", "Sabores surtidos.", 2400, 1800, 24, 1500, 24, 520, true},
+			{"Néctar de uva 1 L", "Bebidas", "pza", "", 2800, 2050, 12, 900, 12, 260, true},
+			{"Frituras de maíz con chile 56 g", "Botanas", "pza", "La botana más vendida con los chavos.", 1800, 1300, 30, 3500, 30, 1600, true},
+			{"Totopos sabor queso 62 g", "Botanas", "pza", "", 1900, 1350, 30, 2500, 30, 1100, true},
+			{"Mazapán clásico caja 30", "Dulces", "caja", "", 9000, 6900, 6, 400, 10, 160, true},
+			{"Pastelito relleno 50 g", "Pan dulce", "pza", "", 1600, 1200, 24, 1800, 24, 900, true},
 		},
 		anuncios: []demoAnuncio{{"promocion", "Temporada de fiestas: bebidas", "Refresco de 2 L a $33 desde 8 piezas para posadas y fiestas.", "$33 c/u desde 8"}, {"servicio", "Te prestamos refrigerador", "Si nos compras $1,500 a la semana te prestamos un refrigerador con nuestra marca.", "Sin costo"}},
 	},
@@ -179,6 +204,10 @@ var redDemo = []demoTienda{
 			{"Jamón de pavo 250 g", "Carnes frías", "pza", "", 4800, 3700, 6, 600, 10, 240, true},
 			{"Salchicha de pavo 500 g", "Carnes frías", "pza", "", 5200, 4000, 6, 700, 10, 300, true},
 			{"Chorizo 250 g", "Carnes frías", "pza", "", 3900, 2950, 6, 300, 10, 90, true},
+			{"Queso manchego rebanado 200 g", "Lácteos", "pza", "", 5400, 4250, 6, 400, 10, 160, true},
+			{"Margarina con sal 454 g", "Lácteos", "pza", "", 3500, 2700, 12, 500, 12, 170, true},
+			{"Yogurt natural 1 kg", "Lácteos", "pza", "", 4600, 3600, 6, 300, 10, 90, true},
+			{"Bolonia 500 g", "Carnes frías", "pza", "", 3800, 2900, 6, 500, 10, 210, true},
 		},
 		anuncios: []demoAnuncio{{"promocion", "Leche a precio de mayoreo", "Leche entera a $21.50 llevando 12 o más. Entrega diaria.", "$21.50 c/u desde 12"}},
 	},
@@ -313,6 +342,24 @@ func (a *App) sembrarRed() error {
 				return err
 			}
 		}
+		// Lupita también vende al mayoreo lo que le traen los productores:
+		// la miel solo para dos tiendas que eligió, las tostadas para toda la red.
+		var miel, tostadas int64
+		a.db.QueryRow("SELECT id FROM productos WHERE tienda_id = ? AND nombre LIKE 'Miel de mezquite%'", lupita).Scan(&miel)
+		a.db.QueryRow("SELECT id FROM productos WHERE tienda_id = ? AND nombre LIKE 'Tostadas de maíz%'", lupita).Scan(&tostadas)
+		if miel > 0 {
+			a.db.Exec(`UPDATE productos SET stock = MAX(COALESCE(stock, 0), 40), publicado = 1, precio_mayoreo_c = 7200, minimo_mayoreo = 6,
+				audiencia = 'elegidos', descripcion = 'Miel pura de mezquite de un apicultor de Nombre de Dios. Frasco de vidrio.' WHERE id = ?`, miel)
+			for _, s := range []string{"abarrotes-mayoreo-guadiana", "boutique-alondra"} {
+				if t := ids[s]; t > 0 {
+					a.db.Exec("INSERT OR IGNORE INTO producto_audiencia (producto_id, tienda_id) VALUES (?, ?)", miel, t)
+				}
+			}
+		}
+		if tostadas > 0 {
+			a.db.Exec(`UPDATE productos SET stock = MAX(COALESCE(stock, 0), 60), publicado = 1, precio_mayoreo_c = 2300, minimo_mayoreo = 10,
+				audiencia = 'todos', descripcion = 'Tostadas horneadas de maíz criollo, paquete de 30.' WHERE id = ?`, tostadas)
+		}
 	}
 	// Un trato a medio negociar: la boutique le compra sudaderas a Textiles.
 	boutique, textiles := ids["boutique-alondra"], ids["textiles-guadiana"]
@@ -334,7 +381,7 @@ func (a *App) sembrarRed() error {
 	// Chat del mayorista con Doña Lupita: le mandó su catálogo y quedó una respuesta sin leer.
 	if surte := ids["abarrotes-mayoreo-guadiana"]; surte > 0 && lupita > 0 {
 		if chat, err := a.chatEntre(lupita, surte); err == nil {
-			items, _ := a.miCatalogo(surte, nil, true)
+			items, _ := a.miCatalogo(surte, lupita, nil, true)
 			cat, _ := json.Marshal(datosCatalogo{Items: items})
 			msgs := []struct {
 				de          int64

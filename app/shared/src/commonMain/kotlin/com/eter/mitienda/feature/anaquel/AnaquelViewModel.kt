@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class SeccionAnaquel(val titulo: String) {
-    HOY("Hoy"), BODEGA("Mi bodega"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"),
+    HOY("Hoy"), BODEGA("Mi bodega"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"), MAYOREO("Vender al mayoreo"),
 }
 
 data class AnaquelUiState(
@@ -56,6 +56,8 @@ data class AnaquelUiState(
     val miCatalogo: List<ItemCatalogo>? = null,
     /** Perfil de otra tienda abierto (hoja de perfil). */
     val perfil: PerfilTienda? = null,
+    /** Mis productos al mayoreo y a quién se los muestro. */
+    val mayoreo: MiMayoreo? = null,
 )
 
 /** Pedido a medio armar desde un catálogo: productos de la otra tienda y cantidades. */
@@ -155,6 +157,7 @@ class AnaquelViewModel(
             SeccionAnaquel.ASESOR -> if (_state.value.asesor == null) trabajo(null) { cargarAsesor() }
             SeccionAnaquel.RED -> if (_state.value.red == null) buscarRed(_state.value.consultaRed)
             SeccionAnaquel.TRATOS -> trabajo(null) { _state.update { it.copy(tratos = api.tratos()) } }
+            SeccionAnaquel.MAYOREO -> cargarMayoreo()
             else -> Unit
         }
     }
@@ -281,6 +284,30 @@ class AnaquelViewModel(
         sincronizado = true
         mensaje = "Inventario sincronizado: ${r.creados} nuevos, ${r.actualizados} actualizados"
         refrescarAhora()
+    }
+
+    // ---------------- Vender al mayoreo ----------------
+
+    fun cargarMayoreo() = trabajo(if (_state.value.mayoreo == null) "mayoreo" else null) {
+        var m = api.mayoreo()
+        // Si aún no ha subido su inventario, se sube solo para poder publicarlo.
+        if (m.productos.isEmpty()) {
+            subirInventario()
+            m = api.mayoreo()
+        }
+        _state.update { it.copy(mayoreo = m) }
+    }
+
+    fun guardarMayoreo(id: Long, c: CambioMayoreo, listo: () -> Unit = {}) = trabajo("mayoreo-guardar") {
+        val m = api.guardarMayoreo(id, c)
+        _state.update { it.copy(mayoreo = m) }
+        val n = c.elegidos.size
+        mensaje = when {
+            !c.publicado -> "Lo quitaste de la red"
+            c.audiencia == "elegidos" -> "Publicado solo para ${if (n == 1) "1 tienda" else "$n tiendas"}"
+            else -> "Publicado para toda la red"
+        }
+        listo()
     }
 
     // ---------------- Inicio ----------------

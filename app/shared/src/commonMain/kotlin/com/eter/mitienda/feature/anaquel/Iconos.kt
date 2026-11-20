@@ -30,6 +30,9 @@ object Ico {
     val Ubicacion = Icons.Rounded.Place
     val Verificado = Icons.Rounded.Verified
     val Paquete = Icons.Rounded.Inventory
+    val Mayoreo = Icons.Rounded.Sell
+    val Candado = Icons.Rounded.Lock
+    val Mundo = Icons.Rounded.Public
 }
 
 /** Ícono para un producto según su nombre (la red aún no tiene fotos). */

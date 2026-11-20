@@ -344,9 +344,9 @@ func distancia(r Resultado) float64 {
 
 func (a *App) tiendasDeLaZona(yo int64, lat, lng *float64, limite int) []TiendaZona {
 	rows, err := a.db.Query(`SELECT t.id, t.nombre, t.slug, t.giro, t.telefono, t.descripcion, t.lat, t.lng,
-		(SELECT COUNT(*) FROM productos p WHERE p.tienda_id = t.id AND p.publicado = 1 AND (p.stock IS NULL OR p.stock > 0)) +
+		(SELECT COUNT(*) FROM productos p WHERE p.tienda_id = t.id AND p.publicado = 1 AND (p.stock IS NULL OR p.stock > 0) AND `+visibleSQL("p")+`) +
 		(SELECT COUNT(*) FROM anuncios n WHERE n.tienda_id = t.id AND n.activo = 1)
-		FROM tiendas t WHERE t.id != ?`, yo)
+		FROM tiendas t WHERE t.id != ?`, yo, yo, yo)
 	if err != nil {
 		return []TiendaZona{}
 	}
@@ -399,7 +399,7 @@ func (a *App) catalogoDe(w http.ResponseWriter, r *http.Request) {
 		manejar(w, nil, err)
 		return
 	}
-	items, err := a.miCatalogo(id, nil, true)
+	items, err := a.miCatalogo(id, tiendaDe(r), nil, true)
 	if err != nil {
 		items = []ItemCatalogo{}
 	}

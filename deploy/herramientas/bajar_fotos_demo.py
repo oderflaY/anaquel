@@ -39,6 +39,26 @@ _d = { 'leche-deslactosada': 'leche deslactosada', 'yogurt': 'yogurt bebible',
     'jamon': 'jamon de pavo', 'salchicha': 'salchicha de pavo', 'chorizo': 'chorizo',
 }
 BUSQUEDAS.update(_d)
+_n = {  # 2026-11-20: catálogos más completos
+    'mayonesa': 'mayonesa mccormick', 'catsup': 'catsup del monte', 'frijoles-refritos': 'frijoles refritos la costena',
+    'pure-tomate': 'pure de tomate del fuerte', 'consome': 'consome de pollo knorr', 'avena': 'avena quaker',
+    'cereal': 'corn flakes kelloggs', 'chocolate-polvo': 'chocolate abuelita', 'mermelada': 'mermelada de fresa mccormick',
+    'salsa-picante': 'salsa valentina', 'sopa-instantanea': 'maruchan', 'fecula': 'maizena', 'leche-condensada': 'la lechera',
+    'leche-evaporada': 'leche evaporada carnation', 'gelatina': 'gelatina dgari', 'suavizante': 'suavitel',
+    'lavatrastes': 'axion', 'shampoo': 'shampoo caprice', 'pasta-dental': 'colgate', 'jabon-tocador': 'jabon palmolive',
+    'pan-blanco': 'pan blanco bimbo', 'te': 'te de manzanilla', 'vinagre': 'vinagre blanco', 'mole': 'mole dona maria',
+    'agua-mineral': 'topo chico', 'refresco-limon': 'sprite', 'refresco-manzana': 'manzanita sol', 'te-helado': 'fuze tea',
+    'isotonica': 'gatorade', 'jugo-mango': 'jumex mango', 'frituras-chile': 'takis', 'totopos': 'doritos nacho',
+    'gomitas': 'gomitas', 'mazapan': 'mazapan de la rosa', 'pastelito': 'gansito marinela', 'queso-manchego': 'queso manchego',
+    'queso-amarillo': 'queso amarillo rebanadas', 'tocino': 'tocino', 'leche-chocolate': 'leche sabor chocolate',
+    'media-crema': 'media crema nestle', 'margarina': 'margarina primavera', 'yogurt-natural': 'yoghurt natural', 'bolonia': 'bologna',
+}
+BUSQUEDAS.update(_n)
+FILTRO.update({'mayonesa': (['mayo'], []), 'catsup': (['catsup', 'ketchup'], []), 'avena': (['avena', 'oat'], ['galleta', 'barra']),
+    'pasta-dental': (['colgate', 'dental', 'crema'], []), 'shampoo': (['shampoo', 'champ'], []), 'tocino': (['tocino', 'bacon'], []),
+    'margarina': (['margarina', 'primavera'], []), 'gomitas': (['gomit'], []), 'pan-blanco': (['pan'], ['dulce', 'tostado']),
+    'consome': (['consom', 'caldo'], []), 'vinagre': (['vinagre'], []), 'te': (['manzanilla', 'té', 'te '], []),
+    'leche-chocolate': (['chocolate'], ['polvo']), 'queso-manchego': (['manchego'], []), 'queso-amarillo': (['amarillo', 'americano'], [])})
 BUSQUEDAS.update(EXTRA)
 
 def obtener(url, tiempo=40):

@@ -75,6 +75,7 @@ fun estiloDe(s: SeccionAnaquel): EstiloSeccion = when (s) {
     SeccionAnaquel.TRATOS -> EstiloSeccion(Ico.Trato, Color(0xFFE0871B), "Tratos", "Tus negociaciones con otras tiendas")
     SeccionAnaquel.ANAQUELES -> EstiloSeccion(Ico.Foto, Color(0xFF00897B), "Anaqueles", "Una foto al día y sabes qué falta")
     SeccionAnaquel.PEDIDOS -> EstiloSeccion(Ico.Camion, Color(0xFF2F5DA8), "Pedidos", "Lo que pediste a tus proveedores")
+    SeccionAnaquel.MAYOREO -> EstiloSeccion(Ico.Mayoreo, Color(0xFF0E7C5A), "Vender al mayoreo", "Publica tus precios y elige quién los ve")
 }
 
 fun pendientesDe(s: SeccionAnaquel, st: AnaquelUiState): Int = when (s) {
@@ -83,7 +84,7 @@ fun pendientesDe(s: SeccionAnaquel, st: AnaquelUiState): Int = when (s) {
     SeccionAnaquel.ANAQUELES -> st.resumen?.sinFotoHoy ?: 0
     SeccionAnaquel.TRATOS -> st.resumen?.tratosPendientes ?: 0
     SeccionAnaquel.RED -> st.resumen?.avisos ?: 0
-    SeccionAnaquel.ASESOR, SeccionAnaquel.BODEGA -> 0
+    SeccionAnaquel.ASESOR, SeccionAnaquel.BODEGA, SeccionAnaquel.MAYOREO -> 0
 }
 
 /** Encabezado de una sola línea: avatar, nombre y acciones (respaldar, herramientas, menú). */

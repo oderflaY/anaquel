@@ -135,6 +135,8 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("POST /api/chats/{id}/pedido/{msg}/{accion}", a.conTienda(a.accionPedido))
 	m.HandleFunc("GET /api/tiendas/{id}/catalogo", a.conTienda(a.catalogoDe))
 	m.HandleFunc("GET /api/tiendas/{id}/perfil", a.conTienda(a.perfilTienda))
+	m.HandleFunc("GET /api/mayoreo", a.conTienda(a.verMayoreo))
+	m.HandleFunc("PUT /api/mayoreo/{id}", a.conTienda(a.guardarMayoreo))
 	m.HandleFunc("GET /api/notificaciones", a.conTienda(a.notificaciones))
 	m.HandleFunc("GET /api/avisos", a.conTienda(a.listarAvisos))
 	m.HandleFunc("POST /api/avisos/leidos", a.conTienda(a.avisosLeidos))

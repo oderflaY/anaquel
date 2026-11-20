@@ -201,6 +201,9 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
     var confirmarSalir by remember { mutableStateOf(false) }
     var negociando by remember { mutableStateOf<ResultadoRed?>(null) }
     var contra by remember { mutableStateOf(false) }
+    var editandoMayoreo by remember { mutableStateOf<ProductoMayoreo?>(null) }
+    var filtroMayoreo by remember { mutableStateOf("todos") }
+    var buscaMayoreo by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             EncabezadoTienda(
@@ -231,6 +234,7 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
                     SeccionAnaquel.ASESOR -> asesor(st, vm) { negociando = it }
                     SeccionAnaquel.RED -> red(st, vm) { negociando = it }
                     SeccionAnaquel.TRATOS -> tratos(st, vm) { contra = true }
+                    SeccionAnaquel.MAYOREO -> mayoreo(st, filtroMayoreo, buscaMayoreo, { filtroMayoreo = it }, { buscaMayoreo = it }) { editandoMayoreo = it }
                     SeccionAnaquel.BODEGA -> Unit
                 }
             } }
@@ -249,6 +253,11 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
     }
     negociando?.let { r ->
         DialogoNegociar(r, onCerrar = { negociando = null }) { n, pc, msg -> negociando = null; vm.negociar(r, n, pc, msg) }
+    }
+    editandoMayoreo?.let { p ->
+        HojaMayoreo(p, st.mayoreo?.tiendas.orEmpty(), ocupado = st.ocupado == "mayoreo-guardar", onCerrar = { editandoMayoreo = null }) { c ->
+            vm.guardarMayoreo(p.id, c) { editandoMayoreo = null }
+        }
     }
     val tratoAbierto = st.trato
     if (contra && tratoAbierto != null) {

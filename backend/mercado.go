@@ -157,7 +157,7 @@ func (a *App) buscarRed(f filtroRed) ([]Resultado, error) {
 		rows, err := a.db.Query(`SELECT p.id, p.nombre, p.categoria, p.descripcion, p.precio_c, p.precio_mayoreo_c,
 			p.minimo_mayoreo, p.unidad, p.stock, p.actualizado, p.foto, `+colsTienda+`
 			FROM productos p JOIN tiendas t ON t.id = p.tienda_id
-			WHERE p.publicado = 1 AND p.tienda_id != ? AND (p.stock IS NULL OR p.stock > 0)`, f.yo)
+			WHERE p.publicado = 1 AND p.tienda_id != ? AND (p.stock IS NULL OR p.stock > 0) AND `+visibleSQL("p"), f.yo, f.yo, f.yo)
 		if err != nil {
 			return nil, err
 		}

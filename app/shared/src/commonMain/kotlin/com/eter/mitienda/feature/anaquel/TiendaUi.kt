@@ -206,6 +206,7 @@ fun herramientasDe(st: AnaquelUiState, urgentes: Int): List<GrupoHerramientas> {
         GrupoHerramientas("Red de comercio", listOf(
             Herramienta("red", Ico.Buscar, Color(0xFF3F51B5), "Buscar en la red", "Quién lo tiene más barato", r?.avisos ?: 0),
             Herramienta("chats", Ico.Chat, Color(0xFF0E7C5A), "Chats", "Proveedores y tiendas", r?.chatsSinLeer ?: 0),
+            Herramienta("mayoreo", Ico.Mayoreo, Color(0xFF0E7C5A), "Vender al mayoreo", "Tú eliges quién lo ve"),
             Herramienta("tratos", Ico.Trato, Color(0xFFE0871B), "Tratos", "Negociaciones abiertas", r?.tratosPendientes ?: 0),
             Herramienta("asesor", Ico.Asesor, Color(0xFF8E44AD), "Asesor", "Pregúntale a tu negocio"),
         )),

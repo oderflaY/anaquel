@@ -196,6 +196,28 @@ data class Inicio(
     @SerialName("tratos_pendientes") val pendientes: Int = 0,
 )
 
+// ---------------- Vender al mayoreo (con audiencia) ----------------
+
+@Serializable
+data class ProductoMayoreo(
+    val id: Long, val nombre: String, val categoria: String = "", val unidad: String = "pza", val foto: String? = null,
+    @SerialName("precio_c") val precioC: Long = 0, @SerialName("precio_mayoreo_c") val precioMayoreoC: Long = 0,
+    @SerialName("minimo_mayoreo") val minimoMayoreo: Long = 0, val stock: Long? = null, val publicado: Boolean = false,
+    val audiencia: String = "todos", val elegidos: List<Long> = emptyList(),
+)
+
+@Serializable
+data class TiendaElegible(val id: Long, val nombre: String, val giro: String = "", val contacto: Boolean = false)
+
+@Serializable
+data class MiMayoreo(val productos: List<ProductoMayoreo> = emptyList(), val tiendas: List<TiendaElegible> = emptyList())
+
+@Serializable
+data class CambioMayoreo(
+    val publicado: Boolean, @SerialName("precio_mayoreo_c") val precioMayoreoC: Long, @SerialName("minimo_mayoreo") val minimoMayoreo: Long,
+    val audiencia: String, val elegidos: List<Long>,
+)
+
 // ---------------- Chats con proveedores y tiendas ----------------
 
 @Serializable
@@ -425,6 +447,8 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
     suspend fun notificaciones(aviso: Long?, chat: Long?): Notificaciones =
         get(if (aviso == null || chat == null) "/notificaciones" else "/notificaciones?aviso=$aviso&chat=$chat")
     suspend fun miCatalogo(): List<ItemCatalogo> = get("/tiendas/yo/catalogo")
+    suspend fun mayoreo(): MiMayoreo = get("/mayoreo")
+    suspend fun guardarMayoreo(id: Long, c: CambioMayoreo): MiMayoreo = put("/mayoreo/$id", c)
 
     suspend fun cambiarEstado(pedido: Long, estado: String): Pedido = post("/pedidos/$pedido/estado", CambioEstado(estado))
 

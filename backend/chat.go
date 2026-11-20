@@ -381,7 +381,7 @@ func (a *App) escribirChat(w http.ResponseWriter, r *http.Request) {
 	quien := a.nombreTienda(yo)
 	var aviso string
 	if d.CatalogoTodo || len(d.Catalogo) > 0 {
-		items, err := a.miCatalogo(yo, d.Catalogo, d.CatalogoTodo)
+		items, err := a.miCatalogo(yo, c.otraID, d.Catalogo, d.CatalogoTodo)
 		if err != nil {
 			manejar(w, nil, err)
 			return
@@ -405,13 +405,14 @@ func (a *App) escribirChat(w http.ResponseWriter, r *http.Request) {
 }
 
 // miCatalogo: los productos de mi vitrina (publicados y con existencia) que voy a mandar.
-func (a *App) miCatalogo(yo int64, ids []int64, todo bool) ([]ItemCatalogo, error) {
+// para = la tienda que lo va a ver: solo salen los productos que tiene permitido ver.
+func (a *App) miCatalogo(yo, para int64, ids []int64, todo bool) ([]ItemCatalogo, error) {
 	q := `SELECT id, nombre, categoria, unidad, precio_c, precio_mayoreo_c, minimo_mayoreo, stock, foto FROM productos
-		WHERE tienda_id = ? AND publicado = 1 AND (stock IS NULL OR stock > 0)`
-	args := []any{yo}
+		WHERE tienda_id = ? AND publicado = 1 AND (stock IS NULL OR stock > 0) AND ` + visibleSQL("productos")
+	args := []any{yo, para, para}
 	if !todo {
-		if len(ids) > 40 {
-			ids = ids[:40]
+		if len(ids) > 80 {
+			ids = ids[:80]
 		}
 		marcas := make([]string, len(ids))
 		for i, x := range ids {
@@ -420,7 +421,7 @@ func (a *App) miCatalogo(yo int64, ids []int64, todo bool) ([]ItemCatalogo, erro
 		}
 		q += " AND id IN (" + strings.Join(marcas, ",") + ")"
 	}
-	rows, err := a.db.Query(q+" ORDER BY categoria, nombre LIMIT 40", args...)
+	rows, err := a.db.Query(q+" ORDER BY categoria, nombre LIMIT 80", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -477,7 +478,7 @@ func (a *App) pedirDeChat(w http.ResponseWriter, r *http.Request) {
 		var publicado bool
 		var stock *int64
 		if a.db.QueryRow("SELECT tienda_id, nombre, publicado, stock FROM productos WHERE id = ?", it.ProductoID).Scan(&dueno, &nombre, &publicado, &stock) != nil ||
-			dueno != c.otraID || !publicado {
+			dueno != c.otraID || !publicado || !a.puedeVer(yo, it.ProductoID) {
 			manejar(w, nil, fallo(409, "Uno de los productos ya no está en su vitrina. Pídele que te mande su catálogo otra vez."))
 			return
 		}
