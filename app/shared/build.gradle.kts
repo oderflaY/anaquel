@@ -59,6 +59,9 @@ kotlin {
             implementation(libs.androidx.work.runtime)
             // Anaquel (nube): cliente HTTP.
             implementation(libs.ktor.client.okhttp)
+            // Mercado: reels (video con cabecera de autorización).
+            implementation(libs.media3.exoplayer)
+            implementation(libs.media3.ui)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
         }

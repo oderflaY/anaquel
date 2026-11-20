@@ -58,6 +58,14 @@ class AppContainer(
     val anaquelApi = com.eter.mitienda.feature.anaquel.AnaquelApi()
     val ajustesDao = com.eter.mitienda.data.local.AjustesDao(database)
 
+    /** Mercado local: sesión (token cifrado) y cliente de los servicios del mercado. */
+    val mercado by lazy {
+        com.eter.mitienda.feature.mercado.MercadoSesion(
+            com.eter.mitienda.feature.mercado.MercadoApi(com.eter.mitienda.feature.mercado.SERVIDOR_MERCADO_DEFECTO),
+            com.eter.mitienda.feature.mercado.AlmacenSeguro(),
+        )
+    }
+
     val syncManager = SyncManager(
         database = database,
         files = databaseFiles,

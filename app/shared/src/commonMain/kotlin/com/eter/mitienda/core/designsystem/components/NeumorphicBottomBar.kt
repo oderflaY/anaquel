@@ -55,7 +55,8 @@ fun NeumorphicBottomBar(
             .fillMaxWidth()
             .neumorphic(RoundedCornerShape(topStart = NeuDimens.SpaceXl, topEnd = NeuDimens.SpaceXl), NeuDimens.ElevationMedium)
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = NeuDimens.SpaceLg, vertical = NeuDimens.SpaceSm),
+            // Con 5 pestañas el margen lateral es menor para que cada nombre quepa en una línea.
+            .padding(horizontal = NeuDimens.SpaceSm, vertical = NeuDimens.SpaceSm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items.forEach { item ->
@@ -75,7 +76,7 @@ private fun BarTab(item: BottomBarItem, selected: Boolean, onClick: () -> Unit, 
             Modifier
                 .neumorphic(NeuShapes.Large, NeuDimens.ElevationSmall, insetProgress = { inset })
                 .clickable(interactionSource = interaction, indication = null, role = Role.Tab, onClick = onClick)
-                .padding(horizontal = NeuDimens.SpaceLg, vertical = NeuDimens.SpaceSm),
+                .padding(horizontal = 6.dp, vertical = NeuDimens.SpaceSm),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box {
@@ -100,6 +101,9 @@ private fun BarTab(item: BottomBarItem, selected: Boolean, onClick: () -> Unit, 
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                 color = color,
+                maxLines = 1,
+                softWrap = false,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Visible,
             )
         }
     }

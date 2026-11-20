@@ -27,6 +27,7 @@ import com.eter.mitienda.feature.stats.StatsRoute
 import com.eter.mitienda.feature.stats.StatsViewModel
 import kotlinx.coroutines.flow.catch
 import mitienda.shared.generated.resources.Res
+import mitienda.shared.generated.resources.ic_cart
 import mitienda.shared.generated.resources.ic_chart
 import mitienda.shared.generated.resources.ic_inventory
 import mitienda.shared.generated.resources.ic_orders
@@ -63,12 +64,13 @@ private object Routes {
     const val ORDERS = "orders"
     const val STATS = "stats"
     const val ANAQUEL = "anaquel"
+    const val MERCADO = "mercado"
     const val ARG_ORDER_ID = "orderId"
     const val ORDER_FORM = "order_form?$ARG_ORDER_ID={$ARG_ORDER_ID}"
     fun orderForm(orderId: Long?) = "order_form?$ARG_ORDER_ID=${orderId ?: NEW_PRODUCT}"
 
     /** Pantallas con barra inferior. */
-    val TOP_LEVEL = setOf(ANAQUEL, DASHBOARD, ORDERS, STATS)
+    val TOP_LEVEL = setOf(ANAQUEL, MERCADO, DASHBOARD, ORDERS, STATS)
     const val SYNC = "sync"
     const val CATEGORIES = "categories"
     const val SALE = "sale"
@@ -198,6 +200,10 @@ fun App(container: AppContainer) {
                             )
                         }
 
+                        composable(Routes.MERCADO) {
+                            com.eter.mitienda.feature.mercado.MercadoApp(container.mercado)
+                        }
+
                         composable(Routes.STATS) {
                             StatsRoute(
                                 viewModel = viewModel { StatsViewModel(container.statsRepository) },
@@ -288,6 +294,7 @@ fun App(container: AppContainer) {
                     NeumorphicBottomBar(
                         items = listOf(
                             BottomBarItem(Routes.ANAQUEL, "Anaquel", painterResource(Res.drawable.ic_shelf)),
+                            BottomBarItem(Routes.MERCADO, "Mercado", painterResource(Res.drawable.ic_cart)),
                             BottomBarItem(Routes.DASHBOARD, "Inventario", painterResource(Res.drawable.ic_inventory)),
                             BottomBarItem(Routes.ORDERS, "Pedidos", painterResource(Res.drawable.ic_orders), badge = urgentOrders),
                             BottomBarItem(Routes.STATS, "Gráficas", painterResource(Res.drawable.ic_chart)),

@@ -15,6 +15,12 @@ import com.eter.mitienda.di.AppContainerProvider
  */
 class MiTiendaApplication : Application(), AppContainerProvider {
 
+    override fun onCreate() {
+        super.onCreate()
+        // El almacén seguro del mercado necesita el contexto de la app.
+        com.eter.mitienda.feature.mercado.ContextoMercado.app = this
+    }
+
     override val container: AppContainer by lazy {
         val databaseFiles = AndroidDatabaseFileStore(this)
         AppContainer(
