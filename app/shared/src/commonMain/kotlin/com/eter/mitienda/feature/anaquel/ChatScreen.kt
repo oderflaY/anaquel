@@ -1,6 +1,12 @@
 package com.eter.mitienda.feature.anaquel
 
 import androidx.compose.foundation.border
+import com.eter.mitienda.core.web.VistaWeb
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -73,7 +79,6 @@ import kotlinx.coroutines.delay
 import mitienda.shared.generated.resources.Res
 import mitienda.shared.generated.resources.ic_add
 import mitienda.shared.generated.resources.ic_arrow_back
-import mitienda.shared.generated.resources.ic_phone
 import mitienda.shared.generated.resources.ic_refresh
 import mitienda.shared.generated.resources.ic_remove
 import mitienda.shared.generated.resources.ic_send
@@ -95,6 +100,8 @@ fun ChatsRoute(vm: AnaquelViewModel) {
             Conversacion(c, st, vm)
         }
         st.pidiendo?.let { DialogoPedido(it, st.ocupado == "pedido", vm) }
+        st.pago?.let { HojaPago(it, onCerrar = vm::cerrarPago) }
+        st.pagado?.let { Pagado(it, onListo = vm::vistoPagado) }
     }
 }
 
@@ -181,6 +188,8 @@ private fun FilaChat(c: Chat, onClick: () -> Unit) {
 private fun Conversacion(c: Chat, st: AnaquelUiState, vm: AnaquelViewModel) {
     var texto by remember(c.id) { mutableStateOf("") }
     var mandarCatalogo by remember(c.id) { mutableStateOf(false) }
+    // Contraoferta: tarjeta y trato que se van a cambiar (con varios productos, primero se elige cuál).
+    var contra by remember(c.id) { mutableStateOf<Pair<MensajeChat, TratoChat?>?>(null) }
     val lista = rememberLazyListState()
     // Siempre al último mensaje cuando llega uno nuevo.
     LaunchedEffect(c.mensajes.size) { if (c.mensajes.isNotEmpty()) lista.animateScrollToItem(c.mensajes.size - 1) }
@@ -197,10 +206,6 @@ private fun Conversacion(c: Chat, st: AnaquelUiState, vm: AnaquelViewModel) {
             Column(Modifier.weight(1f)) {
                 Txt(c.otra.nombre.removeSuffix(" (demo)"), negritas = true, lineas = 1)
                 Txt(listOfNotNull(c.otra.giro.takeIf { it.isNotBlank() }, km(c.distanciaKm)).joinToString(" · "), secundario = true, chico = true, lineas = 1)
-            }
-            c.whatsapp?.takeIf { it.isNotBlank() }?.let { w ->
-                NeumorphicIconButton(painterResource(Res.drawable.ic_phone), "WhatsApp", onClick = { vm.abrirWhatsApp(w) },
-                    size = NeuDimens.IconButtonSmallSize, iconSize = NeuDimens.IconSmallSize)
             }
         }
         // Acciones rápidas: lo que más se hace en un chat de proveedor.
@@ -223,7 +228,13 @@ private fun Conversacion(c: Chat, st: AnaquelUiState, vm: AnaquelViewModel) {
             items(c.mensajes, key = { "m-" + it.id }) { m ->
                 Box(Modifier.animateItem()) { when (m.tipo) {
                     "catalogo" -> TarjetaCatalogo(m, onPedir = { vm.pedirDeCatalogo(m) })
-                    "pedido" -> TarjetaPedido(m, st.ocupado == "pedido${m.id}") { vm.accionPedidoChat(m, it) }
+                    "pedido", "oferta" -> TarjetaPedido(m, c.otra.nombre, st.ocupado == "pedido${m.id}") { accion ->
+                        when (accion) {
+                            "pagar" -> vm.pagar(m)
+                            "contra" -> contra = m to m.tratos.singleOrNull { it.estado == "negociando" }
+                            else -> vm.accionPedidoChat(m, accion)
+                        }
+                    }
                     "sistema" -> Txt(m.texto, secundario = true, chico = true, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp))
                     else -> Burbuja(m)
                 } }
@@ -243,6 +254,17 @@ private fun Conversacion(c: Chat, st: AnaquelUiState, vm: AnaquelViewModel) {
                 containerColor = if (texto.isBlank()) NeuColors.Background else NeuColors.Magenta,
             )
         }
+    }
+    contra?.let { (m, t) ->
+        if (t == null) ElegirProducto(m.tratos.filter { it.estado == "negociando" }, onCerrar = { contra = null }) { contra = m to it }
+        else HojaNegociacion(
+            Negociacion(
+                titulo = t.titulo, tienda = c.otra.nombre, foto = t.foto, icono = iconoDe(t.titulo),
+                precioLista = t.precioC, precioMayoreo = null, minimoMayoreo = null, disponible = null,
+                cantidadInicial = t.cantidad, precioInicial = t.precioC, modo = "contra",
+            ),
+            onCerrar = { contra = null },
+        ) { n, pc, msg -> contra = null; vm.contraoferta(m, t.id, n, pc, msg) }
     }
     if (mandarCatalogo) DialogoMiCatalogo(st.miCatalogo, onCerrar = { mandarCatalogo = false }) { sel ->
         mandarCatalogo = false; vm.mandarCatalogo(sel)
@@ -316,49 +338,202 @@ private fun estadoPedido(e: String) = when (e) {
     "cancelado" -> "Cancelado"; "mixto" -> "En proceso"; else -> e
 }
 
+/**
+ * Tarjeta de un pedido (varios productos) o de una oferta (un producto con la
+ * propuesta de ese momento). Lo que se puede hacer sale como botones; el más
+ * importante («Pagar») va grande y late para que no se pierda.
+ */
 @Composable
-private fun TarjetaPedido(m: MensajeChat, ocupado: Boolean, accion: (String) -> Unit) {
+private fun TarjetaPedido(m: MensajeChat, otra: String, ocupado: Boolean, accion: (String) -> Unit) {
     val compro = m.rol == "compro"
-    NeumorphicCard(Modifier.fillMaxWidth()) {
+    val mia = m.de == "yo"
+    val oferta = m.tipo == "oferta"
+    val vieja = oferta && !m.vigente
+    val otraCorta = otra.removeSuffix(" (demo)")
+    val titulo = when {
+        !oferta -> if (compro) "Tu pedido" else "Te hicieron un pedido"
+        mia -> if (compro) "Tu oferta" else "Le ofreciste"
+        else -> if (compro) "$otraCorta te ofrece" else "$otraCorta te propone"
+    }
+    val entrada = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { entrada.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)) }
+    Column(
+        Modifier.fillMaxWidth()
+            .graphicsLayer {
+                alpha = entrada.value.coerceIn(0f, 1f) * if (vieja) 0.55f else 1f
+                translationY = (1f - entrada.value) * 60f
+                scaleX = 0.94f + 0.06f * entrada.value; scaleY = scaleX
+            }
+            .shadow(if (vieja) 0.dp else 10.dp, RoundedCornerShape(22.dp), spotColor = VerdeMarca.copy(alpha = 0.4f))
+            .background(Color.White, RoundedCornerShape(22.dp))
+            .border(if (m.puedo.isNotEmpty()) 1.5.dp else 1.dp, if (m.puedo.isNotEmpty()) VerdeMarca.copy(alpha = 0.5f) else NeuColors.Hairline, RoundedCornerShape(22.dp))
+            .padding(14.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Txt(if (compro) "Tu pedido" else "Te hicieron un pedido", Modifier.weight(1f), negritas = true)
-            Pastilla(
-                estadoPedido(m.estado),
-                when (m.estado) { "cancelado" -> NeuColors.LowStockContainer; "entregado" -> NeuColors.Magenta; else -> NeuColors.ChipBackground },
-                when (m.estado) { "cancelado" -> NeuColors.OnLowStock; "entregado" -> NeuColors.OnAccent; else -> NeuColors.OnChip },
-            )
-        }
-        m.texto.takeIf { it.isNotBlank() }?.let { Txt("«$it»", secundario = true, chico = true) }
-        Spacer(Modifier.height(NeuDimens.SpaceSm))
-        m.tratos.forEach { t ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                Txt("${t.cantidad} × ${t.titulo}", Modifier.weight(1f), chico = true, lineas = 2,
-                    secundario = t.estado == "cancelado")
-                Txt(formatPrice(t.cantidad * t.precioC), chico = true)
+            Text(titulo.uppercase(), Modifier.weight(1f), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp,
+                color = VerdeMarca, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            when {
+                vieja -> Pastilla("Propuesta anterior")
+                m.pagado && m.estado != "entregado" -> Pastilla("✓ Pagado", VerdeMarca, Color.White)
+                else -> Pastilla(
+                    estadoPedido(m.estado),
+                    when (m.estado) { "cancelado" -> NeuColors.LowStockContainer; "entregado" -> VerdeMarca; else -> NeuColors.ChipBackground },
+                    when (m.estado) { "cancelado" -> NeuColors.OnLowStock; "entregado" -> Color.White; else -> NeuColors.OnChip },
+                )
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top = NeuDimens.SpaceSm)) {
-            Txt("Total", Modifier.weight(1f), negritas = true)
-            Txt(formatPrice(m.total), negritas = true)
+        Spacer(Modifier.height(10.dp))
+        if (oferta && m.tratos.size == 1) {
+            val t = m.tratos.first()
+            val cant = if (m.cantidad > 0) m.cantidad else t.cantidad
+            val precio = if (m.precioC > 0) m.precioC else t.precioC
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Miniatura(t.foto, t.titulo, 58)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(t.titulo, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = NeuColors.TextPrimary, maxLines = 2, lineHeight = 19.sp)
+                    Text("${miles(cant)} × ${formatPrice(precio)}", fontSize = 14.sp, color = NeuColors.TextSecondary)
+                }
+                Text(formatPrice(cant * precio), fontSize = 20.sp, fontWeight = FontWeight.Black, color = NeuColors.TextPrimary)
+            }
+        } else {
+            m.tratos.forEach { t ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Miniatura(t.foto, t.titulo, 34)
+                    Spacer(Modifier.width(8.dp))
+                    Txt("${t.cantidad} × ${t.titulo}", Modifier.weight(1f), chico = true, lineas = 2, secundario = t.estado == "cancelado")
+                    Txt(formatPrice(t.cantidad * t.precioC), chico = true)
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = NeuDimens.SpaceSm)) {
+                Txt("Total", Modifier.weight(1f), negritas = true)
+                Txt(formatPrice(m.total), negritas = true)
+            }
+        }
+        m.texto.takeIf { it.isNotBlank() && (oferta || !it.startsWith("Pedido de")) }?.let {
+            Text("«$it»", fontSize = 13.sp, color = NeuColors.TextSecondary, modifier = Modifier.padding(top = 8.dp))
         }
         // Qué sigue, en palabras, para que nadie se quede esperando sin saber.
         val sigue = when {
-            m.estado == "negociando" && !compro -> "Revisa que tengas todo y acéptalo."
-            m.estado == "negociando" -> "Esperando a que lo acepten."
-            m.estado == "aceptado" && !compro -> "Cuando lo entregues, márcalo: tu inventario baja solo."
-            m.estado == "aceptado" -> "Aceptado: te lo llevan o pasas por él."
+            vieja -> null
+            "pagar" in m.puedo && m.estado == "negociando" -> "Te conviene: págala ya y queda cerrada, o haz una contraoferta."
+            m.estado == "negociando" && "aceptar" in m.puedo -> "Te toca: acéptala o contraoferta."
+            m.estado == "negociando" -> "Esperando a que $otraCorta responda…"
+            m.estado == "aceptado" && compro && !m.pagado -> "Aceptado. Págalo en línea o al recibir."
+            m.estado == "aceptado" && compro -> "Pagado. Te avisamos cuando lo entreguen."
+            m.estado == "aceptado" && m.pagado -> "Ya te pagaron en línea. Entrégalo y márcalo: tu inventario baja solo."
+            m.estado == "aceptado" -> "Cuando lo entregues, márcalo: tu inventario baja solo."
             m.estado == "entregado" && compro -> "Ya entró a tu inventario."
             else -> null
         }
-        sigue?.let { Txt(it, secundario = true, chico = true, modifier = Modifier.padding(top = NeuDimens.SpaceSm)) }
-        if (m.puedo.isNotEmpty()) {
-            Spacer(Modifier.height(NeuDimens.SpaceMd))
-            Row(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
-                if ("aceptar" in m.puedo) NeumorphicButton("Aceptar", onClick = { accion("aceptar") }, enabled = !ocupado, modifier = Modifier.weight(1f))
-                if ("entregar" in m.puedo) NeumorphicButton("Entregado", onClick = { accion("entregar") }, enabled = !ocupado, modifier = Modifier.weight(1f))
-                if ("cancelar" in m.puedo) NeumorphicButton("Cancelar", onClick = { accion("cancelar") }, enabled = !ocupado,
-                    containerColor = NeuColors.Background, modifier = Modifier.weight(1f))
+        sigue?.let { Text(it, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = NeuColors.TextPrimary, modifier = Modifier.padding(top = 10.dp)) }
+        if ("pagar" in m.puedo) {
+            Spacer(Modifier.height(12.dp))
+            BotonVerde("Pagar ${formatPrice(m.porPagarC)}", Icons.Rounded.Check, Modifier.latido(fuerza = 0.025f), habilitado = !ocupado) { accion("pagar") }
+        }
+        val secundarios = m.puedo.filter { it != "pagar" }
+        if (secundarios.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                secundarios.forEach { a ->
+                    val (texto, fuerte) = when (a) {
+                        "aceptar" -> (if ("pagar" in m.puedo) "Al recibir" else "Aceptar") to ("pagar" !in m.puedo)
+                        "contra" -> "Contraoferta" to false
+                        "entregar" -> "Entregado" to true
+                        else -> "Cancelar" to false
+                    }
+                    BotonChico(texto, fuerte, !ocupado, Modifier.weight(if (a == "cancelar") 0.8f else 1f)) { accion(a) }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun BotonChico(texto: String, fuerte: Boolean, habilitado: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(14.dp))
+            .background(if (fuerte) VerdeMarca else VerdeMarca.copy(alpha = 0.09f))
+            .clickable(enabled = habilitado, onClick = onClick).padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(texto, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (fuerte) Color.White else VerdeMarca, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+    }
+}
+
+/** Con varios productos en el pedido: ¿cuál quieres contraofertar? */
+@Composable
+private fun ElegirProducto(tratos: List<TratoChat>, onCerrar: () -> Unit, onElegir: (TratoChat) -> Unit) {
+    HojaAnaquel("¿Qué producto?", "Contraoferta", onCerrar = onCerrar) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            tratos.forEach { t ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White)
+                        .border(1.dp, NeuColors.Hairline, RoundedCornerShape(16.dp)).clickable { onElegir(t) }.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Miniatura(t.foto, t.titulo, 44)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(t.titulo, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NeuColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${t.cantidad} × ${formatPrice(t.precioC)}", fontSize = 12.sp, color = NeuColors.TextSecondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ---------------- Pago ----------------
+
+/** Página de pago (Stripe Checkout o la de prueba) dentro de la app; al volver se cierra sola. */
+@Composable
+private fun HojaPago(c: Cobro, onCerrar: () -> Unit) {
+    Dialog(onDismissRequest = onCerrar, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)) {
+        val p = remember { Animatable(0f) }
+        LaunchedEffect(Unit) { p.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)) }
+        Column(
+            Modifier.fillMaxSize().graphicsLayer { translationY = (1f - p.value) * 900f }
+                .background(NeuColors.Background).systemBarsPadding(),
+        ) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(if (c.modo == "stripe") "PAGO SEGURO · STRIPE" else "PAGO DE PRUEBA", fontSize = 11.sp, fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp, color = VerdeMarca)
+                    Text(formatPrice(c.montoC), fontSize = 22.sp, fontWeight = FontWeight.Black, color = NeuColors.TextPrimary)
+                }
+                BotonCircular(Icons.Rounded.Close, "Cerrar", 40) { onCerrar() }
+            }
+            VistaWeb(c.url, Modifier.fillMaxWidth().weight(1f)) { u ->
+                if (u.startsWith("anaquel://") || "/api/cobros/${c.id}/vuelta" in u) { onCerrar(); true } else false
+            }
+        }
+    }
+}
+
+/** «¡Pagado!»: palomita que rebota y se va sola. */
+@Composable
+private fun Pagado(c: Cobro, onListo: () -> Unit) {
+    val p = remember { Animatable(0f) }
+    LaunchedEffect(c.id) {
+        p.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessLow))
+        delay(1600)
+        onListo()
+    }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f * p.value.coerceIn(0f, 1f))).clickable { onListo() }, contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.graphicsLayer { scaleX = p.value; scaleY = p.value }.shadow(24.dp, RoundedCornerShape(28.dp))
+                .background(Color.White, RoundedCornerShape(28.dp)).padding(horizontal = 36.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.size(86.dp).background(VerdeMarca, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(54.dp))
+            }
+            Spacer(Modifier.height(14.dp))
+            Text("¡Pagado!", fontSize = 26.sp, fontWeight = FontWeight.Black, color = NeuColors.TextPrimary)
+            Text(formatPrice(c.montoC), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = VerdeMarca)
+            Text("Ya le avisamos a la tienda", fontSize = 13.sp, color = NeuColors.TextSecondary)
         }
     }
 }

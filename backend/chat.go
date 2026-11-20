@@ -35,6 +35,8 @@ type TratoChat struct {
 	Cantidad int64  `json:"cantidad"`
 	PrecioC  int64  `json:"precio_c"`
 	Estado   string `json:"estado"`
+	Pagado   bool   `json:"pagado,omitempty"`
+	Foto     string `json:"foto,omitempty"`
 }
 
 type MensajeChat struct {
@@ -47,10 +49,16 @@ type MensajeChat struct {
 	Total  int64          `json:"total,omitempty"`
 	Rol    string         `json:"rol,omitempty"`    // pedido: compro | vendo
 	Estado string         `json:"estado,omitempty"` // pedido: negociando | aceptado | entregado | cancelado | mixto
-	Puedo  []string       `json:"puedo,omitempty"`  // pedido: aceptar | entregar | cancelar
-	Creado int64          `json:"creado"`
-	tienda *int64
-	datos  string
+	Puedo  []string       `json:"puedo,omitempty"`  // pedido/oferta: pagar | aceptar | contra | entregar | cancelar
+	// oferta: lo que se propuso en ese momento (el trato puede haber cambiado después).
+	Cantidad  int64 `json:"cantidad,omitempty"`
+	PrecioC   int64 `json:"precio_c,omitempty"`
+	PorPagarC int64 `json:"por_pagar_c,omitempty"` // lo que puedo pagar en línea ya
+	Pagado    bool  `json:"pagado,omitempty"`      // todo lo no cancelado ya se pagó
+	Vigente   bool  `json:"vigente,omitempty"`     // oferta: es la última propuesta de su trato
+	Creado    int64 `json:"creado"`
+	tienda    *int64
+	datos     string
 }
 
 type Chat struct {
@@ -64,6 +72,7 @@ type Chat struct {
 	Mensajes    []MensajeChat `json:"mensajes,omitempty"`
 	Whatsapp    string        `json:"whatsapp,omitempty"`
 	DistanciaKm *float64      `json:"distancia_km,omitempty"`
+	Cobro       *Cobro        `json:"cobro,omitempty"` // al pedir «pagar»: a dónde ir a pagar
 	otraID      int64
 }
 
@@ -71,9 +80,12 @@ type datosCatalogo struct {
 	Items []ItemCatalogo `json:"items"`
 }
 
+// datosPedido: un pedido (varios tratos) o una oferta (un trato, con lo propuesto).
 type datosPedido struct {
 	Tratos   []int64 `json:"tratos"`
 	Catalogo int64   `json:"catalogo,omitempty"`
+	Cantidad int64   `json:"cantidad,omitempty"`
+	PrecioC  int64   `json:"precio_c,omitempty"`
 }
 
 // chatEntre devuelve (o crea) la conversación entre dos tiendas.
@@ -204,7 +216,7 @@ func (a *App) pendientesChat(chat, yo int64) int {
 	var n int
 	a.db.QueryRow(`SELECT COUNT(*) FROM tratos t WHERE (t.comprador_id = ? OR t.vendedor_id = ?)
 		AND ((t.estado = 'negociando' AND t.propuso_id != ?) OR (t.estado = 'aceptado' AND t.vendedor_id = ?))
-		AND t.id IN (SELECT value FROM chat_mensajes m, json_each(json_extract(m.datos, '$.tratos')) WHERE m.chat_id = ? AND m.tipo = 'pedido')`,
+		AND t.id IN (SELECT value FROM chat_mensajes m, json_each(json_extract(m.datos, '$.tratos')) WHERE m.chat_id = ? AND m.tipo IN ('pedido', 'oferta'))`,
 		yo, yo, yo, yo, chat).Scan(&n)
 	return n
 }
@@ -234,6 +246,17 @@ func (a *App) cargarChat(id, yo int64, marcarLeido bool) (Chat, error) {
 		c.Mensajes = append(c.Mensajes, m)
 	}
 	rows.Close()
+	// Cada trato se maneja desde la última tarjeta que lo menciona (la propuesta vigente).
+	ultima := map[int64]int64{}
+	for _, m := range c.Mensajes {
+		if m.Tipo == "pedido" || m.Tipo == "oferta" {
+			var d datosPedido
+			json.Unmarshal([]byte(m.datos), &d)
+			for _, t := range d.Tratos {
+				ultima[t] = m.ID
+			}
+		}
+	}
 	// Fuera del rows: una sola conexión.
 	for i := range c.Mensajes {
 		m := &c.Mensajes[i]
@@ -245,10 +268,10 @@ func (a *App) cargarChat(id, yo int64, marcarLeido bool) (Chat, error) {
 				a.alDia(&it, *m.tienda)
 				m.Items = append(m.Items, it)
 			}
-		case "pedido":
+		case "pedido", "oferta":
 			var d datosPedido
 			json.Unmarshal([]byte(m.datos), &d)
-			a.llenarPedido(m, d, yo)
+			a.llenarPedido(m, d, yo, ultima)
 		}
 	}
 	if marcarLeido && len(c.Mensajes) > 0 {
@@ -273,18 +296,28 @@ func (a *App) alDia(it *ItemCatalogo, dueno int64) {
 	it.Sigue = err == nil && publicado
 }
 
-func (a *App) llenarPedido(m *MensajeChat, d datosPedido, yo int64) {
+// llenarPedido arma una tarjeta de pedido u oferta con el estado de hoy de sus
+// tratos y lo que yo puedo hacer con ella. Las acciones solo salen en la
+// tarjeta más reciente de cada trato (ultima), para no contestar algo viejo.
+func (a *App) llenarPedido(m *MensajeChat, d datosPedido, yo int64, ultima map[int64]int64) {
 	estados := map[string]int{}
 	puedo := map[string]bool{}
+	sinPagar := 0
 	for _, tid := range d.Tratos {
 		var t TratoChat
 		var comprador, vendedor, propuso int64
-		if a.db.QueryRow("SELECT id, titulo, cantidad, precio_c, estado, comprador_id, vendedor_id, propuso_id FROM tratos WHERE id = ?", tid).
-			Scan(&t.ID, &t.Titulo, &t.Cantidad, &t.PrecioC, &t.Estado, &comprador, &vendedor, &propuso) != nil {
+		var cobro sql.NullInt64
+		var producto sql.NullInt64
+		if a.db.QueryRow("SELECT id, titulo, cantidad, precio_c, estado, comprador_id, vendedor_id, propuso_id, cobro_id, producto_id FROM tratos WHERE id = ?", tid).
+			Scan(&t.ID, &t.Titulo, &t.Cantidad, &t.PrecioC, &t.Estado, &comprador, &vendedor, &propuso, &cobro, &producto) != nil {
 			continue
 		}
 		if yo != comprador && yo != vendedor {
 			continue
+		}
+		t.Pagado = cobro.Valid
+		if producto.Valid {
+			a.db.QueryRow("SELECT foto FROM productos WHERE id = ?", producto.Int64).Scan(&t.Foto)
 		}
 		m.Rol = "compro"
 		if yo == vendedor {
@@ -293,21 +326,41 @@ func (a *App) llenarPedido(m *MensajeChat, d datosPedido, yo int64) {
 		m.Tratos = append(m.Tratos, t)
 		if t.Estado != "cancelado" {
 			m.Total += t.Cantidad * t.PrecioC
+			if !t.Pagado {
+				sinPagar++
+			}
 		}
 		estados[t.Estado]++
+		if ultima[tid] != m.ID {
+			continue
+		}
+		m.Vigente = true
+		pagable := yo == comprador && !t.Pagado && t.Cantidad*t.PrecioC > 0
 		switch t.Estado {
 		case "negociando":
 			if propuso != yo {
 				puedo["aceptar"] = true
+				if pagable {
+					puedo["pagar"] = true
+					m.PorPagarC += t.Cantidad * t.PrecioC
+				}
 			}
+			puedo["contra"] = true
 			puedo["cancelar"] = true
 		case "aceptado":
 			if yo == vendedor {
 				puedo["entregar"] = true
 			}
-			puedo["cancelar"] = true
+			if pagable {
+				puedo["pagar"] = true
+				m.PorPagarC += t.Cantidad * t.PrecioC
+			}
+			if !t.Pagado {
+				puedo["cancelar"] = true
+			}
 		}
 	}
+	m.Pagado = len(m.Tratos) > 0 && sinPagar == 0 && estados["cancelado"] < len(m.Tratos)
 	switch len(estados) {
 	case 0:
 		m.Estado = "cancelado"
@@ -321,11 +374,23 @@ func (a *App) llenarPedido(m *MensajeChat, d datosPedido, yo int64) {
 			m.Estado = "entregado" // lo que no se canceló ya se entregó
 		}
 	}
-	for _, k := range []string{"aceptar", "entregar", "cancelar"} {
+	if m.Tipo == "oferta" {
+		m.Cantidad, m.PrecioC = d.Cantidad, d.PrecioC
+	}
+	for _, k := range []string{"pagar", "aceptar", "contra", "entregar", "cancelar"} {
 		if puedo[k] {
 			m.Puedo = append(m.Puedo, k)
 		}
 	}
+}
+
+// ofertaEnChat deja en el chat de las dos tiendas la propuesta vigente de un trato.
+func (a *App) ofertaEnChat(yo, otra, trato, cantidad, precio int64, texto string) {
+	chat, err := a.chatEntre(yo, otra)
+	if err != nil {
+		return
+	}
+	a.mensajeChat(chat, &yo, "oferta", texto, datosPedido{Tratos: []int64{trato}, Cantidad: cantidad, PrecioC: precio})
 }
 
 // abrirChat: POST /api/chats {tienda_id} → conversación (nueva o la que ya había).
@@ -525,7 +590,8 @@ func (a *App) pedirDeChat(w http.ResponseWriter, r *http.Request) {
 	manejar(w, out, err)
 }
 
-// accionPedido: aceptar, entregar o cancelar todo un pedido del chat.
+// accionPedido: pagar, aceptar, contraofertar, entregar o cancelar desde una
+// tarjeta de pedido u oferta del chat.
 func (a *App) accionPedido(w http.ResponseWriter, r *http.Request) {
 	id, err := idRuta(r)
 	yo := tiendaDe(r)
@@ -537,8 +603,8 @@ func (a *App) accionPedido(w http.ResponseWriter, r *http.Request) {
 	if err == nil && err2 != nil {
 		err = fallo(400, "Mensaje inválido")
 	}
-	var datos string
-	if err == nil && a.db.QueryRow("SELECT datos FROM chat_mensajes WHERE id = ? AND chat_id = ? AND tipo = 'pedido'", msg, id).Scan(&datos) != nil {
+	var datos, tipo string
+	if err == nil && a.db.QueryRow("SELECT datos, tipo FROM chat_mensajes WHERE id = ? AND chat_id = ? AND tipo IN ('pedido', 'oferta')", msg, id).Scan(&datos, &tipo) != nil {
 		err = fallo(404, "Ese pedido no existe")
 	}
 	if err != nil {
@@ -548,6 +614,47 @@ func (a *App) accionPedido(w http.ResponseWriter, r *http.Request) {
 	var d datosPedido
 	json.Unmarshal([]byte(datos), &d)
 	accion := r.PathValue("accion")
+	quien := a.nombreTienda(yo)
+	enlace := fmt.Sprintf("/panel/chats/%d", id)
+
+	switch accion {
+	case "pagar":
+		cobro, err := a.pagarDesdeChat(r, yo, c, d.Tratos)
+		if err != nil {
+			manejar(w, nil, err)
+			return
+		}
+		out, err := a.cargarChat(id, yo, true)
+		out.Cobro = cobro
+		manejar(w, out, err)
+		return
+	case "contra":
+		var b struct {
+			TratoID  int64  `json:"trato_id"`
+			Cantidad int64  `json:"cantidad"`
+			PrecioC  int64  `json:"precio_c"`
+			Texto    string `json:"texto"`
+		}
+		if err := leerJSON(r, &b); err != nil {
+			manejar(w, nil, err)
+			return
+		}
+		if b.TratoID == 0 && len(d.Tratos) == 1 {
+			b.TratoID = d.Tratos[0]
+		}
+		if !slicesContiene(d.Tratos, b.TratoID) {
+			manejar(w, nil, fallo(400, "¿Qué producto quieres contraofertar?"))
+			return
+		}
+		if _, err := a.contraofertar(b.TratoID, yo, &b.Cantidad, &b.PrecioC, b.Texto); err != nil {
+			manejar(w, nil, err)
+			return
+		}
+		out, err := a.cargarChat(id, yo, true)
+		manejar(w, out, err)
+		return
+	}
+
 	hechos := 0
 	var ultimoErr error
 	for _, tid := range d.Tratos {
@@ -564,20 +671,32 @@ func (a *App) accionPedido(w http.ResponseWriter, r *http.Request) {
 		manejar(w, nil, ultimoErr)
 		return
 	}
-	quien := a.nombreTienda(yo)
+	que := "el pedido"
+	if tipo == "oferta" {
+		que = "la oferta"
+	}
 	var texto string
 	switch accion {
 	case "aceptar":
-		texto = quien + " aceptó el pedido. Pónganse de acuerdo para la entrega."
+		texto = quien + " aceptó " + que + ". Ya se puede pagar en línea o al entregar."
 	case "entregar":
-		texto = quien + " entregó el pedido. Ya se registró la salida y la entrada en el inventario de las dos tiendas."
+		texto = quien + " entregó " + que + ". Ya se registró la salida y la entrada en el inventario de las dos tiendas."
 	case "cancelar":
-		texto = quien + " canceló el pedido."
+		texto = quien + " canceló " + que + "."
 	}
 	a.mensajeChat(id, nil, "sistema", texto, nil)
-	a.avisar(c.otraID, fmt.Sprintf("chat:%d:%s:%d", id, accion, msg), "trato", texto, fmt.Sprintf("/panel/chats/%d", id))
+	a.avisar(c.otraID, fmt.Sprintf("chat:%d:%s:%d", id, accion, msg), "trato", texto, enlace)
 	out, err := a.cargarChat(id, yo, true)
 	manejar(w, out, err)
+}
+
+func slicesContiene(xs []int64, x int64) bool {
+	for _, v := range xs {
+		if v == x {
+			return true
+		}
+	}
+	return false
 }
 
 // chatsSinLeer: mensajes nuevos en todas mis conversaciones (para la burbuja).

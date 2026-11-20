@@ -161,7 +161,7 @@ internal fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
                     NeumorphicInput(pass, { pass = it }, Modifier.fillMaxWidth(), placeholder = "Contraseña",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
-                    if (registro) NeumorphicInput(tel, { tel = it }, Modifier.fillMaxWidth(), placeholder = "WhatsApp de la tienda",
+                    if (registro) NeumorphicInput(tel, { tel = it }, Modifier.fillMaxWidth(), placeholder = "Teléfono de la tienda",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
                     NeumorphicButton(
                         text = if (ocupado) "Un momento…" else if (registro) "Crear mi tienda" else "Entrar",
@@ -214,6 +214,8 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
             Box(Modifier.fillMaxWidth().height(1.dp).background(NeuColors.TextSecondary.copy(alpha = 0.12f)))
             if (st.seccion == SeccionAnaquel.BODEGA) {
                 Bodega3D(vm, Modifier.weight(1f))
+            } else if (st.seccion == SeccionAnaquel.ASESOR) {
+                ChatSocio(st, vm, Modifier.weight(1f)) { negociando = it }
             } else key(st.seccion) { LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(
@@ -387,7 +389,7 @@ private fun GrupoCard(g: GrupoPedido, st: AnaquelUiState, vm: AnaquelViewModel) 
         if (s != null) {
             Spacer(Modifier.height(NeuDimens.SpaceLg))
             NeumorphicButton(
-                text = if (st.ocupado == g.clave) "Enviando…" else "Pedir por WhatsApp (${g.items.size})",
+                text = if (st.ocupado == g.clave) "Enviando…" else "Hacer pedido (${g.items.size})",
                 onClick = { vm.pedir(g) }, enabled = st.ocupado != g.clave, modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -452,7 +454,7 @@ private fun PedidoCard(p: Pedido, st: AnaquelUiState, vm: AnaquelViewModel) {
         p.items.forEach { Texto("${it.cantidad} × ${it.nombre}" + if (it.recibido) "  ✓" else "", secundario = it.recibido) }
         if (p.abierto) {
             Spacer(Modifier.height(NeuDimens.SpaceLg))
-            NeumorphicButton(if (p.atrasado) "Preguntar por WhatsApp" else "Abrir WhatsApp", onClick = { vm.reenviar(p) }, modifier = Modifier.fillMaxWidth())
+            if (p.telefono.isNotBlank()) NeumorphicButton(if (p.atrasado) "Llamar para preguntar" else "Llamar a ${p.destino}", onClick = { vm.reenviar(p) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(NeuDimens.SpaceMd))
             androidx.compose.foundation.layout.FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd), verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceSm),

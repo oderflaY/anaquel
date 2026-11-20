@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -82,8 +83,8 @@ func TestChatCatalogoPedidoEntrega(t *testing.T) {
 	if pedido.Tipo != "pedido" || pedido.Total != 24*2250 || pedido.Rol != "compro" {
 		t.Fatalf("pedido mal armado (mayoreo $22.50): %+v", pedido)
 	}
-	if len(pedido.Puedo) != 1 || pedido.Puedo[0] != "cancelar" {
-		t.Fatalf("quien pide solo puede cancelar: %v", pedido.Puedo)
+	if fmt.Sprint(pedido.Puedo) != "[contra cancelar]" {
+		t.Fatalf("quien pide solo puede cambiar su propuesta o cancelar (no pagar aún): %v", pedido.Puedo)
 	}
 	msg := map[string]string{"id": itoa(chat), "msg": itoa(pedido.ID), "accion": "aceptar"}
 

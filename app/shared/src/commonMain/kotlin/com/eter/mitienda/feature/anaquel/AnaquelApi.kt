@@ -275,14 +275,33 @@ data class ItemCatalogo(
 }
 
 @Serializable
-data class TratoChat(val id: Long, val titulo: String, val cantidad: Long, @SerialName("precio_c") val precioC: Long, val estado: String)
+data class TratoChat(
+    val id: Long, val titulo: String, val cantidad: Long, @SerialName("precio_c") val precioC: Long, val estado: String,
+    val pagado: Boolean = false, val foto: String? = null,
+)
 
 @Serializable
 data class MensajeChat(
     val id: Long, val de: String, val tipo: String, val texto: String = "",
     val items: List<ItemCatalogo> = emptyList(), val tratos: List<TratoChat> = emptyList(),
     val total: Long = 0, val rol: String = "", val estado: String = "", val puedo: List<String> = emptyList(),
+    /** Oferta: lo que se propuso en ese momento. */
+    val cantidad: Long = 0, @SerialName("precio_c") val precioC: Long = 0,
+    /** Lo que puedo pagar en línea ya (0 = nada). */
+    @SerialName("por_pagar_c") val porPagarC: Long = 0,
+    val pagado: Boolean = false,
+    /** Oferta: es la propuesta vigente de su trato. */
+    val vigente: Boolean = false,
     val creado: Long = 0,
+)
+
+/** Pago en línea (Stripe Checkout o la página de prueba). */
+@Serializable
+data class Cobro(val id: Long, val url: String = "", val modo: String = "", @SerialName("monto_c") val montoC: Long = 0, val estado: String = "")
+
+@Serializable
+private data class Contraoferta(
+    @SerialName("trato_id") val tratoId: Long, val cantidad: Long, @SerialName("precio_c") val precioC: Long, val texto: String = "",
 )
 
 @Serializable
@@ -291,6 +310,8 @@ data class Chat(
     val actualizado: Long = 0, @SerialName("sin_leer") val sinLeer: Int = 0, val pendientes: Int = 0,
     val mensajes: List<MensajeChat> = emptyList(), val whatsapp: String? = null,
     @SerialName("distancia_km") val distanciaKm: Double? = null,
+    /** Solo al pedir «pagar»: a dónde ir a pagar. */
+    val cobro: Cobro? = null,
 )
 
 @Serializable
@@ -400,6 +421,8 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
             // El asesor con IA puede tardar (busca en la red varias veces).
             requestTimeoutMillis = 180_000
             connectTimeoutMillis = 15_000
+            // OkHttp corta a los 10 s sin datos; el modelo local tarda ~30 s en contestar.
+            socketTimeoutMillis = 120_000
         }
         expectSuccess = false
     }
@@ -486,6 +509,9 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
         post("/chats/$id/pedido", PedidoChat(catalogo, items.map { (p, c) -> ItemNuevo(p, c) }, texto))
     /** aceptar | entregar | cancelar */
     suspend fun accionPedidoChat(id: Long, mensaje: Long, accion: String): Chat = post("/chats/$id/pedido/$mensaje/$accion", Vacio())
+    suspend fun contraofertaChat(id: Long, mensaje: Long, trato: Long, cantidad: Long, precioC: Long, texto: String): Chat =
+        post("/chats/$id/pedido/$mensaje/contra", Contraoferta(trato, cantidad, precioC, texto))
+    suspend fun cobro(id: Long): Cobro = get("/cobros/$id")
     suspend fun catalogo(tienda: Long): List<ItemCatalogo> = get("/tiendas/$tienda/catalogo")
     suspend fun perfil(tienda: Long): PerfilTienda = get("/tiendas/$tienda/perfil")
     suspend fun notificaciones(aviso: Long?, chat: Long?): Notificaciones =

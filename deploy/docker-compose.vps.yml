@@ -27,3 +27,4 @@ services:
   nucleo:
     environment:
       LLM_URL: http://llm:8080
+      ANAQUEL_URL_PUBLICA: https://2.25.68.28/anaquel

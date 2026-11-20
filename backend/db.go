@@ -272,6 +272,26 @@ CREATE TABLE producto_audiencia (
 );
 CREATE INDEX producto_audiencia_tienda ON producto_audiencia(tienda_id);
 `,
+	// 8: cobros en línea (Stripe Checkout o página de prueba) de lo acordado en el chat.
+	`
+CREATE TABLE cobros (
+	id           INTEGER PRIMARY KEY AUTOINCREMENT,
+	comprador_id INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	vendedor_id  INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	chat_id      INTEGER REFERENCES chats(id) ON DELETE SET NULL,
+	tratos       TEXT NOT NULL,                     -- JSON con los ids de los tratos
+	monto_c      INTEGER NOT NULL,
+	estado       TEXT NOT NULL DEFAULT 'pendiente', -- pendiente | pagado | cancelado
+	proveedor    TEXT NOT NULL,                     -- stripe | prueba
+	sesion       TEXT NOT NULL DEFAULT '',          -- id de la Checkout Session
+	secreto      TEXT NOT NULL,                     -- para las páginas públicas de pago y vuelta
+	url          TEXT NOT NULL DEFAULT '',
+	creado       INTEGER NOT NULL,
+	pagado       INTEGER
+);
+CREATE INDEX cobros_sesion ON cobros(sesion);
+ALTER TABLE tratos ADD COLUMN cobro_id INTEGER;
+`,
 }
 
 func abrirDB(ruta string) (*sql.DB, error) {

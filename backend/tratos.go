@@ -214,11 +214,52 @@ func (a *App) crearTrato(w http.ResponseWriter, r *http.Request) {
 		manejar(w, nil, err)
 		return
 	}
-	if chat, err := a.chatEntre(yo, otra); err == nil {
-		a.mensajeChat(chat, &yo, "pedido", "Abrí un trato", datosPedido{Tratos: []int64{id}})
-	}
+	a.publicarOfertaInicial(yo, otra, id)
 	out, err := a.cargarTrato(id, yo, true)
 	manejar(w, out, err)
+}
+
+// publicarOfertaInicial deja la primera propuesta del trato en el chat de las dos tiendas.
+func (a *App) publicarOfertaInicial(yo, otra, id int64) {
+	var cant, precio int64
+	var texto string
+	a.db.QueryRow(`SELECT t.cantidad, t.precio_c, COALESCE((SELECT texto FROM trato_mensajes m WHERE m.trato_id = t.id ORDER BY m.id LIMIT 1), '')
+		FROM tratos t WHERE t.id = ?`, id).Scan(&cant, &precio, &texto)
+	a.ofertaEnChat(yo, otra, id, cant, precio, texto)
+}
+
+// contraofertar cambia cantidad y/o precio del trato (nil o <= 0 = se queda
+// igual), deja la propuesta en el trato y en el chat, y avisa a la otra tienda.
+func (a *App) contraofertar(id, yo int64, cantidad, precio *int64, texto string) (Trato, error) {
+	t, err := a.cargarTrato(id, yo, false)
+	if err != nil {
+		return t, err
+	}
+	if t.Estado != "negociando" {
+		return t, fallo(409, "El trato ya no está en negociación")
+	}
+	cant, pc := t.Cantidad, t.PrecioC
+	if cantidad != nil && *cantidad > 0 {
+		cant = *cantidad
+	}
+	if precio != nil && *precio > 0 {
+		pc = *precio
+	}
+	if t.Rol == "compro" && t.Disponible != nil && cant > *t.Disponible && *t.Disponible > 0 {
+		return t, fallo(409, fmt.Sprintf("Solo tiene %s.", cantidadTxt(*t.Disponible)))
+	}
+	texto = recortarTexto(strings.TrimSpace(texto), 1000)
+	if texto == "" {
+		texto = fmt.Sprintf("Te propongo %s a %s c/u.", cantidadTxt(cant), pesosTxt(pc))
+	}
+	ahoraMs := ahora()
+	a.db.Exec("UPDATE tratos SET cantidad = ?, precio_c = ?, propuso_id = ?, actualizado = ? WHERE id = ?", cant, pc, yo, ahoraMs, id)
+	a.db.Exec("INSERT INTO trato_mensajes (trato_id, tienda_id, texto, cantidad, precio_c, creado) VALUES (?, ?, ?, ?, ?, ?)", id, yo, texto, cant, pc, ahoraMs)
+	a.ofertaEnChat(yo, t.Otra.ID, id, cant, pc, texto)
+	a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:msg:%d", id, ahoraMs), "trato",
+		fmt.Sprintf("%s te contraofertó %s %s a %s c/u.", a.nombreTienda(yo), cantidadTxt(cant), t.Titulo, pesosTxt(pc)), fmt.Sprintf("/panel/tratos/%d", id))
+	t.Cantidad, t.PrecioC = cant, pc
+	return t, nil
 }
 
 // abrirTrato crea el trato y su primer mensaje. Devuelve el id y la otra tienda.
@@ -345,19 +386,18 @@ func (a *App) mensajeTrato(w http.ResponseWriter, r *http.Request) {
 	if d.PrecioC != nil && *d.PrecioC >= 0 {
 		precio = *d.PrecioC
 	}
-	ahoraMs := ahora()
 	if contra {
-		if texto == "" {
-			texto = fmt.Sprintf("Te propongo %s a %s c/u.", cantidadTxt(cant), pesosTxt(precio))
+		if _, err := a.contraofertar(id, yo, &cant, &precio, texto); err != nil {
+			manejar(w, nil, err)
+			return
 		}
-		a.db.Exec("UPDATE tratos SET cantidad = ?, precio_c = ?, propuso_id = ?, actualizado = ? WHERE id = ?", cant, precio, yo, ahoraMs, id)
-		a.db.Exec("INSERT INTO trato_mensajes (trato_id, tienda_id, texto, cantidad, precio_c, creado) VALUES (?, ?, ?, ?, ?, ?)", id, yo, texto, cant, precio, ahoraMs)
 	} else {
+		ahoraMs := ahora()
 		a.db.Exec("UPDATE tratos SET actualizado = ? WHERE id = ?", ahoraMs, id)
 		a.db.Exec("INSERT INTO trato_mensajes (trato_id, tienda_id, texto, creado) VALUES (?, ?, ?, ?)", id, yo, texto, ahoraMs)
+		a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:msg:%d", id, ahoraMs), "trato",
+			a.nombreTienda(yo)+" respondió en el trato de "+t.Titulo+": "+recortarTexto(texto, 140), fmt.Sprintf("/panel/tratos/%d", id))
 	}
-	a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:msg:%d", id, ahoraMs), "trato",
-		a.nombreTienda(yo)+" respondió en el trato de "+t.Titulo+": "+recortarTexto(texto, 140), fmt.Sprintf("/panel/tratos/%d", id))
 	out, err := a.cargarTrato(id, yo, true)
 	manejar(w, out, err)
 }

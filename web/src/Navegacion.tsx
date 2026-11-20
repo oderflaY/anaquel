@@ -14,6 +14,7 @@ const TRAZOS: Record<string, string[]> = {
   anaqueles: ['M4 8h3l2-3h6l2 3h3v11H4z', 'M12 9.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z'],
   pedidos: ['M2 6h12v10H2z', 'M14 10h4l3 3v3h-7', 'M6 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', 'M17 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
   tienda: ['M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z', 'M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1'],
+  mapa: ['M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z', 'M9 4v14M15 6v14'],
   grafo: ['M6 6a2.5 2.5 0 1 0 0 .01', 'M18 6a2.5 2.5 0 1 0 0 .01', 'M12 18a2.5 2.5 0 1 0 0 .01', 'M7.8 7.7l3 8.2M16.2 7.7l-3 8.2M8.5 6h7'],
   campana: ['M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z', 'M10 21a2 2 0 0 0 4 0'],
   mas: ['M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'],
@@ -47,6 +48,7 @@ export function gruposPanel(r?: { sin_pedir?: number; tratos_pendientes?: number
       { href: '/panel/red', texto: 'Red', icono: 'red', color: '#3f51b5', desc: 'Quién lo tiene más barato' },
       { href: '/panel/tratos', texto: 'Tratos', icono: 'tratos', color: '#e0871b', n: r?.tratos_pendientes, desc: 'Negociaciones' },
       { href: '/panel/asesor', texto: 'Tu socio', icono: 'asesor', color: '#8e44ad', desc: 'Tu asesor de negocios' },
+      { href: '/panel/mapa', texto: 'Mapa de la red', icono: 'mapa', color: '#2f5da8', desc: 'Negocios asociados cerca de ti' },
       { href: '/panel/grafo', texto: 'Red en grafo', icono: 'grafo', color: '#0e7c5a', desc: 'De dónde salen tus recomendaciones' },
     ] },
     { titulo: 'Mi negocio', secciones: [

@@ -116,19 +116,19 @@ private fun Seccion(titulo: String, sub: String? = null) {
 internal fun km(d: Double?): String? = d?.let { if (it < 1) "a ${(it * 1000).toInt()} m" else "a ${(it * 10).toInt() / 10.0} km" }
 
 @Composable
-fun InicioRoute(vm: AnaquelViewModel, onAbrirChats: () -> Unit) {
+fun InicioRoute(vm: AnaquelViewModel, onAbrirChats: () -> Unit, onAbrirMapa: () -> Unit = {}) {
     MarcoAnaquel(vm) { st ->
         LaunchedEffect(st.tienda?.id) { vm.cargarInicio() }
         // Pedimos permiso de notificaciones una sola vez (Android 13+); si lo niega no insistimos.
         val permiso = com.eter.mitienda.core.notifications.rememberNotificationPermissionState()
         LaunchedEffect(st.tienda?.id) { if (st.tienda != null && !permiso.granted && vm.tocaPedirPermiso()) permiso.request() }
-        Inicio(st, vm, onAbrirChats)
+        Inicio(st, vm, onAbrirChats, onAbrirMapa)
     }
 }
 
 /** Inicio con dos pestañas arriba: «Para ti» (feed vertical) y «Resumen» (todo en lista). */
 @Composable
-private fun Inicio(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () -> Unit) {
+private fun Inicio(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () -> Unit, onAbrirMapa: () -> Unit) {
     var pestana by rememberSaveable { mutableStateOf(0) }
     var negociando by remember { mutableStateOf<ResultadoRed?>(null) }
     val ini = st.inicio
@@ -159,7 +159,9 @@ private fun Inicio(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () ->
             Resumen(st, vm, onAbrirChats, arriba = 56.dp)
         }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.width(56.dp))
+            Box(Modifier.width(56.dp), contentAlignment = Alignment.Center) {
+                BotonCircular(Ico.Mapa, "Mapa de la red", 40) { onAbrirMapa() }
+            }
             PestanasArriba(listOf("Para ti", "Resumen"), pestana, { pestana = it }, claro = pestana == 0 && feed.isNotEmpty(), modifier = Modifier.weight(1f))
             val avisos = (ini?.chatsSinLeer ?: 0) + (ini?.pendientes ?: 0)
             Box(Modifier.width(56.dp), contentAlignment = Alignment.Center) {

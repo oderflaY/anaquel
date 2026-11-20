@@ -60,6 +60,10 @@ data class AnaquelUiState(
     val perfil: PerfilTienda? = null,
     /** Mis productos al mayoreo y a quién se los muestro. */
     val mayoreo: MiMayoreo? = null,
+    /** Pago en línea abierto (hoja con la página de Stripe o la de prueba). */
+    val pago: Cobro? = null,
+    /** Pago recién confirmado (para la animación de «¡Pagado!»). */
+    val pagado: Cobro? = null,
 )
 
 /** Pedido a medio armar desde un catálogo: productos de la otra tienda y cantidades. */
@@ -92,9 +96,15 @@ class AnaquelViewModel(
     var mensaje by mutableStateOf<String?>(null)
         private set
 
-    /** Enlace de WhatsApp que la pantalla debe abrir (y luego limpiar). */
+    /** Enlace (tel:…) que la pantalla debe abrir y luego limpiar. */
     var abrirEnlace by mutableStateOf<String?>(null)
         private set
+
+    /** Pantalla a la que hay que ir (un solo uso): "chats". La atiende App.kt desde cualquier pestaña. */
+    var navegar by mutableStateOf<String?>(null)
+        private set
+
+    fun onNavegado() { navegar = null }
 
     private var sincronizado = false
 
@@ -175,6 +185,12 @@ class AnaquelViewModel(
         return "$SERVIDOR_ANAQUEL/panel/bodega?app=1$consulta#t=$tok"
     }
 
+    /** Mapa de la red (misma página del panel, sin encabezado y con la sesión en el hash). */
+    fun urlMapa(): String? {
+        val tok = api.token ?: return null
+        return "$SERVIDOR_ANAQUEL/panel/mapa?app=1#t=$tok"
+    }
+
     // ---------------- Red, tratos y asesor ----------------
 
     private suspend fun cargarAsesor() {
@@ -217,13 +233,29 @@ class AnaquelViewModel(
         buscarRed(q)
     }
 
+    /**
+     * Manda la oferta y salta directo al chat con esa tienda: ahí llega su
+     * respuesta (aceptar, contraoferta) y, cuando toca, el botón de pagar.
+     */
     fun negociar(r: ResultadoRed, cantidad: Long, precioC: Long, mensajeTexto: String) = trabajo("trato") {
         val t = api.crearTrato(r, cantidad, precioC, mensajeTexto)
-        mensaje = if (r.tipo == "solicitud") "Oferta enviada" else "Propuesta enviada. Te avisamos cuando responda."
-        _state.update { it.copy(seccion = SeccionAnaquel.TRATOS, trato = t, tratos = api.tratos()) }
+        val c = api.abrirChat(t.otra.id)
+        _state.update { it.copy(chat = c, trato = null, pidiendo = null) }
+        navegar = "chats"
+        mensaje = if (r.tipo == "solicitud") "Oferta enviada a ${t.otra.nombre.removeSuffix(" (demo)")}"
+        else "Propuesta enviada. Aquí te contesta ${t.otra.nombre.removeSuffix(" (demo)")}."
     }
 
     fun abrirTrato(t: Trato) = trabajo("trato") { _state.update { it.copy(trato = api.trato(t.id)) } }
+
+    /** Los tratos se platican en el chat con esa tienda (ahí están sus tarjetas y el pago). */
+    fun verTratoEnChat(t: Trato) = abrirChatCon(t.otra.id)
+
+    /** Abre el chat con una tienda y lleva a la pestaña Chats (desde el mapa, un trato…). */
+    fun abrirChatCon(tienda: Long, pedir: Boolean = false, producto: Long? = null, cantidad: Long = 0) {
+        chatCon(tienda, pedir, producto, cantidad)
+        navegar = "chats"
+    }
     fun cerrarTrato() = trabajo(null) { _state.update { it.copy(trato = null, tratos = api.tratos()) } }
 
     fun escribirTrato(texto: String, cantidad: Long? = null, precioC: Long? = null) {
@@ -246,7 +278,6 @@ class AnaquelViewModel(
         }
     }
 
-    fun abrirWhatsApp(enlace: String) { abrirEnlace = enlace }
 
     fun refrescar() = trabajo(null) { refrescarAhora() }
 
@@ -413,12 +444,47 @@ class AnaquelViewModel(
         }
     }
 
+    /** «Pagar»: acepta lo propuesto (si hacía falta) y abre la página de pago. */
+    fun pagar(m: MensajeChat) {
+        val c = _state.value.chat ?: return
+        trabajo("pedido${m.id}") {
+            val n = api.accionPedidoChat(c.id, m.id, "pagar")
+            _state.update { it.copy(chat = n.copy(cobro = null), pago = n.cobro) }
+        }
+    }
+
+    /** Se cerró la hoja de pago (pagó, canceló o la cerró): se pregunta cómo quedó. */
+    fun cerrarPago() {
+        val p = _state.value.pago ?: return
+        _state.update { it.copy(pago = null) }
+        viewModelScope.launch {
+            val c = runCatching { api.cobro(p.id) }.getOrNull()
+            if (c?.estado == "pagado") {
+                _state.update { it.copy(pagado = c) }
+            } else if (c != null) {
+                mensaje = "No se hizo el cargo. Puedes pagar cuando quieras desde la tarjeta."
+            }
+            refrescarChat()
+        }
+    }
+
+    fun vistoPagado() = _state.update { it.copy(pagado = null) }
+
+    fun contraoferta(m: MensajeChat, trato: Long, cantidad: Long, precioC: Long, texto: String) {
+        val c = _state.value.chat ?: return
+        trabajo("pedido${m.id}") {
+            _state.update { it.copy(chat = api.contraofertaChat(c.id, m.id, trato, cantidad, precioC, texto)) }
+            mensaje = "Contraoferta enviada"
+        }
+    }
+
     fun accionPedidoChat(m: MensajeChat, accion: String) {
         val c = _state.value.chat ?: return
         trabajo("pedido${m.id}") {
             _state.update { it.copy(chat = api.accionPedidoChat(c.id, m.id, accion)) }
             mensaje = when (accion) {
-                "aceptar" -> "Pedido aceptado"; "entregar" -> "Marcado como entregado: el inventario ya se movió"
+                "aceptar" -> if (m.tipo == "oferta") "Oferta aceptada" else "Pedido aceptado"
+                "entregar" -> "Marcado como entregado: el inventario ya se movió"
                 else -> "Pedido cancelado"
             }
         }
@@ -448,8 +514,7 @@ class AnaquelViewModel(
         val s = g.sugerencia ?: return
         trabajo(g.clave) {
             val p = api.pedir(s, g.items.map { it.producto.id to cantidad(it) })
-            abrirEnlace = p.whatsapp
-            mensaje = "Pedido #${p.id} listo para ${p.destino}"
+            mensaje = "Pedido #${p.id} guardado para ${p.destino}. Lo ves en «Pedidos a proveedor»."
             refrescarAhora()
         }
     }
@@ -459,7 +524,8 @@ class AnaquelViewModel(
         refrescarAhora()
     }
 
-    fun reenviar(p: Pedido) { abrirEnlace = p.whatsapp }
+    /** Pedido a un proveedor de fuera de la red: se le llama (ya no se manda por WhatsApp). */
+    fun reenviar(p: Pedido) { if (p.telefono.isNotBlank()) abrirEnlace = "tel:" + p.telefono.filter { it.isDigit() || it == '+' } }
 
     // ---------------- Anaqueles ----------------
 

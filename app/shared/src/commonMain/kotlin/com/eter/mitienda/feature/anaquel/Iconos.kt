@@ -33,6 +33,7 @@ object Ico {
     val Mayoreo = Icons.Rounded.Sell
     val Candado = Icons.Rounded.Lock
     val Mundo = Icons.Rounded.Public
+    val Mapa = Icons.Rounded.Map
 }
 
 /** Ícono para un producto según su nombre (la red aún no tiene fotos). */

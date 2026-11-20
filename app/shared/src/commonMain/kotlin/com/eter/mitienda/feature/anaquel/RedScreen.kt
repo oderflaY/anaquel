@@ -69,7 +69,7 @@ internal fun LazyListScope.asesor(st: AnaquelUiState, vm: AnaquelViewModel, nego
         Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceSm)) {
             if (st.plan == null) T("Conoce tu inventario, tus ventas y la temporada de tu giro, y busca por ti en la red.", secundario = true)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Etiqueta(if (st.motorAsesor == "ia") "Con IA (Claude)" else "Asesor básico, sin IA")
+                Etiqueta(when (st.motorAsesor) { "ia" -> "Con IA (Claude)"; "local" -> "IA de Anaquel (modelo propio)"; else -> "Asesor básico, sin IA" })
                 Spacer(Modifier.weight(1f))
                 if (!st.asesor.isNullOrEmpty()) TextButton(onClick = vm::conversacionNueva) { Text("Conversación nueva", color = NeuColors.TextSecondary) }
             }
@@ -216,7 +216,7 @@ internal fun LazyListScope.tratos(st: AnaquelUiState, vm: AnaquelViewModel, cont
     if (lista == null) item(key = "tr-cargando") { T("Cargando…", secundario = true) }
     else if (lista.isEmpty()) item(key = "tr-vacio") { T("No tienes tratos todavía.", secundario = true) }
     items(lista.orEmpty(), key = { "t-" + it.id }) { tr ->
-        NeumorphicCard(Modifier.fillMaxWidth(), onClick = { vm.abrirTrato(tr) }) {
+        NeumorphicCard(Modifier.fillMaxWidth(), onClick = { vm.verTratoEnChat(tr) }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Etiqueta(estadoTxt(tr.estado))
                 Spacer(Modifier.weight(1f))
@@ -258,7 +258,7 @@ private fun LazyListScope.detalleTrato(t: Trato, st: AnaquelUiState, vm: Anaquel
                 if (t.estado == "negociando" && t.teToca) NeumorphicButton("Aceptar trato", enabled = !ocupado, onClick = { vm.accionTrato("aceptar") }, modifier = Modifier.fillMaxWidth())
                 if (t.estado == "negociando") NeumorphicButton("Contraoferta", onClick = contraoferta, containerColor = NeuColors.Blue, modifier = Modifier.fillMaxWidth())
                 if (t.estado == "aceptado" && t.rol == "vendo") NeumorphicButton("Marcar entregado", enabled = !ocupado, onClick = { vm.accionTrato("entregar") }, modifier = Modifier.fillMaxWidth())
-                t.whatsapp?.takeIf { it.isNotBlank() }?.let { w -> NeumorphicButton("WhatsApp", onClick = { vm.abrirWhatsApp(w) }, containerColor = NeuColors.Blue, modifier = Modifier.fillMaxWidth()) }
+                NeumorphicButton("Ir al chat", onClick = { vm.verTratoEnChat(t) }, containerColor = NeuColors.Blue, modifier = Modifier.fillMaxWidth())
                 if (t.abierto) TextButton(onClick = { vm.accionTrato("cancelar") }, enabled = !ocupado) { Text("Cancelar trato", color = NeuColors.OnLowStock) }
             }
         }

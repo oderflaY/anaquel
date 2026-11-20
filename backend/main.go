@@ -23,6 +23,7 @@ type App struct {
 	claude *clienteClaude // nil = asesor básico (sin llave de Anthropic)
 	local  *modeloLocal   // modelo ligero en llama.cpp (LLM_URL); nil = sin él
 	grafo  *Grafo         // Neo4j con el clon de la red (NEO4J_URL); nil = sin grafo
+	stripe *stripeCli     // cobros en línea (STRIPE_SECRET_KEY); nil = página de pago de prueba
 }
 
 func env(k, def string) string {
@@ -47,6 +48,7 @@ func main() {
 		claude: nuevoClaude(),
 		local:  nuevoModeloLocal(),
 		grafo:  nuevoGrafo(),
+		stripe: stripeDesdeEnv(),
 	}
 	if env("DATOS_DEMO", "1") == "1" {
 		if err := app.sembrarDemo(); err != nil {
@@ -59,7 +61,7 @@ func main() {
 	}
 	go app.vigilarGrafo()
 	addr := env("ADDR", ":8080")
-	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v, modelo local: %v)", addr, app.vision.Nombre(), app.claude != nil, app.local != nil)
+	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v, modelo local: %v, Stripe: %v)", addr, app.vision.Nombre(), app.claude != nil, app.local != nil, app.stripe != nil)
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           app.rutas(),
@@ -136,6 +138,12 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("POST /api/chats/{id}/mensajes", a.conTienda(a.escribirChat))
 	m.HandleFunc("POST /api/chats/{id}/pedido", a.conTienda(a.pedirDeChat))
 	m.HandleFunc("POST /api/chats/{id}/pedido/{msg}/{accion}", a.conTienda(a.accionPedido))
+	m.HandleFunc("GET /api/mapa", a.conTienda(a.mapa))
+	m.HandleFunc("GET /api/cobros/{id}", a.conTienda(a.verCobro))
+	m.HandleFunc("GET /api/cobros/{id}/prueba", a.pruebaCobro)
+	m.HandleFunc("POST /api/cobros/{id}/prueba", a.pruebaCobro)
+	m.HandleFunc("GET /api/cobros/{id}/vuelta", a.vueltaCobro)
+	m.HandleFunc("POST /api/cobros/stripe/webhook", a.webhookStripe)
 	m.HandleFunc("GET /api/tiendas/{id}/catalogo", a.conTienda(a.catalogoDe))
 	m.HandleFunc("GET /api/tiendas/{id}/perfil", a.conTienda(a.perfilTienda))
 	m.HandleFunc("GET /api/mayoreo", a.conTienda(a.verMayoreo))

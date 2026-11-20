@@ -11,8 +11,10 @@ IMG=ghcr.io/ggml-org/llama.cpp:full
 corre() { docker run --rm -v "$PWD":/m -w /app --entrypoint "$1" "$IMG" "${@:2}"; }
 test -s base-$TAM-f16.gguf || corre python3 convert_hf_to_gguf.py /m/base-$TAM --outfile /m/base-$TAM-f16.gguf --outtype f16
 if [ -d lora-$TAM ]; then
-	corre python3 convert_lora_to_gguf.py /m/lora-$TAM --base /m/base-$TAM --outfile /m/lora-$TAM.gguf --outtype f16
-	corre ./llama-export-lora -m /m/base-$TAM-f16.gguf --lora /m/lora-$TAM.gguf -o /m/asesor-$TAM-f16.gguf
+	# la imagen no trae llama-export-lora: se fusiona el LoRA en HF y se convierte
+	corre python3 /m/fusionar_lora.py /m/base-$TAM /m/lora-$TAM /m/fusion-$TAM
+	corre python3 convert_hf_to_gguf.py /m/fusion-$TAM --outfile /m/asesor-$TAM-f16.gguf --outtype f16
+	rm -rf fusion-$TAM lora-$TAM.gguf
 	corre ./llama-quantize /m/asesor-$TAM-f16.gguf /m/asesor-$TAM-q4km.gguf Q4_K_M
 	rm -f asesor-$TAM-f16.gguf
 	ln -sf asesor-$TAM-q4km.gguf anaquel-asesor.gguf

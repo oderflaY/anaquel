@@ -42,6 +42,7 @@ import mitienda.shared.generated.resources.ic_inventory
 import mitienda.shared.generated.resources.ic_shelf
 import com.eter.mitienda.feature.anaquel.AnaquelRoute
 import com.eter.mitienda.feature.anaquel.ChatsRoute
+import com.eter.mitienda.feature.anaquel.MapaRoute
 import com.eter.mitienda.feature.anaquel.InicioRoute
 import com.eter.mitienda.feature.anaquel.BarraTienda
 import com.eter.mitienda.feature.anaquel.HojaHerramientas
@@ -90,6 +91,7 @@ private object Routes {
     const val ANAQUEL = "anaquel"
     const val INICIO = "inicio"
     const val CHATS = "chats"
+    const val MAPA = "mapa"
     const val ARG_ORDER_ID = "orderId"
     const val ORDER_FORM = "order_form?$ARG_ORDER_ID={$ARG_ORDER_ID}"
     fun orderForm(orderId: Long?) = "order_form?$ARG_ORDER_ID=${orderId ?: NEW_PRODUCT}"
@@ -240,9 +242,10 @@ fun App(container: AppContainer) {
                                     popUpTo(Routes.INICIO) { saveState = true }
                                     launchSingleTop = true
                                 }
-                            })
+                            }, onAbrirMapa = { navController.navigate(Routes.MAPA) })
                         }
                         composable(Routes.CHATS) { ChatsRoute(anaquel) }
+                        composable(Routes.MAPA) { MapaRoute(anaquel, onVolver = { navController.popBackStack() }) }
                         composable(Routes.DASHBOARD) {
                             DashboardRoute(
                                 viewModel = viewModel { DashboardViewModel(repository, container.categoryRepository) },
@@ -384,6 +387,14 @@ fun App(container: AppContainer) {
                         restoreState = true
                     }
                 }
+                // Una oferta, un trato o el mapa piden ir al chat: se va desde cualquier pantalla.
+                val navegar = anaquel.navegar
+                LaunchedEffect(navegar) {
+                    if (navegar == "chats") {
+                        anaquel.onNavegado()
+                        irPestana(Routes.CHATS)
+                    }
+                }
                 // La barra se esconde hacia abajo en las pantallas de detalle y vuelve a subir.
                 AnimatedVisibility(
                     showBottomBar,
@@ -411,7 +422,7 @@ fun App(container: AppContainer) {
                         menuOrigen = currentRoute
                         menuDestino = when (id) {
                             "vender" -> Routes.SALE; "agregar" -> Routes.PRODUCT_FORM; "inventario" -> Routes.DASHBOARD
-                            "pedidos_clientes" -> Routes.ORDERS; "chats" -> Routes.CHATS; "graficas" -> Routes.STATS
+                            "pedidos_clientes" -> Routes.ORDERS; "chats" -> Routes.CHATS; "mapa" -> Routes.MAPA; "graficas" -> Routes.STATS
                             "categorias" -> Routes.CATEGORIES; "bluetooth" -> Routes.SYNC; "sincronizar" -> null
                             else -> Routes.ANAQUEL
                         }
@@ -429,6 +440,7 @@ fun App(container: AppContainer) {
                             "inventario" -> irPestana(Routes.DASHBOARD)
                             "pedidos_clientes" -> irPestana(Routes.ORDERS)
                             "chats" -> irPestana(Routes.CHATS)
+                            "mapa" -> navController.navigate(Routes.MAPA)
                             "graficas" -> navController.navigate(Routes.STATS)
                             "categorias" -> navController.navigate(Routes.CATEGORIES)
                             "bluetooth" -> navController.navigate(Routes.SYNC)

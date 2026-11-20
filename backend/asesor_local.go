@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -40,7 +41,7 @@ func nuevoModeloLocal() *modeloLocal {
 	if u == "" {
 		return nil
 	}
-	return &modeloLocal{url: u, nombre: env("LLM_MODELO", "anaquel-asesor"), http: &http.Client{Timeout: 75 * time.Second}} // la pasarela corta a los 2 min
+	return &modeloLocal{url: u, nombre: env("LLM_MODELO", "anaquel-asesor"), http: &http.Client{Timeout: 45 * time.Second}} // la pasarela corta a los 2 min
 }
 
 func pesosHoja(c int64) string {
@@ -298,6 +299,9 @@ func (a *App) asesorLocal(ctx context.Context, tienda int64, pregunta string) (M
 	if err != nil {
 		return MensajeAsesor{}, err
 	}
+	if motivo := contradiceHoja(texto, hoja, pregunta); motivo != "" {
+		return MensajeAsesor{}, fmt.Errorf("respuesta descartada (%s): %q", motivo, recortarTexto(texto, 160))
+	}
 	turno.pasos = append([]string{"Revisé tu inventario, tus ventas, lo que se te acaba y las ofertas de la red"}, turno.pasos...)
 	return MensajeAsesor{Texto: texto, Tarjetas: turno.tarjetas, Pasos: turno.pasos, Motor: "local"}, nil
 }
@@ -307,4 +311,34 @@ func (a *App) hojaAsesor(w http.ResponseWriter, r *http.Request) {
 	hoja, _ := a.contextoAsesor(tiendaDe(r), r.URL.Query().Get("q"))
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Write([]byte(hoja))
+}
+
+var (
+	reCifra = regexp.MustCompile(`\d[\d,]*(?:\.\d+)?`)
+	reNiego = regexp.MustCompile(`(?i)no (?:encontr[ée]|hay|tengo|vi|aparece)[^.\n]{0,60}`)
+)
+
+// contradiceHoja revisa la respuesta del modelo chico contra los datos que leyó:
+// si inventa cifras o dice que algo «no está» cuando la hoja sí lo trae, se
+// descarta y contesta el asesor básico (que siempre sale de los datos).
+func contradiceHoja(texto, hoja, pregunta string) string {
+	fuente := strings.ReplaceAll(hoja+" "+pregunta, ",", "")
+	for _, n := range reCifra.FindAllString(texto, -1) {
+		n = strings.TrimSuffix(strings.ReplaceAll(n, ",", ""), ".")
+		if len(n) <= 1 { // 1-9: cantidades sueltas («2 semanas»)
+			continue
+		}
+		if !strings.Contains(fuente, n) && !strings.Contains(fuente, strings.TrimSuffix(n, ".00")) {
+			return "cifra inventada " + n
+		}
+	}
+	h := normalizar(hoja)
+	for _, frase := range reNiego.FindAllString(texto, -1) {
+		for _, palabra := range strings.Fields(normalizar(frase)) {
+			if len(palabra) >= 5 && palabra != "encontre" && palabra != "aparece" && strings.Count(h, palabra) >= 2 {
+				return "niega algo que sí está: " + palabra
+			}
+		}
+	}
+	return ""
 }
