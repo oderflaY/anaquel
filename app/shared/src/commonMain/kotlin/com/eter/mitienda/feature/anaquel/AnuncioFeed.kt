@@ -129,7 +129,7 @@ internal fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, o
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(claro, oscuro)))) {
         FondoAnuncio(acento)
         // ---------- Producto en tarjeta de vidrio con aro que gira ----------
-        Box(Modifier.align(Alignment.TopCenter).padding(top = 150.dp).size(210.dp).pop(), contentAlignment = Alignment.Center) {
+        Box(Modifier.align(Alignment.TopCenter).padding(top = 128.dp).size(196.dp).pop(), contentAlignment = Alignment.Center) {
             AroGiratorio(acento, Modifier.fillMaxSize())
             Box(
                 Modifier.size(150.dp).flotar(8f, 2600)
@@ -137,7 +137,7 @@ internal fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, o
                     .border(1.dp, Color.White.copy(alpha = 0.45f), RoundedCornerShape(40.dp)),
                 contentAlignment = Alignment.Center,
             ) { Icon(a.icono, null, tint = Color.White, modifier = Modifier.size(84.dp)) }
-            a.descuento?.let { SelloDescuento(it, Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = 4.dp)) }
+            a.descuento?.let { SelloDescuento(it, Modifier.align(Alignment.TopEnd).offset(x = (-2).dp, y = 2.dp)) }
         }
         // ---------- Etiqueta y contador ----------
         Row(Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 66.dp), verticalAlignment = Alignment.CenterVertically) {
