@@ -11,7 +11,7 @@ services:
         aliases: [anaquel-api]
 
   # Asesor con modelo propio: corre en la GPU de la laptop (AnaquelIA/servir_asesor.py)
-  # y llega al VPS por un túnel SSH inverso a 172.17.0.1:18085 (AnaquelIA/tunel_asesor.sh).
+  # y llega al VPS por un túnel SSH inverso a 172.16.0.1:18085 (AnaquelIA/tunel_asesor.sh).
   # Si la laptop está apagada, el núcleo contesta con el asesor básico.
   # Respaldo en el VPS (1 CPU, ~29 s por respuesta y casi 1 GB de RAM):
   #   docker compose ... --profile llm-vps up -d llm   y LLM_URL=http://llm:8080

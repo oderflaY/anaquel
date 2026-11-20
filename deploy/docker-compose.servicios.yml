@@ -63,7 +63,7 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       ANAQUEL_URL_PUBLICA: ${ANAQUEL_URL_PUBLICA:-}
     volumes: ["./datos:/datos"]
-    networks: [interna]
+    networks: [interna, salida]  # salida: Stripe y el asesor de la laptop (túnel)
 
   acceso:
     <<: *servicio
