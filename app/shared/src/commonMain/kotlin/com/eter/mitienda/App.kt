@@ -51,6 +51,9 @@ import com.eter.mitienda.feature.anaquel.herramientasDe
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import mitienda.shared.generated.resources.ic_chat
 import mitienda.shared.generated.resources.ic_home
@@ -165,6 +168,10 @@ fun App(container: AppContainer) {
     val chatsSinLeer = nube.inicio?.chatsSinLeer ?: nube.resumen?.chatsSinLeer ?: 0
 
     var herramientas by remember { mutableStateOf(false) }
+    // Si algo se abrió desde el menú ＋, «atrás» regresa al menú (no hasta Inicio).
+    // Guarda de qué pantalla se partió y a cuál se fue.
+    var menuOrigen by remember { mutableStateOf<String?>(null) }
+    var menuDestino by remember { mutableStateOf<String?>(null) }
 
     MiTiendaTheme {
         // Las imágenes guardan rutas relativas; aquí se indica cómo resolverlas.
@@ -175,6 +182,35 @@ fun App(container: AppContainer) {
             val navController = rememberNavController()
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
             val showBottomBar = currentRoute in Routes.TOP_LEVEL
+            // Pantalla empujada (Cobrar, Nuevo producto…): al volver al origen se reabre el menú.
+            LaunchedEffect(currentRoute) {
+                val destino = menuDestino ?: return@LaunchedEffect
+                when {
+                    currentRoute == destino -> Unit
+                    currentRoute == menuOrigen && destino !in Routes.TOP_LEVEL && destino != Routes.ORDERS -> {
+                        menuOrigen = null; menuDestino = null; herramientas = true
+                    }
+                    else -> { menuOrigen = null; menuDestino = null }
+                }
+            }
+            // Pestaña (Mi tienda, Inventario, Encargos…): «atrás» vuelve a donde estaba y abre el menú.
+            NavigationBackHandler(
+                state = rememberNavigationEventState(NavigationEventInfo.None),
+                isBackEnabled = !herramientas && menuDestino != null && currentRoute == menuDestino &&
+                    (menuDestino in Routes.TOP_LEVEL || menuDestino == Routes.ORDERS),
+                onBackCompleted = {
+                    val origen = menuOrigen
+                    menuOrigen = null; menuDestino = null
+                    if (origen != null && origen != currentRoute) {
+                        navController.navigate(origen) {
+                            popUpTo(Routes.INICIO) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                    herramientas = true
+                },
+            )
 
             Column(Modifier.fillMaxSize().background(NeuColors.Background)) {
                 Box(
@@ -372,6 +408,13 @@ fun App(container: AppContainer) {
                 if (herramientas) {
                     HojaHerramientas(herramientasDe(nube, urgentOrders), onCerrar = { herramientas = false }) { id ->
                         herramientas = false
+                        menuOrigen = currentRoute
+                        menuDestino = when (id) {
+                            "vender" -> Routes.SALE; "agregar" -> Routes.PRODUCT_FORM; "inventario" -> Routes.DASHBOARD
+                            "pedidos_clientes" -> Routes.ORDERS; "chats" -> Routes.CHATS; "graficas" -> Routes.STATS
+                            "categorias" -> Routes.CATEGORIES; "bluetooth" -> Routes.SYNC; "sincronizar" -> null
+                            else -> Routes.ANAQUEL
+                        }
                         val seccion = when (id) {
                             "hoy" -> SeccionAnaquel.HOY; "foto" -> SeccionAnaquel.ANAQUELES; "pedidos" -> SeccionAnaquel.PEDIDOS
                             "bodega" -> SeccionAnaquel.BODEGA; "red" -> SeccionAnaquel.RED; "tratos" -> SeccionAnaquel.TRATOS

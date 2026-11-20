@@ -114,6 +114,8 @@ fun NeumorphicButton(
             text = text,
             style = MaterialTheme.typography.labelLarge,
             color = contentColor,
+            // Nunca partir una palabra letra por letra: si no cabe, se corta con «…».
+            maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }

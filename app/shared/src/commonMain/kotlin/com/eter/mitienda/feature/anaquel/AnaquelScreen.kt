@@ -433,6 +433,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.pedidos(st: AnaquelUi
 }
 
 @Composable
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 private fun PedidoCard(p: Pedido, st: AnaquelUiState, vm: AnaquelViewModel) {
     NeumorphicCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -453,7 +454,9 @@ private fun PedidoCard(p: Pedido, st: AnaquelUiState, vm: AnaquelViewModel) {
             Spacer(Modifier.height(NeuDimens.SpaceLg))
             NeumorphicButton(if (p.atrasado) "Preguntar por WhatsApp" else "Abrir WhatsApp", onClick = { vm.reenviar(p) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(NeuDimens.SpaceMd))
-            Row(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd), verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceSm),
+            ) {
                 if (p.estado == "enviado") NeumorphicChip("Me confirmó", selected = false, onClick = { vm.cambiarEstado(p, "confirmado") })
                 NeumorphicChip("Ya llegó", selected = false, onClick = { vm.cambiarEstado(p, "llego") })
                 NeumorphicChip("Cancelar", selected = false, onClick = { vm.cambiarEstado(p, "cancelado") })

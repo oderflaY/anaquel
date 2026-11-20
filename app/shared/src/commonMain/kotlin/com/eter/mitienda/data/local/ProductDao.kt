@@ -40,7 +40,7 @@ class ProductDao(private val db: PapeleriaDatabase) {
             stmt.bindProductColumns(product)
             stmt.step()
         }
-        conn.lastInsertRowId()
+        conn.idInsertado(TABLE)
     }
 
     suspend fun getAllProducts(): List<Product> = db.withConnection { conn ->
@@ -66,6 +66,7 @@ class ProductDao(private val db: PapeleriaDatabase) {
 
     /** @return filas afectadas (0 si el producto ya no existe). */
     suspend fun updateProduct(product: Product): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, product.id)
         conn.prepare(
             """
             UPDATE $TABLE SET $BARCODE = ?, $NAME = ?, $DESCRIPTION = ?, $PRICE = ?, $COST = ?,
@@ -77,29 +78,31 @@ class ProductDao(private val db: PapeleriaDatabase) {
             stmt.bindLong(12, product.id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 
     /** Actualización mínima (2 columnas) para ajustes rápidos de inventario. */
     suspend fun updateProductStock(id: Long, newStock: Int): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, id)
         conn.prepare("UPDATE $TABLE SET $STOCK = ?, $UPDATED_AT = ? WHERE $ID = ?").use { stmt ->
             stmt.bindLong(1, newStock.toLong())
             stmt.bindLong(2, nowMillis())
             stmt.bindLong(3, id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 
     /** Suma/resta en la propia sentencia: no depende de un valor leído antes. */
     suspend fun adjustProductStock(id: Long, delta: Int): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, id)
         conn.prepare("UPDATE $TABLE SET $STOCK = MAX(0, $STOCK + ?), $UPDATED_AT = ? WHERE $ID = ?").use { stmt ->
             stmt.bindLong(1, delta.toLong())
             stmt.bindLong(2, nowMillis())
             stmt.bindLong(3, id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 
     suspend fun getKnownLocations(): List<String> = db.withConnection { conn ->
@@ -115,11 +118,12 @@ class ProductDao(private val db: PapeleriaDatabase) {
     }
 
     suspend fun deleteProduct(id: Long): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, id)
         conn.prepare("DELETE FROM $TABLE WHERE $ID = ?").use { stmt ->
             stmt.bindLong(1, id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 
     // --- Mapeo fila <-> dominio -------------------------------------------------
@@ -181,8 +185,15 @@ internal fun SQLiteStatement.bindTextOrNull(index: Int, value: String?) {
 internal fun SQLiteStatement.getTextOrNull(index: Int): String? =
     if (isNull(index)) null else getText(index)
 
-internal fun SQLiteConnection.lastInsertRowId(): Long =
-    prepare("SELECT last_insert_rowid()").use { it.step(); it.getLong(0) }
+// Con el driver de Android, `SELECT changes()` y `SELECT last_insert_rowid()` pueden
+// leerse en otra sesión del framework y regresar 0 o un valor viejo (el producto
+// recién agregado salía como «ya no existe»). Por eso no se usan: se pregunta
+// directo a la tabla, que es fiable porque toda la app usa una sola cola serial.
 
-internal fun SQLiteConnection.changes(): Int =
-    prepare("SELECT changes()").use { it.step(); it.getLong(0).toInt() }
+/** id de la fila recién insertada en [tabla] (la de rowid mayor). */
+internal fun SQLiteConnection.idInsertado(tabla: String): Long =
+    prepare("SELECT MAX(rowid) FROM $tabla").use { it.step(); it.getLong(0) }
+
+/** 1 si existe la fila [id] en [tabla], 0 si no. Se llama ANTES de actualizar o borrar. */
+internal fun SQLiteConnection.existe(tabla: String, id: Long): Int =
+    prepare("SELECT COUNT(*) FROM $tabla WHERE id = ?").use { it.bindLong(1, id); it.step(); it.getLong(0).toInt() }

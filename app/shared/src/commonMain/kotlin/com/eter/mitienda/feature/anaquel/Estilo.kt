@@ -77,7 +77,7 @@ internal fun ChipVerde(texto: String, activo: Boolean, onClick: () -> Unit) {
     val tinta by animateColorAsState(if (activo) Color.White else NeuColors.TextPrimary)
     val fuente = remember { MutableInteractionSource() }
     Text(
-        texto, color = tinta, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+        texto, color = tinta, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
         modifier = Modifier.rebote(fuente, 0.9f).clip(CircleShape).background(fondo)
             .border(1.dp, if (activo) VerdeMarca else NeuColors.Hairline, CircleShape)
             .clickable(interactionSource = fuente, indication = null, onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp),
@@ -110,7 +110,8 @@ internal fun BotonVerde(
             .semantics { role = Role.Button },
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(texto, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+        Text(texto, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).padding(horizontal = 12.dp))
         icono?.let {
             Spacer(Modifier.width(10.dp))
             Icon(it, null, tint = Color.White, modifier = Modifier.size(20.dp))

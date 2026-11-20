@@ -65,6 +65,7 @@ fun NeumorphicChip(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = if (selected) NeuColors.OnAccent else NeuColors.TextPrimary,
+            maxLines = 1, softWrap = false,
         )
     }
 }

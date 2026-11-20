@@ -33,24 +33,26 @@ class CategoryDao(private val db: PapeleriaDatabase) {
             stmt.bindText(1, name)
             stmt.step()
         }
-        conn.lastInsertRowId()
+        conn.idInsertado(TABLE)
     }
 
     suspend fun rename(id: Long, name: String): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, id)
         conn.prepare("UPDATE $TABLE SET $NAME = ? WHERE $ID = ?").use { stmt ->
             stmt.bindText(1, name)
             stmt.bindLong(2, id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 
     /** Los productos quedan con categoria_id = NULL por la FK `ON DELETE SET NULL`. */
     suspend fun delete(id: Long): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, id)
         conn.prepare("DELETE FROM $TABLE WHERE $ID = ?").use { stmt ->
             stmt.bindLong(1, id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 }
