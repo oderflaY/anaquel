@@ -9,3 +9,21 @@ services:
       interna: {}
       rutacree_edge:
         aliases: [anaquel-api]
+
+  # Asesor con modelo local: Qwen2.5 afinado para Anaquel (AnaquelIA), servido
+  # por llama.cpp solo dentro de la red interna. El VPS tiene 1 CPU: se le pone
+  # tope para que no frene a las demás apps; si tarda, el núcleo contesta con
+  # el asesor básico. El modelo lo arma deploy/llm/armar_modelo.sh en /root/anaquel/llm.
+  llm:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    restart: unless-stopped
+    command: ["-m", "/m/anaquel-asesor.gguf", "--alias", "anaquel-asesor", "-c", "4096", "-np", "1", "-t", "1",
+              "--host", "0.0.0.0", "--port", "8080", "--cache-reuse", "256"]
+    volumes: ["../llm:/m:ro"]
+    mem_limit: 900m
+    cpus: 0.85
+    networks: [interna]
+
+  nucleo:
+    environment:
+      LLM_URL: http://llm:8080
