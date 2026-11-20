@@ -2,7 +2,6 @@ package com.eter.mitienda.core.designsystem.neumorphism
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
@@ -10,7 +9,11 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.dropShadow
-import androidx.compose.ui.draw.innerShadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -57,45 +60,30 @@ fun Modifier.neumorphic(
     darkShadow: Color = NeuColors.ShadowDark,
     lightShadow: Color = NeuColors.ShadowLight,
     insetProgress: () -> Float = OutsetAlways,
-): Modifier = this
-    // 1) Sombra oscura exterior: se desvanece a medida que el elemento se hunde.
-    .dropShadow(shape) {
-        val k = 1f - insetProgress().coerceIn(0f, 1f)
-        val d = elevation.offset.toPx() * k
-        radius = elevation.blur.toPx() * k
-        offset = Offset(d, d)
-        color = darkShadow
-        alpha = k
-    }
-    // 2) Sombra clara exterior (dirección opuesta).
-    .dropShadow(shape) {
-        val k = 1f - insetProgress().coerceIn(0f, 1f)
-        val d = elevation.offset.toPx() * k
-        radius = elevation.blur.toPx() * k
-        offset = Offset(-d, -d)
-        color = lightShadow
-        alpha = k
-    }
-    // 3) Superficie. Debe ir entre las sombras exteriores y las interiores.
-    .background(surfaceColor, shape)
-    // 4) Sombra oscura interior: aparece al hundirse.
-    .innerShadow(shape) {
-        val k = insetProgress().coerceIn(0f, 1f)
-        val d = elevation.offset.toPx() * k
-        radius = elevation.blur.toPx() * k
-        offset = Offset(d, d)
-        color = darkShadow
-        alpha = k
-    }
-    // 5) Sombra clara interior.
-    .innerShadow(shape) {
-        val k = insetProgress().coerceIn(0f, 1f)
-        val d = elevation.offset.toPx() * k
-        radius = elevation.blur.toPx() * k
-        offset = Offset(-d, -d)
-        color = lightShadow
-        alpha = k
-    }
+): Modifier {
+    // Estilo Anaquel (plano, igual que el feed, el perfil y la hoja de negociar):
+    // superficies blancas con una sombra suave hacia abajo y un filete fino.
+    // «Hundido» (inputs, presionado) = gris verdoso claro, sin sombra.
+    // Los nombres «neumorphic» se conservan para no tocar todas las pantallas.
+    val neutra = surfaceColor == NeuColors.Background
+    val arriba = if (neutra) NeuColors.Surface else surfaceColor
+    val abajo = if (neutra) NeuColors.SurfaceSunken else lerp(surfaceColor, Color.Black, 0.12f)
+    val filete = if (neutra) NeuColors.Hairline else Color.Transparent
+    return this
+        .dropShadow(shape) {
+            val k = 1f - insetProgress().coerceIn(0f, 1f)
+            radius = elevation.blur.toPx() * 0.9f * k
+            offset = Offset(0f, elevation.offset.toPx() * 0.45f * k)
+            color = if (neutra) NeuColors.ShadowSoft else surfaceColor
+            alpha = (if (neutra) 1f else 0.35f) * k
+        }
+        .drawBehind {
+            val p = insetProgress().coerceIn(0f, 1f)
+            val o = shape.createOutline(size, layoutDirection, this)
+            drawOutline(o, lerp(arriba, abajo, p))
+            if (filete != Color.Transparent) drawOutline(o, filete, style = Stroke(1.dp.toPx()))
+        }
+}
 
 /** Atajo para elementos estáticos hundidos (inputs, placeholders). */
 fun Modifier.neumorphicInset(

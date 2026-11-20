@@ -139,14 +139,14 @@ fun HojaNegociacion(n: Negociacion, onCerrar: () -> Unit, onEnviar: (Long, Long,
             // ---------- Cantidad ----------
             Seccion("¿Cuántas piezas?", Modifier.entrada(2)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    BotonRedondo(Icons.Rounded.Remove, "Menos") {
+                    BotonCircular(Icons.Rounded.Remove, "Menos") {
                         cantidad = (cantidad - pasoDe(cantidad)).coerceAtLeast(1)
                         if (n.modo != "contra") precioTxt = centsToInput(sugerido(cantidad))
                     }
                     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         NumeroAnimado(cantidad.toInt(), NeuColors.TextPrimary, 34.sp, FontWeight.Black)
                     }
-                    BotonRedondo(Icons.Rounded.Add, "Más") {
+                    BotonCircular(Icons.Rounded.Add, "Más") {
                         cantidad += pasoDe(cantidad)
                         if (n.modo != "contra") precioTxt = centsToInput(sugerido(cantidad))
                     }
@@ -154,7 +154,7 @@ fun HojaNegociacion(n: Negociacion, onCerrar: () -> Unit, onEnviar: (Long, Long,
                 val atajos = listOfNotNull(n.minimoMayoreo?.takeIf { it > 1 }, 12L, 24L, 48L, 100L).distinct().sorted().take(4)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     atajos.forEach { c ->
-                        Chip(if (c == n.minimoMayoreo) "$c · mayoreo" else "$c pzas", cantidad == c) {
+                        ChipVerde(if (c == n.minimoMayoreo) "$c · mayoreo" else "$c pzas", cantidad == c) {
                             cantidad = c
                             if (n.modo != "contra") precioTxt = centsToInput(sugerido(c))
                         }
@@ -180,7 +180,7 @@ fun HojaNegociacion(n: Negociacion, onCerrar: () -> Unit, onEnviar: (Long, Long,
                 if (!vendo && referencia > 0) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(0, 3, 5, 8, 12).forEach { d ->
                         val p = referencia * (100 - d) / 100
-                        Chip(if (d == 0) "Sin descuento" else "−$d%", pc == p) { precioTxt = centsToInput(p) }
+                        ChipVerde(if (d == 0) "Sin descuento" else "−$d%", pc == p) { precioTxt = centsToInput(p) }
                     }
                 }
             }
@@ -218,7 +218,7 @@ fun HojaNegociacion(n: Negociacion, onCerrar: () -> Unit, onEnviar: (Long, Long,
                 val listos = if (vendo) listOf("Te lo llevo hoy", "Tengo factura", "Precio especial por volumen")
                 else listOf("Pago de contado", "Paso a recogerlo", "Te compro cada semana", "¿Me das crédito?")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listos.forEach { m -> Chip(m, mensaje.contains(m)) { mensaje = if (mensaje.contains(m)) mensaje.replace(m, "").replace(" · ·", " ·").trim(' ', '·') else listOf(mensaje, m).filter { it.isNotBlank() }.joinToString(" · ") } }
+                    listos.forEach { m -> ChipVerde(m, mensaje.contains(m)) { mensaje = if (mensaje.contains(m)) mensaje.replace(m, "").replace(" · ·", " ·").trim(' ', '·') else listOf(mensaje, m).filter { it.isNotBlank() }.joinToString(" · ") } }
                 }
                 BasicTextField(
                     mensaje, { mensaje = it }, Modifier.fillMaxWidth().heightIn(min = 52.dp).background(Color.White, RoundedCornerShape(14.dp)).padding(14.dp),
@@ -227,20 +227,10 @@ fun HojaNegociacion(n: Negociacion, onCerrar: () -> Unit, onEnviar: (Long, Long,
                 )
             }
             // ---------- Enviar ----------
-            val fuente = remember { MutableInteractionSource() }
-            Row(
-                Modifier.entrada(6).fillMaxWidth().heightIn(min = 58.dp).rebote(fuente, 0.96f)
-                    .shadow(12.dp, RoundedCornerShape(18.dp), spotColor = Verde)
-                    .background(Brush.horizontalGradient(listOf(Color(0xFF12A374), Color(0xFF0E7C5A))), RoundedCornerShape(18.dp))
-                    .clickable(interactionSource = fuente, indication = null, enabled = pc > 0) { onEnviar(cantidad, pc, mensaje.trim()) }
-                    .semantics { role = Role.Button; contentDescription = "Enviar" },
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(when (n.modo) { "contra" -> "Enviar contraoferta"; "ofrecer" -> "Enviar oferta"; else -> "Enviar propuesta" },
-                    color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.width(10.dp))
-                Icon(Icons.Rounded.Send, null, tint = Color.White, modifier = Modifier.size(20.dp))
-            }
+            BotonVerde(
+                when (n.modo) { "contra" -> "Enviar contraoferta"; "ofrecer" -> "Enviar oferta"; else -> "Enviar propuesta" },
+                Icons.Rounded.Send, Modifier.entrada(6), habilitado = pc > 0,
+            ) { onEnviar(cantidad, pc, mensaje.trim()) }
         }
     }
 }
@@ -264,28 +254,4 @@ private fun Referencia(titulo: String, valor: String, modifier: Modifier, destac
         Text(titulo, fontSize = 11.sp, color = NeuColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(valor, fontSize = 16.sp, fontWeight = FontWeight.Black, color = if (destacado) Verde else NeuColors.TextPrimary, maxLines = 1)
     }
-}
-
-@Composable
-private fun Chip(texto: String, activo: Boolean, onClick: () -> Unit) {
-    val fondo by animateColorAsState(if (activo) Verde else Color.White)
-    val tinta by animateColorAsState(if (activo) Color.White else NeuColors.TextPrimary)
-    val fuente = remember { MutableInteractionSource() }
-    Text(
-        texto, color = tinta, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-        modifier = Modifier.rebote(fuente, 0.9f).clip(CircleShape).background(fondo)
-            .border(1.dp, if (activo) Verde else Color(0x1F000000), CircleShape)
-            .clickable(interactionSource = fuente, indication = null, onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp),
-    )
-}
-
-@Composable
-private fun BotonRedondo(icono: ImageVector, descripcion: String, onClick: () -> Unit) {
-    val fuente = remember { MutableInteractionSource() }
-    Box(
-        Modifier.size(52.dp).rebote(fuente, 0.85f).shadow(6.dp, CircleShape).background(Color.White, CircleShape)
-            .clickable(interactionSource = fuente, indication = null, onClick = onClick)
-            .semantics { role = Role.Button; contentDescription = descripcion },
-        contentAlignment = Alignment.Center,
-    ) { Icon(icono, null, tint = Verde, modifier = Modifier.size(26.dp)) }
 }

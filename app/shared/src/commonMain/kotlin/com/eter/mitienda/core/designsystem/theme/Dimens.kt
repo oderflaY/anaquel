@@ -31,7 +31,7 @@ object NeuDimens {
 
     // Radios
     val RadiusSmall = 12.dp
-    val RadiusLarge = 16.dp
+    val RadiusLarge = 18.dp
 
     // Tamaños de componentes
     val ButtonHeight = 52.dp

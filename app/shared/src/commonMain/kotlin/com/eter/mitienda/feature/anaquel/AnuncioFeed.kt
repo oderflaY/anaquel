@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -134,13 +135,25 @@ internal fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, o
         Box(Modifier.align(Alignment.TopCenter).padding(top = 128.dp).size(196.dp).pop(), contentAlignment = Alignment.Center) {
             AroGiratorio(acento, activa, Modifier.fillMaxSize())
             if (a.foto != null) {
-                // Foto real del producto sobre tarjeta blanca, como en catálogo.
-                Box(
-                    Modifier.size(156.dp).flotar(8f, 2600, activa).shadow(18.dp, RoundedCornerShape(36.dp))
-                        .background(Color.White, RoundedCornerShape(36.dp)).clip(RoundedCornerShape(36.dp)).padding(12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    FotoRed(a.foto, a.titulo, Modifier.fillMaxSize()) { Icon(a.icono, null, tint = oscuro.copy(alpha = 0.5f), modifier = Modifier.size(72.dp)) }
+                // Foto real integrada al anuncio: «foco» de luz del color de la paleta,
+                // el blanco de la foto se funde con él y una sombra de piso la asienta.
+                val foco = lerp(claro, Color.White, 0.80f)
+                Box(Modifier.size(188.dp).flotar(6f, 2800, activa), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp).size(120.dp, 16.dp)
+                            .background(Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent)), CircleShape),
+                    )
+                    Box(
+                        Modifier.size(172.dp).shadow(24.dp, CircleShape, spotColor = acento, ambientColor = oscuro)
+                            .background(foco, CircleShape) // liso: así el fondo de la foto no deja un cuadro
+                            .border(3.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.9f), acento.copy(alpha = 0.6f))), CircleShape)
+                            .clip(CircleShape).padding(22.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        FotoRed(a.foto, a.titulo, Modifier.fillMaxSize(), tinte = foco) {
+                            Icon(a.icono, null, tint = oscuro.copy(alpha = 0.5f), modifier = Modifier.size(72.dp))
+                        }
+                    }
                 }
             } else Box(
                 Modifier.size(150.dp).flotar(8f, 2600, activa)

@@ -89,7 +89,7 @@ fun <T> NeumorphicDropdown(
             onDismissRequest = { expanded = false },
             modifier = Modifier.width(with(density) { fieldWidthPx.toDp() }.coerceAtLeast(160.dp)),
             shape = NeuShapes.Large,
-            containerColor = NeuColors.Background,
+            containerColor = NeuColors.Surface,
             shadowElevation = 8.dp,
         ) {
             options.forEach { option ->

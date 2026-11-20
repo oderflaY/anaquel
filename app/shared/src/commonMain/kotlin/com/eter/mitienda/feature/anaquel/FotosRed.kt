@@ -13,6 +13,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -43,7 +46,10 @@ private object CacheFotos {
 @Composable
 fun FotoRed(
     ruta: String?, descripcion: String?, modifier: Modifier = Modifier,
-    escala: ContentScale = ContentScale.Fit, respaldo: @Composable () -> Unit = {},
+    escala: ContentScale = ContentScale.Fit,
+    /** Color del fondo donde va la foto: el blanco de la foto se funde con él (multiplicar). */
+    tinte: Color? = null,
+    respaldo: @Composable () -> Unit = {},
 ) {
     val bajar = LocalBajarFoto.current
     var img by remember(ruta) { mutableStateOf(ruta?.let { CacheFotos.leer(it) }) }
@@ -57,6 +63,9 @@ fun FotoRed(
     val a by animateFloatAsState(if (img != null) 1f else 0f, tween(280))
     Box(modifier, contentAlignment = Alignment.Center) {
         if (img == null || a < 1f) Box(Modifier.graphicsLayer { alpha = 1f - a }) { respaldo() }
-        img?.let { Image(it, descripcion, Modifier.matchParentSize().graphicsLayer { alpha = a }, contentScale = escala) }
+        img?.let {
+            Image(it, descripcion, Modifier.matchParentSize().graphicsLayer { alpha = a }, contentScale = escala,
+                colorFilter = tinte?.let { t -> ColorFilter.tint(t, BlendMode.Multiply) })
+        }
     }
 }

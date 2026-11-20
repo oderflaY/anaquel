@@ -1,5 +1,19 @@
 package com.eter.mitienda.feature.anaquel
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -248,7 +262,7 @@ private fun Burbuja(m: MensajeChat) {
                     transformOrigin = TransformOrigin(if (mio) 1f else 0f, 1f)
                 }
                 .background(
-                    if (mio) NeuColors.Magenta else NeuColors.ChipBackground,
+                    if (mio) NeuColors.Magenta else Color.White,
                     RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = if (mio) 18.dp else 4.dp, bottomEnd = if (mio) 4.dp else 18.dp),
                 )
                 .padding(horizontal = 14.dp, vertical = 9.dp),
@@ -277,7 +291,9 @@ private fun TarjetaCatalogo(m: MensajeChat, onPedir: () -> Unit) {
         m.texto.takeIf { it.isNotBlank() }?.let { Txt(it, secundario = true, chico = true) }
         Spacer(Modifier.height(NeuDimens.SpaceSm))
         m.items.take(6).forEach { i ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Miniatura(i.foto, i.nombre, 42)
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Txt(i.nombre, chico = true, negritas = true, lineas = 1, secundario = !i.sigue)
                     Txt(if (!i.sigue) "Ya no está en su vitrina" else precioTxt(i) + " /${i.unidad}", chico = true, secundario = true, lineas = 1)
@@ -350,86 +366,105 @@ private fun TarjetaPedido(m: MensajeChat, ocupado: Boolean, accion: (String) -> 
 @Composable
 private fun DialogoPedido(p: PedidoEnCurso, ocupado: Boolean, vm: AnaquelViewModel) {
     var nota by remember(p.chatId, p.catalogo) { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = vm::cancelarPedido,
-        title = { Text("Pedir a ${p.tienda.removeSuffix(" (demo)")}") },
-        text = {
-            LazyColumn(Modifier.heightIn(max = 460.dp), verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
-                item { Txt("Pon cuántas quieres de cada uno. El precio de mayoreo se aplica solo al llegar al mínimo.", secundario = true, chico = true) }
-                items(p.items, key = { it.productoId }) { i ->
-                    val n = p.cantidades[i.productoId] ?: 0
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Txt(i.nombre, chico = true, negritas = true, lineas = 2)
-                                Txt("${formatPrice(i.precioPara(n.coerceAtLeast(1)))} c/u" + (i.disponible?.let { " · hay $it" } ?: ""), chico = true, secundario = true)
-                            }
-                            Contador(n, i.disponible, onCambio = { vm.cambiarCantidadPedido(i.productoId, it) })
+    HojaAnaquel("Pedir a ${p.tienda.removeSuffix(" (demo)")}", "Nuevo pedido", onCerrar = vm::cancelarPedido) {
+        Text("Pon cuántas quieres de cada uno. El mayoreo se aplica solo al llegar al mínimo.", fontSize = 13.sp, color = NeuColors.TextSecondary)
+        Spacer(Modifier.height(12.dp))
+        LazyColumn(Modifier.heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(p.items, key = { it.productoId }) { i ->
+                val n = p.cantidades[i.productoId] ?: 0
+                val elegido = n > 0
+                Column(
+                    Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp))
+                        .border(if (elegido) 1.5.dp else 1.dp, if (elegido) VerdeMarca.copy(alpha = 0.6f) else NeuColors.Hairline, RoundedCornerShape(18.dp))
+                        .padding(10.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Miniatura(i.foto, i.nombre, 56)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(i.nombre, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NeuColors.TextPrimary, maxLines = 2, lineHeight = 17.sp)
+                            Text("${formatPrice(i.precioPara(n.coerceAtLeast(1)))} c/u" + (i.disponible?.let { " · hay $it" } ?: ""),
+                                fontSize = 12.sp, color = NeuColors.TextSecondary)
                         }
-                        if (i.minimoMayoreo > 0 && i.precioMayoreoC > 0 && n in 1 until i.minimoMayoreo) {
-                            Txt("Con ${i.minimoMayoreo - n} más te sale a ${formatPrice(i.precioMayoreoC)}", chico = true, color = NeuColors.Magenta,
-                                modifier = Modifier.clickable { vm.cambiarCantidadPedido(i.productoId, i.minimoMayoreo) })
-                        }
+                        Contador(n, i.disponible, onCambio = { vm.cambiarCantidadPedido(i.productoId, it) })
+                    }
+                    if (i.minimoMayoreo > 0 && i.precioMayoreoC > 0 && n in 1 until i.minimoMayoreo) {
+                        Text("Con ${i.minimoMayoreo - n} más te sale a ${formatPrice(i.precioMayoreoC)} · tocar para subir",
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold, color = VerdeMarca,
+                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth().background(VerdeMarca.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                .clickable { vm.cambiarCantidadPedido(i.productoId, i.minimoMayoreo) }.padding(horizontal = 10.dp, vertical = 6.dp))
                     }
                 }
-                item { NeumorphicInput(nota, { nota = it }, Modifier.fillMaxWidth(), placeholder = "Nota (opcional): cuándo pasas, cómo pagas…", singleLine = false) }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { vm.enviarPedido(nota) }, enabled = p.piezas > 0 && !ocupado) {
-                Text(if (p.piezas > 0) "Enviar pedido · ${formatPrice(p.total)}" else "Enviar pedido", fontWeight = FontWeight.Bold)
+            item {
+                BasicTextField(
+                    nota, { nota = it }, Modifier.fillMaxWidth().heightIn(min = 52.dp).background(Color.White, RoundedCornerShape(14.dp))
+                        .border(1.dp, NeuColors.Hairline, RoundedCornerShape(14.dp)).padding(14.dp),
+                    textStyle = TextStyle(fontSize = 15.sp, color = NeuColors.TextPrimary), cursorBrush = SolidColor(VerdeMarca),
+                    decorationBox = { campo -> if (nota.isEmpty()) Text("Nota: cuándo pasas, cómo pagas…", color = NeuColors.TextSecondary, fontSize = 15.sp); campo() },
+                )
             }
-        },
-        dismissButton = { TextButton(onClick = vm::cancelarPedido) { Text("Cancelar") } },
-        containerColor = NeuColors.Background,
-    )
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.Bottom) {
+            Column(Modifier.weight(1f)) {
+                Text("${p.piezas} piezas", fontSize = 12.sp, color = NeuColors.TextSecondary)
+                Text(formatPrice(p.total), fontSize = 26.sp, fontWeight = FontWeight.Black, color = NeuColors.TextPrimary)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        BotonVerde("Enviar pedido", Icons.AutoMirrored.Rounded.Send, habilitado = p.piezas > 0 && !ocupado) { vm.enviarPedido(nota) }
+    }
 }
 
 @Composable
 private fun Contador(n: Long, tope: Long?, onCambio: (Long) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        NeumorphicIconButton(painterResource(Res.drawable.ic_remove), "Menos", onClick = { onCambio(n - 1) },
-            size = 34.dp, iconSize = 16.dp, elevation = NeuDimens.ElevationSmall)
-        Text("$n", Modifier.width(40.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+        BotonCircular(Icons.Rounded.Remove, "Menos", 36) { if (n > 0) onCambio(n - 1) }
+        Text("$n", Modifier.width(40.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 17.sp,
             color = if (n > 0) NeuColors.TextPrimary else NeuColors.TextSecondary)
-        NeumorphicIconButton(painterResource(Res.drawable.ic_add), "Más", onClick = { if (tope == null || n < tope) onCambio(n + 1) },
-            size = 34.dp, iconSize = 16.dp, elevation = NeuDimens.ElevationSmall)
+        BotonCircular(Icons.Rounded.Add, "Más", 36) { if (tope == null || n < tope) onCambio(n + 1) }
     }
 }
 
 @Composable
 private fun DialogoMiCatalogo(items: List<ItemCatalogo>?, onCerrar: () -> Unit, onEnviar: (List<Long>?) -> Unit) {
     var sel by remember { mutableStateOf(setOf<Long>()) }
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Mandar mi catálogo") },
-        text = {
-            when {
-                items == null -> Txt("Cargando tu vitrina…", secundario = true)
-                items.isEmpty() -> Txt("No tienes productos publicados con existencia. Publícalos en tu inventario (Mi tienda › Vitrina) para poder mandarlos.", secundario = true)
-                else -> LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                    item { Txt("Elige cuáles mandar, o manda todos.", secundario = true, chico = true) }
+    HojaAnaquel("Mandar mi catálogo", "Tu vitrina", onCerrar = onCerrar) {
+        when {
+            items == null -> Text("Cargando tu vitrina…", color = NeuColors.TextSecondary)
+            items.isEmpty() -> Text("No tienes productos publicados con existencia. Publícalos en Mi tienda › Vitrina para poder mandarlos.", color = NeuColors.TextSecondary)
+            else -> {
+                Text("Elige cuáles mandar, o manda todos.", fontSize = 13.sp, color = NeuColors.TextSecondary)
+                Spacer(Modifier.height(12.dp))
+                LazyColumn(Modifier.heightIn(max = 430.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(items, key = { it.productoId }) { i ->
+                        val on = i.productoId in sel
                         Row(
-                            Modifier.fillMaxWidth().clickable { sel = if (i.productoId in sel) sel - i.productoId else sel + i.productoId },
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White)
+                                .border(if (on) 1.5.dp else 1.dp, if (on) VerdeMarca.copy(alpha = 0.6f) else NeuColors.Hairline, RoundedCornerShape(18.dp))
+                                .clickable { sel = if (on) sel - i.productoId else sel + i.productoId }.padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Checkbox(i.productoId in sel, null, colors = CheckboxDefaults.colors(checkedColor = NeuColors.Magenta))
+                            Miniatura(i.foto, i.nombre, 48)
+                            Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
-                                Txt(i.nombre, chico = true, negritas = true, lineas = 1)
-                                Txt(precioTxt(i) + (i.disponible?.let { " · hay $it" } ?: ""), chico = true, secundario = true, lineas = 1)
+                                Text(i.nombre, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NeuColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(precioTxt(i) + (i.disponible?.let { " · hay $it" } ?: ""), fontSize = 12.sp, color = NeuColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
+                            Box(
+                                Modifier.size(26.dp).background(if (on) VerdeMarca else Color.Transparent, CircleShape)
+                                    .border(2.dp, if (on) VerdeMarca else Color(0x33000000), CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) { if (on) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(16.dp)) }
                         }
                     }
                 }
+                Spacer(Modifier.height(14.dp))
+                BotonVerde(if (sel.isEmpty()) "Mandar todos (${items.size})" else "Mandar ${sel.size}", Icons.AutoMirrored.Rounded.Send) {
+                    onEnviar(sel.toList().ifEmpty { null })
+                }
             }
-        },
-        confirmButton = {
-            if (!items.isNullOrEmpty()) TextButton(onClick = { onEnviar(sel.toList().ifEmpty { null }) }) {
-                Text(if (sel.isEmpty()) "Mandar todos (${items.size})" else "Mandar ${sel.size}", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = { TextButton(onClick = onCerrar) { Text("Cerrar") } },
-        containerColor = NeuColors.Background,
-    )
+        }
+    }
 }
