@@ -1,5 +1,18 @@
 package com.eter.mitienda
 
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -167,7 +180,21 @@ fun App(container: AppContainer) {
                         // La barra inferior ya ocupa la zona de navegación del sistema.
                         .then(if (showBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier),
                 ) {
-                    NavHost(navController = navController, startDestination = Routes.INICIO) {
+                    NavHost(
+                        navController = navController, startDestination = Routes.INICIO,
+                        // Entre pestañas: desvanecido con un leve acercamiento. Al entrar a una
+                        // pantalla de detalle: llega desde la derecha; al volver, regresa.
+                        enterTransition = {
+                            if (targetState.destination.route in Routes.TOP_LEVEL) fadeIn(tween(260)) + scaleIn(tween(320, easing = FastOutSlowInEasing), initialScale = 0.96f)
+                            else slideInHorizontally(tween(340, easing = FastOutSlowInEasing)) { it / 3 } + fadeIn(tween(260))
+                        },
+                        exitTransition = {
+                            if (targetState.destination.route in Routes.TOP_LEVEL) fadeOut(tween(180))
+                            else slideOutHorizontally(tween(340, easing = FastOutSlowInEasing)) { -it / 5 } + fadeOut(tween(260))
+                        },
+                        popEnterTransition = { slideInHorizontally(tween(340, easing = FastOutSlowInEasing)) { -it / 5 } + fadeIn(tween(260)) },
+                        popExitTransition = { slideOutHorizontally(tween(320, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(220)) + scaleOut(tween(320), targetScale = 0.96f) },
+                    ) {
                         composable(Routes.INICIO) {
                             InicioRoute(anaquel, onAbrirChats = {
                                 navController.navigate(Routes.CHATS) {
@@ -318,7 +345,12 @@ fun App(container: AppContainer) {
                         restoreState = true
                     }
                 }
-                if (showBottomBar) {
+                // La barra se esconde hacia abajo en las pantallas de detalle y vuelve a subir.
+                AnimatedVisibility(
+                    showBottomBar,
+                    enter = slideInVertically(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)) { it } + fadeIn(),
+                    exit = slideOutVertically(tween(220)) { it } + fadeOut(tween(180)),
+                ) {
                     BarraTienda(
                         izquierda = listOf(
                             PestanaTienda(Routes.INICIO, "Inicio", painterResource(Res.drawable.ic_home)),

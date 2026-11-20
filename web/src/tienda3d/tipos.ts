@@ -6,15 +6,29 @@
 // hacia la calle (+z); rot 90 hacia la derecha (+x); 180 al fondo; 270 a la izquierda.
 
 export type TipoMueble = 'gondola' | 'anaquel' | 'refri' | 'congelador' | 'rack' | 'tarima' | 'perchero' | 'mesa' | 'mostrador' | 'botanero'
+  | 'vitrina' | 'ganchera' | 'cajas'
 
 export type Mueble = {
   id: string; tipo: TipoMueble; nombre: string; x: number; z: number; rot: number
   ancho: number; fondo: number; alto: number; niveles: number; anaquel_id?: number | null
 }
 export type Area = { nombre: string; x: number; z: number; ancho: number; fondo: number; color: string }
+/** Pared interior del armador: de (x1,z1) a (x2,z2); `puerta` = ancho del hueco al centro (0 = corrida). */
+export type Pared = { x1: number; z1: number; x2: number; z2: number; alto: number; puerta: number; tipo?: 'muro' | 'media' | 'cristal' }
+export type Columna = { x: number; z: number; lado: number }
 export type Plano = {
   ancho: number; fondo: number; alto: number; puerta: { x: number; ancho: number }
   piso: 'mosaico' | 'cemento' | 'madera'; muebles: Mueble[]; areas: Area[]
+  paredes?: Pared[]; columnas?: Columna[]
+}
+
+/** Tramos sólidos de una pared (sin el hueco de la puerta), en metros del local. */
+export function tramosPared(w: Pared): [number, number, number, number][] {
+  const L = Math.hypot(w.x2 - w.x1, w.z2 - w.z1)
+  if (!w.puerta || w.puerta <= 0 || L <= w.puerta + 0.1) return [[w.x1, w.z1, w.x2, w.z2]]
+  const ux = (w.x2 - w.x1) / L, uz = (w.z2 - w.z1) / L
+  const a = (L - w.puerta) / 2, b = a + w.puerta
+  return [[w.x1, w.z1, w.x1 + ux * a, w.z1 + uz * a], [w.x1 + ux * b, w.z1 + uz * b, w.x2, w.z2]]
 }
 export type Lugar = {
   id: number; codigo: string; nombre: string; categoria: string; unidad: string
@@ -41,6 +55,9 @@ export const TIPOS: Record<TipoMueble, { nombre: string; ancho: number; fondo: n
   mesa: { nombre: 'Mesa de exhibición', ancho: 1.6, fondo: 0.9, alto: 0.8, niveles: 1, lados: 1, min: 1, max: 1 },
   mostrador: { nombre: 'Mostrador y caja', ancho: 2.2, fondo: 0.7, alto: 1.0, niveles: 1, lados: 1, min: 1, max: 2 },
   botanero: { nombre: 'Exhibidor de botana', ancho: 0.7, fondo: 0.5, alto: 1.7, niveles: 4, lados: 1, min: 2, max: 6 },
+  vitrina: { nombre: 'Vitrina de cristal', ancho: 1.5, fondo: 0.6, alto: 1.1, niveles: 2, lados: 1, min: 1, max: 3 },
+  ganchera: { nombre: 'Panel de ganchos', ancho: 1.2, fondo: 0.35, alto: 1.8, niveles: 5, lados: 1, min: 3, max: 8 },
+  cajas: { nombre: 'Estante de cajas', ancho: 1.8, fondo: 0.5, alto: 1.8, niveles: 5, lados: 1, min: 3, max: 7 },
 }
 
 export const LADOS = ['A (frente)', 'B (atrás)']
@@ -68,6 +85,8 @@ export function entrepanos(m: Mueble) {
     case 'mesa': return { base: m.alto, h: 0.45 }
     case 'mostrador': return { base: m.alto, h: 0.35 }
     case 'botanero': return { base: 0.25, h: (m.alto - 0.35) / m.niveles }
+    case 'vitrina': return { base: 0.15, h: (m.alto - 0.2) / m.niveles }
+    case 'ganchera': return { base: 0.3, h: (m.alto - 0.35) / m.niveles }
     default: return { base: 0.12, h: (m.alto - 0.12) / m.niveles }
   }
 }

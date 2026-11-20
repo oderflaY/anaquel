@@ -46,14 +46,35 @@ type Puerta struct {
 	Ancho float64 `json:"ancho"`
 }
 
+// Pared interior que arma el tendero (bodega, trastienda, oficina). Puede tener
+// un hueco de puerta al centro (Puerta > 0) por donde se pasa caminando.
+type Pared struct {
+	X1     float64 `json:"x1"`
+	Z1     float64 `json:"z1"`
+	X2     float64 `json:"x2"`
+	Z2     float64 `json:"z2"`
+	Alto   float64 `json:"alto"`
+	Puerta float64 `json:"puerta"`         // ancho del hueco de puerta (0 = pared corrida)
+	Tipo   string  `json:"tipo,omitempty"` // muro | media (barda a media altura) | cristal
+}
+
+// Columna o pilar del local (estorba al caminar).
+type Columna struct {
+	X    float64 `json:"x"`
+	Z    float64 `json:"z"`
+	Lado float64 `json:"lado"`
+}
+
 type Plano struct {
-	Ancho   float64  `json:"ancho"`
-	Fondo   float64  `json:"fondo"`
-	Alto    float64  `json:"alto"`
-	Puerta  Puerta   `json:"puerta"`
-	Piso    string   `json:"piso"` // mosaico | cemento | madera
-	Muebles []Mueble `json:"muebles"`
-	Areas   []Area   `json:"areas"`
+	Ancho    float64   `json:"ancho"`
+	Fondo    float64   `json:"fondo"`
+	Alto     float64   `json:"alto"`
+	Puerta   Puerta    `json:"puerta"`
+	Piso     string    `json:"piso"` // mosaico | cemento | madera
+	Muebles  []Mueble  `json:"muebles"`
+	Areas    []Area    `json:"areas"`
+	Paredes  []Pared   `json:"paredes"`
+	Columnas []Columna `json:"columnas"`
 }
 
 // Datos de cada tipo de mueble: medidas por omisión, entrepaños, lados
@@ -77,6 +98,9 @@ var tiposMueble = map[string]tipoMueble{
 	"mesa":       {"Mesa de exhibición", 1.6, 0.9, 0.8, 1, 1, 2.5, 1, 1},
 	"mostrador":  {"Mostrador y caja", 2.2, 0.7, 1.0, 1, 1, 2, 1, 2},
 	"botanero":   {"Exhibidor de botana", 0.7, 0.5, 1.7, 4, 1, 3, 2, 6},
+	"vitrina":    {"Vitrina de cristal", 1.5, 0.6, 1.1, 2, 1, 2.5, 1, 3},
+	"ganchera":   {"Panel de ganchos", 1.2, 0.35, 1.8, 5, 1, 3, 3, 8},
+	"cajas":      {"Estante de cajas", 1.8, 0.5, 1.8, 5, 1, 2.5, 3, 7},
 }
 
 func numeroEn(v, min, max float64) float64 {
@@ -136,6 +160,47 @@ func (p *Plano) limpiar() error {
 		}
 		m.X = math.Round(numeroEn(m.X, math.Min(w/2, p.Ancho/2), math.Max(p.Ancho-w/2, p.Ancho/2))*100) / 100
 		m.Z = math.Round(numeroEn(m.Z, math.Min(d/2, p.Fondo/2), math.Max(p.Fondo-d/2, p.Fondo/2))*100) / 100
+	}
+	if len(p.Paredes) > 80 {
+		return fallo(400, "Son demasiadas paredes (máximo 80)")
+	}
+	if len(p.Columnas) > 60 {
+		return fallo(400, "Son demasiadas columnas (máximo 60)")
+	}
+	paredes := p.Paredes[:0]
+	for _, w := range p.Paredes {
+		w.X1, w.X2 = numeroEn(w.X1, 0, p.Ancho), numeroEn(w.X2, 0, p.Ancho)
+		w.Z1, w.Z2 = numeroEn(w.Z1, 0, p.Fondo), numeroEn(w.Z2, 0, p.Fondo)
+		largo := math.Hypot(w.X2-w.X1, w.Z2-w.Z1)
+		if largo < 0.3 {
+			continue // un clic sin arrastrar
+		}
+		if w.Tipo != "media" && w.Tipo != "cristal" {
+			w.Tipo = "muro"
+		}
+		altoMax := p.Alto
+		if w.Tipo == "media" {
+			altoMax = 1.5
+		}
+		if w.Alto <= 0 {
+			w.Alto = altoMax
+		}
+		w.Alto = numeroEn(w.Alto, 0.5, altoMax)
+		w.Puerta = 0 + numeroEn(w.Puerta, 0, math.Max(0, largo-0.2))
+		if w.Puerta > 0 && w.Puerta < 0.6 {
+			w.Puerta = 0.6
+		}
+		for _, v := range []*float64{&w.X1, &w.Z1, &w.X2, &w.Z2, &w.Alto, &w.Puerta} {
+			*v = math.Round(*v*100) / 100
+		}
+		paredes = append(paredes, w)
+	}
+	p.Paredes = paredes
+	for i := range p.Columnas {
+		c := &p.Columnas[i]
+		c.Lado = numeroEn(c.Lado, 0.15, 1.5)
+		c.X = numeroEn(c.X, c.Lado/2, p.Ancho-c.Lado/2)
+		c.Z = numeroEn(c.Z, c.Lado/2, p.Fondo-c.Lado/2)
 	}
 	for i := range p.Areas {
 		ar := &p.Areas[i]
@@ -311,6 +376,12 @@ func (a *App) leerPlano(tienda int64) (Plano, bool, error) {
 	if p.Muebles == nil {
 		p.Muebles = []Mueble{}
 	}
+	if p.Paredes == nil {
+		p.Paredes = []Pared{}
+	}
+	if p.Columnas == nil {
+		p.Columnas = []Columna{}
+	}
 	if p.Areas == nil {
 		p.Areas = []Area{}
 	}
@@ -465,6 +536,8 @@ var preferencias = []struct {
 	{[]string{"cloro", "detergente", "jabon", "shampoo", "papel higienico", "servilleta", "pasta dental", "suavizante", "limpia", "fabuloso", "pinol"}, []string{"anaquel", "gondola", "rack"}},
 	{[]string{"papas", "botana", "fritura", "cacahuate", "chicharron", "palomitas"}, []string{"botanero", "gondola", "rack"}},
 	{[]string{"dulce", "chicle", "paleta", "chocolate", "pila", "encendedor"}, []string{"mostrador", "botanero", "gondola"}},
+	{[]string{"reloj", "lente", "joya", "arete", "collar", "celular", "audifono", "perfume", "cargador"}, []string{"vitrina", "mostrador"}},
+	{[]string{"tornillo", "clavo", "pija", "taquete", "llave", "herramienta", "cinta", "llavero", "broche", "cable"}, []string{"ganchera", "cajas", "anaquel"}},
 }
 
 func normal(s string) string { return " " + normalizar(s) + " " }
@@ -474,14 +547,14 @@ func tiposPara(l Lugar3D, giro string) []string {
 	for _, p := range preferencias {
 		for _, w := range p.palabras {
 			if strings.Contains(txt, w) {
-				return append(p.tipos, "gondola", "anaquel", "rack", "tarima", "mesa", "perchero", "mostrador", "botanero", "refri")
+				return append(p.tipos, "gondola", "anaquel", "cajas", "rack", "tarima", "mesa", "vitrina", "ganchera", "perchero", "mostrador", "botanero", "refri")
 			}
 		}
 	}
 	if giro == "mayoreo" {
-		return []string{"rack", "tarima", "anaquel", "gondola", "mesa", "perchero", "mostrador"}
+		return []string{"rack", "tarima", "cajas", "anaquel", "gondola", "mesa", "perchero", "mostrador"}
 	}
-	return []string{"gondola", "anaquel", "mesa", "rack", "tarima", "botanero", "perchero", "mostrador", "refri"}
+	return []string{"gondola", "anaquel", "cajas", "mesa", "vitrina", "ganchera", "rack", "tarima", "botanero", "perchero", "mostrador", "refri"}
 }
 
 type hueco struct {

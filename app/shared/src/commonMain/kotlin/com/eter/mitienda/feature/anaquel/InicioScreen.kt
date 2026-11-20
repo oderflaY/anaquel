@@ -213,40 +213,40 @@ private fun Resumen(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () -
                 r.isEmpty() -> item(key = "res-v") {
                     Txt("Nadie lo tiene publicado todavía. Pídele al asesor (en Mi tienda) «publica que busco ${st.consultaRed}» y les avisamos a todas las tiendas.", secundario = true)
                 }
-                else -> items(r, key = { "res-" + it.clave }) { TarjetaRed(it, { x -> negociando = x }, compacta = true) }
+                else -> items(r, key = { "res-" + it.clave }) { Box(Modifier.animateItem().entrada()) { TarjetaRed(it, { x -> negociando = x }, compacta = true) } }
             }
         }
         if (ini == null) {
-            item(key = "cargando") { Txt(if (st.error != null) st.error else "Revisando qué le conviene a tu tienda…", secundario = true) }
+            item(key = "cargando") { if (st.error != null) Txt(st.error, secundario = true) else TarjetasCargando("Revisando qué le conviene a tu tienda…", 4) }
             return@LazyColumn
         }
         if (ini.paraSurtir.isNotEmpty()) {
             item(key = "s-t") { Seccion("Se te está acabando", "Lo más barato de la red para surtirlo") }
-            items(ini.paraSurtir, key = { "s-" + it.productoId }) { s -> TarjetaSurtir(s, chat) }
+            items(ini.paraSurtir, key = { "s-" + it.productoId }) { s -> Box(Modifier.animateItem().entrada()) { TarjetaSurtir(s, chat) } }
         }
         if (ini.proveedores.isNotEmpty()) {
             item(key = "p-t") { Seccion("Proveedores grandes", "Mayoristas de tu ciudad con lo que tú vendes") }
             item(key = "p-l") {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceLg), contentPadding = PaddingValues(vertical = NeuDimens.SpaceSm)) {
-                    items(ini.proveedores, key = { "p-" + it.id }) { p -> TarjetaProveedor(p, chat) }
+                    items(ini.proveedores, key = { "p-" + it.id }) { p -> Box(Modifier.animateItem().entrada()) { TarjetaProveedor(p, chat) } }
                 }
             }
         }
         if (ini.convienen.isNotEmpty()) {
             item(key = "c-t") { Seccion("Te conviene", "Ofertas de productos que manejas") }
-            items(ini.convienen.take(8), key = { "c-" + it.clave }) { r -> TarjetaOferta(r, chat, negociar = { negociando = it }) }
+            items(ini.convienen.take(8), key = { "c-" + it.clave }) { r -> Box(Modifier.animateItem().entrada()) { TarjetaOferta(r, chat, negociar = { negociando = it }) } }
         }
         if (ini.promociones.isNotEmpty()) {
             item(key = "pr-t") { Seccion("Promociones cerca") }
-            items(ini.promociones.take(6), key = { "pr-" + it.clave }) { r -> TarjetaRed(r, { negociando = it }, compacta = true) }
+            items(ini.promociones.take(6), key = { "pr-" + it.clave }) { r -> Box(Modifier.animateItem().entrada()) { TarjetaRed(r, { negociando = it }, compacta = true) } }
         }
         if (ini.buscan.isNotEmpty()) {
             item(key = "b-t") { Seccion("Buscan lo que vendes", "Otras tiendas quieren comprarte") }
-            items(ini.buscan.take(6), key = { "b-" + it.clave }) { r -> TarjetaRed(r, { negociando = it }, compacta = true) }
+            items(ini.buscan.take(6), key = { "b-" + it.clave }) { r -> Box(Modifier.animateItem().entrada()) { TarjetaRed(r, { negociando = it }, compacta = true) } }
         }
         if (ini.tiendas.isNotEmpty()) {
             item(key = "t-t") { Seccion("Tiendas de tu zona") }
-            items(ini.tiendas.take(12), key = { "t-" + it.id }) { t -> TarjetaTienda(t, chat) }
+            items(ini.tiendas.take(12), key = { "t-" + it.id }) { t -> Box(Modifier.animateItem().entrada()) { TarjetaTienda(t, chat) } }
         }
         if (ini.paraSurtir.isEmpty() && ini.convienen.isEmpty() && ini.proveedores.isEmpty()) {
             item(key = "vacio") { Txt("Todo en orden por ahora. Toma la foto de tus anaqueles en Mi tienda y aquí verás qué surtir y con quién.", secundario = true) }

@@ -1,7 +1,23 @@
 package com.eter.mitienda.feature.anaquel
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.absoluteValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -103,12 +119,16 @@ fun BarraTienda(
 @Composable
 private fun Pestana(p: PestanaTienda, activa: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val color by animateColorAsState(if (activa) NeuColors.Magenta else NeuColors.TextSecondary)
-    val escala by animateFloatAsState(if (activa) 1.12f else 1f)
+    val escala by animateFloatAsState(if (activa) 1.18f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+    val giro by animateFloatAsState(if (activa) 0f else -8f, spring(dampingRatio = Spring.DampingRatioHighBouncy))
+    val punto by animateDpAsState(if (activa) 16.dp else 0.dp, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+    val fuente = remember { MutableInteractionSource() }
     Column(
         modifier
             .heightIn(min = 52.dp)
+            .rebote(fuente, 0.85f)
             .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
+            .clickable(interactionSource = fuente, indication = null, onClick = onClick)
             .semantics(mergeDescendants = true) {
                 role = Role.Tab; selected = activa
                 contentDescription = p.texto + if (p.burbuja > 0) ", ${p.burbuja} pendientes" else ""
@@ -117,34 +137,44 @@ private fun Pestana(p: PestanaTienda, activa: Boolean, modifier: Modifier, onCli
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
         Box {
-            Icon(p.icono, null, tint = color, modifier = Modifier.size(24.dp).scale(escala))
-            if (p.burbuja > 0) Text(
-                if (p.burbuja > 99) "99+" else "${p.burbuja}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White,
-                modifier = Modifier.align(Alignment.TopEnd).offset(x = 11.dp, y = (-6).dp)
-                    .background(Color(0xFFE5484D), CircleShape).padding(horizontal = 5.dp, vertical = 1.dp),
-            )
+            Icon(p.icono, null, tint = color, modifier = Modifier.size(24.dp).scale(escala).graphicsLayer { rotationZ = if (activa) 0f else giro + 8f })
+            if (p.burbuja > 0) AnimatedContent(
+                p.burbuja, Modifier.align(Alignment.TopEnd).offset(x = 11.dp, y = (-6).dp).latido(),
+                transitionSpec = { (slideInVertically { -it } + fadeIn()) togetherWith (slideOutVertically { it } + fadeOut()) },
+            ) { n ->
+                Text(
+                    if (n > 99) "99+" else "$n", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                    modifier = Modifier.background(Color(0xFFE5484D), CircleShape).padding(horizontal = 5.dp, vertical = 1.dp),
+                )
+            }
         }
         Spacer(Modifier.height(3.dp))
         Text(p.texto, fontSize = 11.sp, fontWeight = if (activa) FontWeight.Bold else FontWeight.Medium, color = color, maxLines = 1, softWrap = false)
-        Box(Modifier.padding(top = 2.dp).size(4.dp).background(if (activa) NeuColors.Magenta else Color.Transparent, CircleShape))
+        Box(Modifier.padding(top = 2.dp).size(width = punto.coerceAtLeast(4.dp), height = 4.dp).background(if (activa) NeuColors.Magenta else Color.Transparent, CircleShape))
     }
 }
 
 /** Botón central: una pastilla con el verde de la marca y una sombra azul desplazada. */
 @Composable
 private fun BotonMas(onClick: () -> Unit, modifier: Modifier) {
+    val fuente = remember { MutableInteractionSource() }
+    val presionado by fuente.collectIsPressedAsState()
+    // Al presionar, las dos sombras de color se abren y la cruz gira.
+    val abre by animateDpAsState(if (presionado) 6.dp else 3.dp, spring(dampingRatio = Spring.DampingRatioHighBouncy, stiffness = Spring.StiffnessMedium))
+    val gira by animateFloatAsState(if (presionado) 90f else 0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
     Box(modifier.heightIn(min = 52.dp), contentAlignment = Alignment.Center) {
         Box(
             Modifier.size(width = 54.dp, height = 38.dp)
-                .clickable(onClick = onClick)
+                .rebote(fuente, 0.88f)
+                .clickable(interactionSource = fuente, indication = null, onClick = onClick)
                 .semantics { role = Role.Button; contentDescription = "Todas tus herramientas: vender, surtir, foto, asesor" },
         ) {
-            Box(Modifier.fillMaxSize().offset(x = (-3).dp).background(NeuColors.Blue, RoundedCornerShape(12.dp)))
-            Box(Modifier.fillMaxSize().offset(x = 3.dp).background(Color(0xFF4FD1A2), RoundedCornerShape(12.dp)))
+            Box(Modifier.fillMaxSize().offset(x = -abre).background(NeuColors.Blue, RoundedCornerShape(12.dp)))
+            Box(Modifier.fillMaxSize().offset(x = abre).background(Color(0xFF4FD1A2), RoundedCornerShape(12.dp)))
             Box(
                 Modifier.fillMaxSize().background(NeuColors.TextPrimary, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center,
-            ) { Icon(painterResource(Res.drawable.ic_add), null, tint = Color.White, modifier = Modifier.size(24.dp)) }
+            ) { Icon(painterResource(Res.drawable.ic_add), null, tint = Color.White, modifier = Modifier.size(24.dp).graphicsLayer { rotationZ = gira }) }
         }
     }
 }
@@ -205,22 +235,27 @@ fun HojaHerramientas(grupos: List<GrupoHerramientas>, onCerrar: () -> Unit, onEl
                     Text("Todo tu negocio a un toque", style = MaterialTheme.typography.bodySmall, color = NeuColors.TextSecondary)
                 }
             }
+            var n = 0
             grupos.forEach { g ->
+                val base = n; n += g.herramientas.size + 1
                 item(span = { GridItemSpan(maxLineSpan) }, key = "g-" + g.titulo) {
-                    Text(g.titulo.uppercase(), Modifier.padding(top = 10.dp), style = MaterialTheme.typography.labelMedium,
+                    Text(g.titulo.uppercase(), Modifier.padding(top = 10.dp).entrada(base), style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold, color = NeuColors.TextSecondary, letterSpacing = 1.sp)
                 }
-                items(g.herramientas, key = { it.id }) { h -> Mosaico(h) { onElegir(h.id) } }
+                items(g.herramientas.size, key = { g.herramientas[it].id }) { k -> val h = g.herramientas[k]; Mosaico(h, base + 1 + k) { onElegir(h.id) } }
             }
         }
     }
 }
 
 @Composable
-private fun Mosaico(h: Herramienta, onClick: () -> Unit) {
+private fun Mosaico(h: Herramienta, indice: Int, onClick: () -> Unit) {
+    val fuente = remember { MutableInteractionSource() }
     Column(
         Modifier.fillMaxWidth()
-            .clickable(onClick = onClick)
+            .pop(indice)
+            .rebote(fuente, 0.86f)
+            .clickable(interactionSource = fuente, indication = null, onClick = onClick)
             .clearAndSetSemantics {
                 role = Role.Button
                 contentDescription = "${h.titulo}. ${h.detalle}" + if (h.burbuja > 0) ". ${h.burbuja} pendientes" else ""
@@ -235,7 +270,7 @@ private fun Mosaico(h: Herramienta, onClick: () -> Unit) {
             ) { Text(h.emoji, fontSize = 26.sp) }
             if (h.burbuja > 0) Text(
                 "${h.burbuja}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White,
-                modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp)
+                modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).latido()
                     .background(Color(0xFFE5484D), CircleShape).padding(horizontal = 6.dp, vertical = 1.dp),
             )
         }
@@ -305,12 +340,22 @@ fun FeedParaTi(
     val pager = rememberPagerState { feed.size }
     VerticalPager(pager, modifier.fillMaxSize(), key = { feed[it].clave }, beyondViewportPageCount = 1) { i ->
         val pub = feed[i]
-        PaginaFeed(pub, i, feed.size, onPedir = { onPedir(pub) }, onChat = onChat, onNegociar = onNegociar)
+        // Al deslizar, la página que se va se aleja y se oscurece; la que llega crece.
+        Box(Modifier.graphicsLayer {
+            val d = pager.desfase(i)
+            val s = 1f - 0.08f * d.absoluteValue.coerceAtMost(1f)
+            scaleX = s; scaleY = s
+            alpha = 1f - 0.35f * d.absoluteValue.coerceAtMost(1f)
+        }) {
+            PaginaFeed(pub, i, feed.size, activa = pager.currentPage == i, onPedir = { onPedir(pub) }, onChat = onChat, onNegociar = onNegociar)
+        }
     }
 }
 
+private fun PagerState.desfase(pagina: Int): Float = (currentPage - pagina) + currentPageOffsetFraction
+
 @Composable
-private fun PaginaFeed(pub: Publicacion, i: Int, total: Int, onPedir: () -> Unit, onChat: (Long) -> Unit, onNegociar: (ResultadoRed) -> Unit) {
+private fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, onPedir: () -> Unit, onChat: (Long) -> Unit, onNegociar: (ResultadoRed) -> Unit) {
     val tono = tonos[(pub.clave.hashCode() and 0x7fffffff) % tonos.size]
     val tienda: TiendaCorta?; val titulo: String; val emoji: String; val etiqueta: String
     val precio: String?; val detalle: String?; val km: Double?
@@ -340,7 +385,7 @@ private fun PaginaFeed(pub: Publicacion, i: Int, total: Int, onPedir: () -> Unit
     }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(tono))) {
         // Dibujo grande al centro, como la «foto» de la publicación.
-        Text(emoji, fontSize = 140.sp, modifier = Modifier.align(Alignment.Center).offset(y = (-60).dp).clearAndSetSemantics { })
+        Text(emoji, fontSize = 140.sp, modifier = Modifier.align(Alignment.Center).offset(y = (-60).dp).pop().flotar().clearAndSetSemantics { })
         // Contador y etiqueta arriba.
         Row(Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 64.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(etiqueta, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
@@ -358,19 +403,19 @@ private fun PaginaFeed(pub: Publicacion, i: Int, total: Int, onPedir: () -> Unit
                 Text("@${it.slug.ifBlank { it.nombre }}" + (km(km)?.let { k -> " · $k" } ?: ""), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.height(6.dp))
-            Text(titulo, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, lineHeight = 28.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text(titulo, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, lineHeight = 28.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.entrada(1))
             precio?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(it, color = Color(0xFF0B3D2E), fontWeight = FontWeight.Bold, fontSize = 15.sp,
-                    modifier = Modifier.background(Color(0xFFB8F5DC), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 4.dp))
+                    modifier = Modifier.entrada(2).latido(activa, 0.04f).background(Color(0xFFB8F5DC), RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 4.dp))
             }
             detalle?.let {
                 Spacer(Modifier.height(8.dp))
-                Text(it, color = Color.White.copy(alpha = 0.92f), fontSize = 14.sp, lineHeight = 19.sp, maxLines = 5, overflow = TextOverflow.Ellipsis)
+                Text(it, color = Color.White.copy(alpha = 0.92f), fontSize = 14.sp, lineHeight = 19.sp, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.entrada(3))
             }
             if (i == 0 && total > 1) {
                 Spacer(Modifier.height(10.dp))
-                Text("Desliza hacia arriba para ver más ↑", color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp)
+                Text("Desliza hacia arriba para ver más ↑", color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp, modifier = Modifier.flotar(5f, 900))
             }
         }
         // Barra de acciones a la derecha.
@@ -380,7 +425,7 @@ private fun PaginaFeed(pub: Publicacion, i: Int, total: Int, onPedir: () -> Unit
         ) {
             tienda?.let { t ->
                 Box(
-                    Modifier.size(52.dp).border(2.dp, Color.White, CircleShape).background(Color.White.copy(alpha = 0.2f), CircleShape),
+                    Modifier.size(52.dp).pop(1).latido(activa, 0.06f).border(2.dp, Color.White, CircleShape).background(Color.White.copy(alpha = 0.2f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(t.nombre.removeSuffix(" (demo)").split(' ').filter { it.firstOrNull()?.isLetter() == true }.take(2).joinToString("") { it.first().uppercase() },
@@ -401,8 +446,10 @@ private fun AccionLateral(icono: Painter?, texto: String, onClick: () -> Unit) =
 
 @Composable
 private fun AccionLateral(icono: Painter?, texto: String, emoji: String?, onClick: () -> Unit) {
+    val fuente = remember { MutableInteractionSource() }
     Column(
-        Modifier.clickable(onClick = onClick).semantics(mergeDescendants = true) { role = Role.Button; contentDescription = texto },
+        Modifier.pop(2).rebote(fuente, 0.8f).clickable(interactionSource = fuente, indication = null, onClick = onClick)
+            .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = texto },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.size(50.dp).background(Color.Black.copy(alpha = 0.25f), CircleShape), contentAlignment = Alignment.Center) {
@@ -425,8 +472,11 @@ fun PestanasArriba(opciones: List<String>, activa: Int, onElegir: (Int) -> Unit,
                 Modifier.clickable { onElegir(i) }.semantics { role = Role.Tab; selected = on }.padding(horizontal = 14.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(t, color = if (on) base else base.copy(alpha = 0.6f), fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 17.sp)
-                Box(Modifier.padding(top = 4.dp).size(width = 24.dp, height = 3.dp).background(if (on) base else Color.Transparent, RoundedCornerShape(2.dp)))
+                val ancho by animateDpAsState(if (on) 28.dp else 0.dp, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+                val tam by animateFloatAsState(if (on) 1.08f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                Text(t, color = if (on) base else base.copy(alpha = 0.6f), fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 17.sp,
+                    modifier = Modifier.scale(tam))
+                Box(Modifier.padding(top = 4.dp).size(width = ancho, height = 3.dp).background(base, RoundedCornerShape(2.dp)))
             }
         }
     }

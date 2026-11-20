@@ -1,5 +1,11 @@
 package com.eter.mitienda.feature.anaquel
 
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -109,7 +115,7 @@ private fun ListaChats(st: AnaquelUiState, vm: AnaquelViewModel) {
             }
         }
         when {
-            lista == null -> item(key = "carg") { Txt(if (st.ocupado == "chats") "Cargando…" else st.error ?: "Cargando…", secundario = true) }
+            lista == null -> item(key = "carg") { if (st.error != null && st.ocupado != "chats") Txt(st.error, secundario = true) else TarjetasCargando("Abriendo tus chats…") }
             lista.isEmpty() -> item(key = "vacio") {
                 NeumorphicCard(Modifier.fillMaxWidth()) {
                     Txt("Todavía no platicas con nadie", negritas = true)
@@ -117,7 +123,7 @@ private fun ListaChats(st: AnaquelUiState, vm: AnaquelViewModel) {
                     Txt("En Inicio toca «Chat» o «Catálogo» en un proveedor o una tienda de tu zona para empezar. Ahí les puedes pedir con cantidades y mandar tu propio catálogo.", secundario = true, chico = true)
                 }
             }
-            else -> items(lista, key = { "c-" + it.id }) { c -> FilaChat(c) { vm.abrirChat(c.id) } }
+            else -> itemsIndexed(lista, key = { _, c -> "c-" + c.id }) { i, c -> Box(Modifier.animateItem().entrada(i)) { FilaChat(c) { vm.abrirChat(c.id) } } }
         }
     }
 }
@@ -199,12 +205,12 @@ private fun Conversacion(c: Chat, st: AnaquelUiState, vm: AnaquelViewModel) {
                     secundario = true, modifier = Modifier.fillMaxWidth().padding(top = NeuDimens.SpaceXl))
             }
             items(c.mensajes, key = { "m-" + it.id }) { m ->
-                when (m.tipo) {
+                Box(Modifier.animateItem()) { when (m.tipo) {
                     "catalogo" -> TarjetaCatalogo(m, onPedir = { vm.pedirDeCatalogo(m) })
                     "pedido" -> TarjetaPedido(m, st.ocupado == "pedido${m.id}") { vm.accionPedidoChat(m, it) }
                     "sistema" -> Txt(m.texto, secundario = true, chico = true, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp))
                     else -> Burbuja(m)
-                }
+                } }
             }
         }
         Row(
@@ -230,9 +236,17 @@ private fun Conversacion(c: Chat, st: AnaquelUiState, vm: AnaquelViewModel) {
 @Composable
 private fun Burbuja(m: MensajeChat) {
     val mio = m.de == "yo"
+    // Cada burbuja entra deslizándose desde su lado, con un pequeño rebote.
+    val p = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { p.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow)) }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mio) Arrangement.End else Arrangement.Start) {
         Column(
             Modifier.widthIn(max = 300.dp)
+                .graphicsLayer {
+                    translationX = (1f - p.value) * (if (mio) 120f else -120f)
+                    alpha = p.value.coerceIn(0f, 1f); scaleX = 0.85f + 0.15f * p.value; scaleY = scaleX
+                    transformOrigin = TransformOrigin(if (mio) 1f else 0f, 1f)
+                }
                 .background(
                     if (mio) NeuColors.Magenta else NeuColors.ChipBackground,
                     RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = if (mio) 18.dp else 4.dp, bottomEnd = if (mio) 4.dp else 18.dp),

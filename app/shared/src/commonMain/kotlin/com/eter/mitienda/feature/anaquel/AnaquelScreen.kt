@@ -1,5 +1,6 @@
 package com.eter.mitienda.feature.anaquel
 
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.semantics.contentDescription
 
 import androidx.compose.ui.semantics.semantics
@@ -297,7 +298,9 @@ private fun Errores(error: String, reintentar: () -> Unit) {
 @Composable
 private fun Cifra(valor: String, texto: String, alerta: Boolean, modifier: Modifier) {
     NeumorphicCard(modifier, elevation = NeuDimens.ElevationMedium) {
-        Text(valor, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+        val num = valor.toIntOrNull()
+        if (num != null) NumeroAnimado(num, if (alerta) NeuColors.OnLowStock else NeuColors.TextPrimary, MaterialTheme.typography.headlineSmall.fontSize, FontWeight.Bold, MaterialTheme.typography.headlineSmall)
+        else Text(valor, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
             color = if (alerta) NeuColors.OnLowStock else NeuColors.TextPrimary)
         Text(texto, style = MaterialTheme.typography.bodySmall, color = NeuColors.TextSecondary)
     }
@@ -339,8 +342,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.hoy(st: AnaquelUiStat
     if (st.faltantes != null && grupos.isEmpty()) {
         item(key = "nada") { Texto("No falta nada por pedir. Toma la foto de hoy para revisar tus anaqueles.", Modifier.fillMaxWidth()) }
     }
-    if (st.faltantes == null && st.error == null) item(key = "cargando") { Texto("Cargando…") }
-    items(grupos, key = { "g-" + it.clave }) { g -> GrupoCard(g, st, vm) }
+    if (st.faltantes == null && st.error == null) item(key = "cargando") { TarjetasCargando("Revisando tus anaqueles…") }
+    itemsIndexed(grupos, key = { _, g -> "g-" + g.clave }) { i, g -> Box(Modifier.animateItem().entrada(i)) { GrupoCard(g, st, vm) } }
     val pedidos = st.faltantes.orEmpty().filter { it.enPedido != null }
     if (pedidos.isNotEmpty()) {
         item(key = "ya") {
@@ -411,7 +414,7 @@ private fun GrupoCard(g: GrupoPedido, st: AnaquelUiState, vm: AnaquelViewModel) 
 
 private fun androidx.compose.foundation.lazy.LazyListScope.anaqueles(st: AnaquelUiState, vm: AnaquelViewModel) {
     val lista = st.anaqueles
-    if (lista == null) { item { Texto("Cargando…") }; return }
+    if (lista == null) { item { TarjetasCargando("Cargando…") }; return }
     if (lista.isEmpty()) {
         item {
             Texto("Aún no tienes anaqueles.\nToca + y toma la foto de tu anaquel lleno.", Modifier.fillMaxWidth().padding(top = NeuDimens.SpaceXxl))
@@ -438,13 +441,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.anaqueles(st: Anaquel
 
 private fun androidx.compose.foundation.lazy.LazyListScope.pedidos(st: AnaquelUiState, vm: AnaquelViewModel) {
     val lista = st.pedidos
-    if (lista == null) { item { Texto("Cargando…") }; return }
+    if (lista == null) { item { TarjetasCargando("Cargando…") }; return }
     val abiertos = lista.filter { it.abierto }
     val cerrados = lista.filterNot { it.abierto }.take(15)
     if (abiertos.isEmpty()) item { Texto("No hay pedidos en camino. Se crean desde «Hoy».", Modifier.fillMaxWidth()) }
-    items(abiertos, key = { it.id }) { p -> PedidoCard(p, st, vm) }
+    itemsIndexed(abiertos, key = { _, p -> p.id }) { i, p -> Box(Modifier.animateItem().entrada(i)) { PedidoCard(p, st, vm) } }
     if (cerrados.isNotEmpty()) item { Titulo("Anteriores") }
-    items(cerrados, key = { it.id }) { p -> PedidoCard(p, st, vm) }
+    items(cerrados, key = { it.id }) { p -> Box(Modifier.animateItem()) { PedidoCard(p, st, vm) } }
 }
 
 @Composable
@@ -729,7 +732,7 @@ private fun Cifra(n: Int, texto: String, onClick: () -> Unit) {
             .semantics(mergeDescendants = true) { contentDescription = "$n $texto" },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("$n", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = NeuColors.TextPrimary)
+        NumeroAnimado(n, NeuColors.TextPrimary, MaterialTheme.typography.titleLarge.fontSize, estilo = MaterialTheme.typography.titleLarge)
         Text(texto, style = MaterialTheme.typography.bodySmall, color = NeuColors.TextSecondary)
     }
 }

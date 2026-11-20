@@ -9,11 +9,12 @@ import { api, hace, numero, type Movimiento } from '../api'
 import type { Sesion } from '../App'
 import { Enlace } from '../router'
 import { avisar, Estado, mensajeDe, useDatos } from '../ui'
-import { Tienda3D, type Hover, type Modo, type Tema } from '../tienda3d/escena'
-import { trazar, type Ruta } from '../tienda3d/ruta'
+import type { Hover, Modo, Tema, Tienda3D } from '../tienda3d/escena'
+import { encerrados, trazar, type Ruta } from '../tienda3d/ruta'
+import { ICONO_2D, Plano2D, vistaInicial, type Herramienta } from '../tienda3d/Plano2D'
 import {
   alturaHablada, calcularHuecos, describirLugar, estadoDe, huella, LADOS, normalizar, pesos, singular, TIPOS, unidades,
-  type DatosBodega, type Lugar, type Mueble, type Plano, type TipoMueble,
+  type DatosBodega, type Lugar, type Mueble, type Pared, type Plano, type TipoMueble,
 } from '../tienda3d/tipos'
 
 // ---------------------------------------------------------------- voz
@@ -198,29 +199,57 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
   const [paso, setPaso] = useState(-1)
   const [recorriendo, setRecorriendo] = useState(false)
   const [editor, setEditor] = useState(false)
-  const [borrador, setBorrador] = useState<Plano | null>(null)
+  const [borrador, setBorradorCrudo] = useState<Plano | null>(null)
+  const [vista2d, setVista2d] = useState<'2d' | '3d'>(vistaInicial)
+  const [herr, setHerr] = useState<Herramienta>('mover')
+  const [previa3d, setPrevia3d] = useState(false)
+  const [listo3d, setListo3d] = useState(0) // sube cuando la escena 3D ya cargó
+  const deshacer = useRef<Plano[]>([])
+  const rehacer = useRef<Plano[]>([])
   const rec = useRef<Reconocedor | null>(null)
+  // Cada cambio del armador se puede deshacer (Ctrl+Z) y rehacer (Ctrl+Y).
+  const setBorrador = useCallback((v: Plano | null | ((b: Plano | null) => Plano | null)) => {
+    setBorradorCrudo((b) => {
+      const n = typeof v === 'function' ? v(b) : v
+      if (b && n && n !== b) { deshacer.current = [...deshacer.current.slice(-60), b]; rehacer.current = [] }
+      if (!n) { deshacer.current = []; rehacer.current = [] }
+      return n
+    })
+  }, [])
+  const atras = () => setBorradorCrudo((b) => { const u = deshacer.current.pop(); if (!u || !b) return b; rehacer.current.push(b); return u })
+  const adelante = () => setBorradorCrudo((b) => { const u = rehacer.current.pop(); if (!u || !b) return b; deshacer.current.push(b); return u })
+  useEffect(() => { try { localStorage.setItem('bodega-vista', vista2d) } catch { /* sin almacenamiento */ } }, [vista2d])
+  // El 3D solo se crea si se va a ver (en 2D no se gasta memoria ni batería).
+  const usar3d = vista2d === '3d' && (!editor || previa3d)
 
   const plano = editor && borrador ? borrador : datos?.plano
   const vista = useMemo(() => (datos && plano ? { ...datos, plano } : null), [datos, plano])
 
-  // La escena se crea una vez.
+  // La escena se crea al usar el 3D y se libera al pasar al 2D.
   useEffect(() => {
-    if (!caja.current) return
-    try {
-      const e = new Tienda3D(caja.current, tema)
-      e.onPick = (id, mueble) => { setElegido(id); setMuebleSel(id == null ? mueble : null); if (id != null) e.resaltar([id], '', false) }
-      e.onHover = setHover
-      escena.current = e
-    } catch {
-      setWebgl(false)
-    }
-    return () => { callar(); escena.current?.dispose(); escena.current = null }
+    if (!usar3d || !caja.current) return
+    let vivo = true
+    // three.js se baja solo si se usa el 3D (el 2D ligero no lo necesita).
+    import('../tienda3d/escena').then(({ Tienda3D }) => {
+      if (!vivo || !caja.current) return
+      try {
+        const e = new Tienda3D(caja.current, tema)
+        e.onPick = (id, mueble) => { setElegido(id); setMuebleSel(id == null ? mueble : null); if (id != null) e.resaltar([id], '', false) }
+        e.onHover = setHover
+        escena.current = e
+        setListo3d((n) => n + 1)
+      } catch {
+        setWebgl(false)
+        setVista2d('2d') // sin WebGL: el plano ligero
+      }
+    }).catch(() => setVista2d('2d'))
+    return () => { vivo = false; escena.current?.dispose(); escena.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  useEffect(() => { escena.current?.setTema(tema) }, [tema])
-  useEffect(() => { if (vista) escena.current?.setDatos(vista) }, [vista])
-  useEffect(() => { escena.current?.setModo(modo) }, [modo, vista])
+  }, [usar3d])
+  useEffect(() => () => callar(), [])
+  useEffect(() => { escena.current?.setTema(tema) }, [tema, usar3d, listo3d])
+  useEffect(() => { if (vista) escena.current?.setDatos(vista) }, [vista, usar3d, listo3d])
+  useEffect(() => { escena.current?.setModo(modo) }, [modo, vista, usar3d, listo3d])
 
   // Editor: mover muebles arrastrando.
   useEffect(() => {
@@ -229,8 +258,23 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
     e.setEditor(editor)
     e.onMover = (id, x, z) => setBorrador((b) => b && { ...b, muebles: b.muebles.map((m) => (m.id === id ? { ...m, x, z } : m)) })
     e.onSeleccion = setMuebleSel
+  }, [editor, usar3d, listo3d, setBorrador])
+  useEffect(() => { if (editor) escena.current?.setSeleccion(muebleSel) }, [muebleSel, editor, vista, usar3d, listo3d])
+  // Atajos del armador: Ctrl+Z / Ctrl+Y y teclas de herramienta.
+  useEffect(() => {
+    if (!editor) return
+    const f = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).closest('input, select, textarea')) return
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) adelante(); else atras() }
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); adelante() }
+      else if (!e.ctrlKey && !e.metaKey) {
+        const h = ({ m: 'mover', p: 'muro', b: 'media', c: 'columna', x: 'borrar' } as Record<string, Herramienta>)[e.key.toLowerCase()]
+        if (h) setHerr(h)
+      }
+    }
+    window.addEventListener('keydown', f)
+    return () => window.removeEventListener('keydown', f)
   }, [editor])
-  useEffect(() => { if (editor) escena.current?.setSeleccion(muebleSel) }, [muebleSel, editor, vista])
 
   const preguntar = useCallback((texto: string) => {
     if (!datos || !texto.trim()) return
@@ -252,14 +296,14 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
   // ?q=… pregunta al abrir (la app manda aquí su «Llévame»); ?modo=existencia abre con ese mapa.
   const preguntado = useRef(false)
   useEffect(() => {
-    if (!datos || preguntado.current || !escena.current) return
+    if (!datos || preguntado.current || (usar3d && !escena.current)) return
     preguntado.current = true
     const ps = new URLSearchParams(location.search)
     const m = ps.get('modo') as Modo | null
     if (m && MODOS.some(([k]) => k === m)) setModo(m)
     const pq = ps.get('q')
     if (pq) setTimeout(() => preguntar(pq), 300)
-  }, [datos, preguntar])
+  }, [datos, preguntar, usar3d, listo3d])
 
   function escuchar() {
     if (!CrearReconocedor) { avisar('Este navegador no reconoce voz: usa Chrome o escribe la pregunta.'); return }
@@ -335,11 +379,19 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
         {!publica && datos && (
           <div className="fila">
             {!editor ? (
-              <button className="boton claro" onClick={() => { setEditor(true); setBorrador(structuredClone(datos.plano)); setElegido(null); setResp(null); escena.current?.setRuta(null); escena.current?.vistaPlano() }}>✏️ Acomodar muebles</button>
+              <button className="boton" onClick={() => { setEditor(true); setBorrador(structuredClone(datos.plano)); setHerr('mover'); setPrevia3d(false); setElegido(null); setResp(null); escena.current?.setRuta(null); escena.current?.vistaPlano() }}>🧱 Armar mi almacén</button>
             ) : null}
             {datos.tienda.slug && <Enlace className="boton claro" href={`/t/${datos.tienda.slug}/3d`}>👁 Como lo ven tus clientes</Enlace>}
           </div>
         )}
+        <div className="interruptor-vista" role="radiogroup" aria-label="Tipo de vista">
+          {(['3d', '2d'] as const).map((v) => (
+            <button key={v} role="radio" aria-checked={vista2d === v} className={vista2d === v ? 'on' : ''} onClick={() => setVista2d(v)}
+              title={v === '2d' ? 'Plano ligero: para teléfonos sencillos o con poca batería' : 'Tienda en 3D'}>
+              {v === '3d' ? '🧊 3D' : '🗺️ 2D ligero'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {!editor && (
@@ -393,8 +445,33 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
       <Estado error={error} cargando={!datos && !error} />
 
       <div className={`rejilla3d ${editor ? 'con-editor' : ''}`}>
-        <div className="lienzo3d" ref={caja}>
-          {!webgl && <p className="vacio-lista">Tu navegador no tiene WebGL; no se puede mostrar la tienda en 3D.</p>}
+        {!usar3d && vista && (
+          <div className="lienzo3d lienzo2d">
+            <Plano2D plano={vista.plano} productos={vista.productos} publica={publica} modo={modo}
+              resaltados={resp?.ids ?? (elegido != null ? [elegido] : [])} ruta={editor ? null : resp?.ruta ?? null}
+              editor={editor} herramienta={herr} sel={muebleSel}
+              onSel={(id) => { setMuebleSel(id); if (!editor) setElegido(null) }}
+              onMover={(id, x, z) => setBorrador((b) => b && { ...b, muebles: b.muebles.map((m) => (m.id === id ? { ...m, x, z } : m)) })}
+              onPlano={(p) => setBorrador(p)} onProducto={(id) => { setElegido(id); setMuebleSel(null) }} />
+            {!editor && (
+              <div className="barra3d">
+                {(publica ? MODOS.filter(([m]) => m === 'normal' || m === 'existencia') : MODOS).map(([m, t]) => (
+                  <button key={m} className={`boton chico ${modo === m ? '' : 'claro'}`} onClick={() => setModo(m)}>{publica && m === 'existencia' ? 'Qué hay' : t}</button>
+                ))}
+              </div>
+            )}
+            {editor && <Herramientas herr={herr} setHerr={setHerr} atras={atras} adelante={adelante}
+              puedeAtras={deshacer.current.length > 0} puedeAdelante={rehacer.current.length > 0}
+              previa={vista2d === '3d' ? () => setPrevia3d(true) : undefined} />}
+            {modo !== 'normal' && !editor && (
+              <div className="leyenda3d">
+                {LEYENDA[modo].map(([c, t]) => <span key={t}><i style={{ background: c }} />{t}</span>)}
+              </div>
+            )}
+          </div>
+        )}
+        {usar3d && <div className="lienzo3d" ref={caja}>
+          {!webgl && <p className="vacio-lista">Tu navegador no tiene WebGL: usa la vista 🗺️ 2D ligero.</p>}
           <div className="barra3d">
             {!editor && (publica ? MODOS.filter(([m]) => m === 'normal' || m === 'existencia') : MODOS).map(([m, t]) => (
               <button key={m} className={`boton chico ${modo === m ? '' : 'claro'}`} onClick={() => setModo(m)}>{publica && m === 'existencia' ? 'Qué hay' : t}</button>
@@ -417,19 +494,23 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
               <span>{pesos(hoverP.precio_c)} · {hoverP.stock == null ? 'sin conteo' : publica ? { agotado: 'se acabó', bajo: 'quedan pocas', bien: 'hay', sin: '' }[estadoDe(hoverP)] : unidades(hoverP.stock, hoverP.unidad)}</span>
             </div>
           )}
-          {editor && <div className="aviso-editor">Arrastra un mueble para moverlo · flechas: ajustar · R: girar · Supr: quitar</div>}
-        </div>
+          {editor && <div className="aviso-editor">Vista previa 3D: arrastra un mueble para moverlo · flechas: ajustar · R: girar
+            <button className="boton chico" style={{ marginLeft: '.5rem' }} onClick={() => setPrevia3d(false)}>🧱 Volver a armar</button></div>}
+        </div>}
 
         <aside className="lado3d">
           {editor && borrador && datos ? (
-            <Editor plano={borrador} setPlano={setBorrador} sel={muebleSel} setSel={setMuebleSel} anaqueles={datos.anaqueles}
+            <Editor plano={borrador} setPlano={(p) => setBorrador(p)} sel={muebleSel} setSel={setMuebleSel} anaqueles={datos.anaqueles} giro={datos.tienda.giro}
               alCancelar={() => { setEditor(false); setBorrador(null); setMuebleSel(null) }}
               alGuardar={async () => {
                 try {
-                  const d = await api.put<DatosBodega>('/bodega/plano', borrador)
+                  let d = await api.put<DatosBodega>('/bodega/plano', borrador)
+                  // Lo que se quedó sin mueble (por quitar o cambiar muebles) se acomoda solo.
+                  const sueltos = d.productos.filter((p) => !p.mueble || p.nivel < 1).length
+                  if (sueltos) d = await api.post<DatosBodega>('/bodega/acomodar', {})
                   nuevaInfo(d)
                   setEditor(false); setBorrador(null); setMuebleSel(null)
-                  avisar('Plano guardado')
+                  avisar(sueltos ? `Almacén guardado · ${sueltos} productos acomodados en sus nuevos muebles` : 'Almacén guardado')
                 } catch (e) { avisar(mensajeDe(e)) }
               }} />
           ) : elegidoP && datos ? (
@@ -493,6 +574,7 @@ export default function Bodega3D({ sesion, slug }: { sesion?: Sesion; slug?: str
 
 const ICONO: Record<TipoMueble, string> = {
   gondola: '🛒', anaquel: '🗄️', refri: '🧊', congelador: '🍦', rack: '🏗️', tarima: '📦', perchero: '👕', mesa: '🪵', mostrador: '💵', botanero: '🍿',
+  vitrina: '💎', ganchera: '🪝', cajas: '🧺',
 }
 
 // ---------------------------------------------------------------- ficha del producto
@@ -713,10 +795,142 @@ function lugarLibre(plano: Plano, m: Mueble): [number, number] {
   return [plano.ancho / 2, plano.fondo / 2]
 }
 
-function Editor({ plano, setPlano, sel, setSel, anaqueles, alCancelar, alGuardar }: {
-  plano: Plano; setPlano: (p: Plano) => void; sel: string | null; setSel: (id: string | null) => void
-  anaqueles: DatosBodega['anaqueles']; alCancelar: () => void; alGuardar: () => void
+// ---------------------------------------------------------------- armador: herramientas, modelos y plantillas
+
+const HERRAMIENTAS: [Herramienta, string, string, string][] = [
+  ['mover', '✋', 'Mover', 'M · arrastra muebles'],
+  ['muro', '🧱', 'Pared', 'P · clic, clic… doble clic termina'],
+  ['media', '🚧', 'Barda', 'B · pared a media altura'],
+  ['cristal', '🪟', 'Cristal', 'pared de vidrio'],
+  ['columna', '⬛', 'Columna', 'C · clic para ponerla'],
+  ['borrar', '🧽', 'Borrar', 'X · toca lo que quieras quitar'],
+]
+
+function Herramientas({ herr, setHerr, atras, adelante, puedeAtras, puedeAdelante, previa }: {
+  herr: Herramienta; setHerr: (h: Herramienta) => void; atras: () => void; adelante: () => void
+  puedeAtras: boolean; puedeAdelante: boolean; previa?: () => void
 }) {
+  return (
+    <div className="herramientas2d" role="toolbar" aria-label="Herramientas del armador">
+      {HERRAMIENTAS.map(([h, i, t, d]) => (
+        <button key={h} className={herr === h ? 'on' : ''} onClick={() => setHerr(h)} title={d} aria-pressed={herr === h}>
+          <span aria-hidden>{i}</span><small>{t}</small>
+        </button>
+      ))}
+      <span className="sep" />
+      <button onClick={atras} disabled={!puedeAtras} title="Deshacer (Ctrl+Z)"><span aria-hidden>↶</span><small>Deshacer</small></button>
+      <button onClick={adelante} disabled={!puedeAdelante} title="Rehacer (Ctrl+Y)"><span aria-hidden>↷</span><small>Rehacer</small></button>
+      {previa && <button onClick={previa} title="Ver cómo queda en 3D"><span aria-hidden>🧊</span><small>Ver 3D</small></button>}
+    </div>
+  )
+}
+
+/** Dibujo de frente de cada modelo de mueble para el catálogo. */
+function MiniMueble({ tipo }: { tipo: TipoMueble }) {
+  const t = TIPOS[tipo]
+  const W = 84, H = 64, piso = 58
+  const esc = Math.min((W - 10) / t.ancho, (piso - 6) / Math.max(t.alto, 1))
+  const w = t.ancho * esc, h = t.alto * esc, x = (W - w) / 2, y = piso - h
+  const lineas = Array.from({ length: t.niveles }, (_, i) => y + h - ((i + 1) * h) / (t.niveles + (tipo === 'refri' ? 0.6 : 0)))
+  const colores = ['#2f80ed', '#eb5757', '#f2c94c', '#27ae60', '#9b51e0']
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="mini-mueble" aria-hidden>
+      <line x1={2} y1={piso} x2={W - 2} y2={piso} stroke="currentColor" strokeOpacity=".25" />
+      {tipo === 'refri' ? <>
+        <rect x={x} y={y} width={w} height={h} rx={2} fill="#c8221c" />
+        <rect x={x + 3} y={y + 7} width={w - 6} height={h - 12} fill="#cfeaff" opacity=".9" />
+        {lineas.map((ly, i) => <line key={i} x1={x + 3} x2={x + w - 3} y1={ly} y2={ly} stroke="#8aa" />)}
+        <rect x={x + 3} y={y + 1} width={w - 6} height={5} fill="#fff" opacity=".85" />
+      </> : tipo === 'vitrina' ? <>
+        <rect x={x} y={piso - 6} width={w} height={6} fill="#6d4c33" />
+        <rect x={x} y={y} width={w} height={h - 6} fill="#cfeaff" opacity=".6" stroke="#9fb7c9" />
+        {lineas.map((ly, i) => <line key={i} x1={x + 2} x2={x + w - 2} y1={ly} y2={ly} stroke="#9fb7c9" />)}
+      </> : tipo === 'ganchera' ? <>
+        <rect x={x} y={y} width={w} height={h} fill="#d8c3a0" />
+        {lineas.map((ly, i) => Array.from({ length: 6 }, (_, k) => <circle key={i + '-' + k} cx={x + 5 + k * ((w - 10) / 5)} cy={ly} r={1.6} fill="#7a6a55" />))}
+      </> : tipo === 'cajas' ? <>
+        <rect x={x} y={y} width={w} height={h} fill="none" stroke="#5b6470" strokeWidth={2} />
+        {lineas.map((ly, i) => Array.from({ length: 4 }, (_, k) => <rect key={i + '-' + k} x={x + 2 + k * ((w - 4) / 4)} y={ly - 6} width={(w - 4) / 4 - 2} height={6} fill={colores[(i + k) % 5]} />))}
+      </> : tipo === 'perchero' ? <>
+        <line x1={x} x2={x + w} y1={y + 4} y2={y + 4} stroke="#555" strokeWidth={2} />
+        <line x1={x} x2={x} y1={y + 4} y2={piso} stroke="#555" strokeWidth={2} /><line x1={x + w} x2={x + w} y1={y + 4} y2={piso} stroke="#555" strokeWidth={2} />
+        {Array.from({ length: 6 }, (_, k) => <path key={k} d={`M${x + 6 + k * ((w - 12) / 5) - 4} ${y + 22} l4 -16 l4 16z`} fill={colores[k % 5]} opacity=".8" />)}
+      </> : tipo === 'mesa' || tipo === 'mostrador' || tipo === 'congelador' ? <>
+        <rect x={x} y={y} width={w} height={h} rx={2} fill={tipo === 'mesa' ? '#efe6d8' : tipo === 'mostrador' ? '#a0703f' : '#e8f4fb'} stroke="#888" />
+        <rect x={x - 1} y={y - 2} width={w + 2} height={3} fill={tipo === 'congelador' ? '#7fb7d9' : '#2d3436'} />
+      </> : tipo === 'tarima' ? <>
+        <rect x={x} y={piso - 5} width={w} height={5} fill="#b07d48" />
+        <rect x={x + 2} y={y} width={w - 4} height={h - 5} fill="#c9a26b" stroke="#8a6a3d" />
+      </> : <>
+        <rect x={x} y={y} width={w} height={h} rx={1.5} fill={tipo === 'rack' ? 'none' : '#f4f6f8'} stroke={tipo === 'rack' ? '#e67e22' : '#9aa5ad'} strokeWidth={tipo === 'rack' ? 2 : 1} />
+        {lineas.map((ly, i) => <line key={i} x1={x + 1} x2={x + w - 1} y1={ly} y2={ly} stroke={tipo === 'rack' ? '#e67e22' : '#7d8a93'} strokeWidth={1.5} />)}
+        {tipo !== 'rack' && lineas.map((ly, i) => Array.from({ length: Math.max(2, Math.round(w / 9)) }, (_, k) => <rect key={i + '-' + k} x={x + 2 + k * 9} y={ly - 5} width={6} height={5} fill={colores[(i * 3 + k) % 5]} opacity=".85" />))}
+        {tipo === 'rack' && <rect x={x + 4} y={lineas[0] - 10} width={w - 8} height={10} fill="#c9a26b" />}
+      </>}
+    </svg>
+  )
+}
+
+/** Plantillas para arrancar el armado (después se ajusta todo a mano). */
+function plantilla(nombre: 'vacio' | 'tiendita' | 'trastienda' | 'mayoreo' | 'ferreteria', base: Plano): Plano {
+  const A = base.ancho, F = base.fondo
+  const m = (id: string, tipo: TipoMueble, nombre: string, x: number, z: number, rot = 0, ancho?: number): Mueble => {
+    const t = TIPOS[tipo]
+    return { id, tipo, nombre, x, z, rot, ancho: ancho ?? t.ancho, fondo: t.fondo, alto: t.alto, niveles: t.niveles }
+  }
+  const p: Plano = { ...base, muebles: [], paredes: [], columnas: [], areas: [] }
+  if (nombre === 'vacio') return p
+  if (nombre === 'tiendita' || nombre === 'trastienda') {
+    const fondoVenta = nombre === 'trastienda' ? 2.2 : 0
+    // Con trastienda la puerta queda al centro: el anaquel del fondo se parte en dos para no taparla.
+    const zVenta = fondoVenta + 0.25, libreZ = F - 2.4 - (fondoVenta + 0.5) // de frente del fondo a la caja
+    const largoG = Math.max(1.2, Math.min(3, libreZ - 2.2)), zG = fondoVenta + 0.5 + 1.1 + largoG / 2
+    const anchoFondo = fondoVenta ? Math.max(1, A / 2 - 1.1) : Math.min(A - 1, 4.8)
+    p.muebles = [
+      ...(fondoVenta
+        ? [m('anaquel-1', 'anaquel', 'Anaquel del fondo izq.', 0.1 + anchoFondo / 2, zVenta, 0, anchoFondo), m('anaquel-3', 'anaquel', 'Anaquel del fondo der.', A - 0.1 - anchoFondo / 2, zVenta, 0, anchoFondo)]
+        : [m('anaquel-1', 'anaquel', 'Anaquel del fondo', A / 2, zVenta, 0, anchoFondo)]),
+      m('refri-1', 'refri', 'Refrigerador', 0.4, zG, 90),
+      m('gondola-1', 'gondola', 'Góndola 1', A / 2, zG, 90, largoG),
+      m('anaquel-2', 'anaquel', 'Anaquel de la derecha', A - 0.25, zG, 270, largoG),
+      m('mostrador-1', 'mostrador', 'Mostrador y caja', Math.max(1.4, A - 1.4), F - 1.1, 0),
+      m('botanero-1', 'botanero', 'Botanas', 1.2, F - 1.1, 0),
+    ]
+    if (nombre === 'trastienda') {
+      p.paredes = [{ x1: 0, z1: fondoVenta, x2: A, z2: fondoVenta, alto: base.alto, puerta: 0.9, tipo: 'muro' }]
+      p.muebles.push(m('rack-1', 'rack', 'Rack de bodega', A / 2, 0.55, 0, Math.min(A - 1.4, 4)))
+      p.areas = [{ nombre: 'Trastienda', x: 0, z: 0, ancho: A, fondo: fondoVenta, color: '#cfd8dc' }]
+    }
+  } else if (nombre === 'mayoreo') {
+    const filas = Math.max(1, Math.floor((F - 4) / 2.6))
+    for (let i = 0; i < filas; i++) p.muebles.push(m(`rack-${i + 1}`, 'rack', `Rack ${i + 1}`, A / 2, 1 + i * 2.6, 0, Math.min(A - 2, 8)))
+    p.muebles.push(m('tarima-1', 'tarima', 'Tarima de entrada', 1.2, F - 2, 0), m('mostrador-1', 'mostrador', 'Oficina y caja', A - 1.4, F - 1, 0))
+    p.paredes = [{ x1: A - 3, z1: F - 2.2, x2: A, z2: F - 2.2, alto: 1.2, puerta: 0, tipo: 'media' }]
+    p.columnas = A > 8 ? [{ x: A / 3, z: F / 2, lado: 0.4 }, { x: (2 * A) / 3, z: F / 2, lado: 0.4 }] : []
+  } else if (nombre === 'ferreteria') {
+    p.muebles = [
+      m('ganchera-1', 'ganchera', 'Ganchos de tornillería', 0.2, F / 2, 90, Math.min(F - 3, 3.6)),
+      m('cajas-1', 'cajas', 'Cajas de pijas y clavos', A / 2, 0.3, 0, Math.min(A - 1, 3.6)),
+      m('gondola-1', 'gondola', 'Góndola de herramienta', A / 2, F / 2, 90, Math.min(F - 3.5, 3)),
+      m('vitrina-1', 'vitrina', 'Vitrina de herramienta fina', A - 1.4, F - 1.1, 0),
+      m('rack-1', 'rack', 'Rack de material', A - 0.55, F / 2 - 0.5, 270, Math.min(F - 3, 3)),
+    ]
+  }
+  return p
+}
+
+const PLANTILLAS: ['vacio' | 'tiendita' | 'trastienda' | 'mayoreo' | 'ferreteria', string, string][] = [
+  ['vacio', '⬜', 'Local vacío'], ['tiendita', '🏪', 'Tiendita'], ['trastienda', '🚪', 'Con trastienda'],
+  ['mayoreo', '🏭', 'Bodega de mayoreo'], ['ferreteria', '🔩', 'Ferretería'],
+]
+
+function Editor({ plano, setPlano, sel, setSel, anaqueles, alCancelar, alGuardar, giro }: {
+  plano: Plano; setPlano: (p: Plano) => void; sel: string | null; setSel: (id: string | null) => void
+  anaqueles: DatosBodega['anaqueles']; alCancelar: () => void; alGuardar: () => void; giro?: string
+}) {
+  const paredes = plano.paredes ?? []
+  const sinPaso = useMemo(() => plano.muebles.filter((x) => encerrados(plano).has(x.id)), [plano])
+  const cambiarPared = (i: number, c: Partial<Pared>) => setPlano({ ...plano, paredes: paredes.map((w, k) => (k === i ? { ...w, ...c } : w)) })
   const m = plano.muebles.find((x) => x.id === sel) ?? null
   const cambiar = (c: Partial<Mueble>) => m && setPlano({ ...plano, muebles: plano.muebles.map((x) => (x.id === m.id ? { ...x, ...c } : x)) })
   const quitar = () => { if (m && confirm(`¿Quitar «${m.nombre}»? Sus productos quedan sin lugar.`)) { setPlano({ ...plano, muebles: plano.muebles.filter((x) => x.id !== m.id) }); setSel(null) } }
@@ -752,12 +966,30 @@ function Editor({ plano, setPlano, sel, setSel, anaqueles, alCancelar, alGuardar
   return (
     <div className="columna" style={{ gap: '.7rem' }}>
       <div className="fila entre">
-        <h2 style={{ margin: 0 }}>Acomodar muebles</h2>
+        <h2 style={{ margin: 0 }}>🧱 Armar mi almacén</h2>
+        <span className="chip enviado">{plano.muebles.length} muebles · {paredes.length} paredes</span>
       </div>
       <div className="fila" style={{ gap: '.4rem' }}>
-        <button className="boton" onClick={alGuardar}>Guardar plano</button>
+        <button className="boton" onClick={alGuardar}>💾 Guardar</button>
         <button className="boton claro" onClick={alCancelar}>Cancelar</button>
       </div>
+      {sinPaso.length > 0 && (
+        <div className="aviso-encerrado" role="alert">
+          🚷 <b>{sinPaso.length === 1 ? 'Un mueble quedó' : `${sinPaso.length} muebles quedaron`} sin pasillo:</b>{' '}
+          {sinPaso.map((x, i) => <button key={x.id} className="enlace" onClick={() => setSel(x.id)}>{i ? ', ' : ''}{x.nombre}</button>)}.
+          {' '}Deja al menos 60 cm libres para que tú y tus clientes lleguen.
+        </div>
+      )}
+      <details className="armador-paso" open={plano.muebles.length === 0}>
+        <summary><b>1 · Empieza con una plantilla</b></summary>
+        <div className="plantillas">
+          {PLANTILLAS.map(([k, i, t]) => (
+            <button key={k} className="plantilla" onClick={() => { if (plano.muebles.length && !confirm(`¿Cambiar todo por la plantilla «${t}»? Puedes deshacer con Ctrl+Z.`)) return; setPlano(plantilla(k, plano)); setSel(null) }}>
+              <span aria-hidden>{i}</span>{t}{giro && ((k === 'mayoreo' && giro === 'mayoreo') || (k === 'tiendita' && giro === 'abarrotes')) && <small>para tu giro</small>}
+            </button>
+          ))}
+        </div>
+      </details>
       {m ? (
         <div className="tarjeta-plana columna" style={{ gap: '.5rem' }}>
           <div className="fila entre"><b>{ICONO[m.tipo]} {TIPOS[m.tipo].nombre}</b><button className="boton claro chico" onClick={() => setSel(null)}>Listo</button></div>
@@ -790,11 +1022,35 @@ function Editor({ plano, setPlano, sel, setSel, anaqueles, alCancelar, alGuardar
         <p className="secundario chico" style={{ margin: 0 }}>Toca un mueble en el plano para editarlo, o arrástralo para moverlo.</p>
       )}
       <div className="columna" style={{ gap: '.35rem' }}>
-        <b className="chico">Agregar mueble</b>
-        <div className="paleta3d">
-          {(Object.keys(TIPOS) as TipoMueble[]).map((t) => <button key={t} className="boton claro chico" onClick={() => agregar(t)}>{ICONO[t]} {TIPOS[t].nombre}</button>)}
+        <b className="chico">2 · Pon tus estantes (toca un modelo)</b>
+        <div className="catalogo-muebles">
+          {(Object.keys(TIPOS) as TipoMueble[]).map((t, i) => (
+            <button key={t} className="modelo" style={{ animationDelay: `${i * 35}ms` }} onClick={() => agregar(t)} aria-label={`Agregar ${TIPOS[t].nombre}`}>
+              <MiniMueble tipo={t} />
+              <b>{ICONO_2D[t]} {TIPOS[t].nombre}</b>
+              <small>{TIPOS[t].ancho} × {TIPOS[t].fondo} m · {TIPOS[t].niveles} {t === 'rack' ? 'niveles' : t === 'perchero' ? 'tubo' : 'entrepaños'}</small>
+            </button>
+          ))}
         </div>
       </div>
+      <details className="armador-paso" open={paredes.length > 0}>
+        <summary><b>3 · Paredes y columnas</b> ({paredes.length} / {(plano.columnas ?? []).length})</summary>
+        <p className="secundario chico" style={{ margin: '.4rem 0' }}>Elige 🧱 Pared en la barra del plano y toca dónde empieza y dónde termina; sigue tocando para encadenar. Doble clic o Esc para terminar. Se pega sola a las esquinas y a escuadra.</p>
+        <div className="columna" style={{ gap: '.35rem' }}>
+          {paredes.map((w, i) => (
+            <div key={i} className="tarjeta-plana fila pared-fila" style={{ gap: '.35rem' }}>
+              <b className="chico">{({ muro: '🧱', media: '🚧', cristal: '🪟' } as Record<string, string>)[w.tipo ?? 'muro']} {Math.hypot(w.x2 - w.x1, w.z2 - w.z1).toFixed(1)} m</b>
+              <select value={w.tipo ?? 'muro'} onChange={(e) => cambiarPared(i, { tipo: e.target.value as Pared['tipo'], alto: e.target.value === 'media' ? 1.2 : plano.alto })} aria-label="Tipo de pared">
+                <option value="muro">Muro</option><option value="media">Barda</option><option value="cristal">Cristal</option>
+              </select>
+              <label className="chico">Puerta <input type="number" min={0} step={0.1} value={w.puerta} style={{ width: 64 }} onChange={(e) => cambiarPared(i, { puerta: Math.max(0, num(e.target.value, w.puerta)) })} /> m</label>
+              <button className="boton claro chico" onClick={() => cambiarPared(i, { puerta: w.puerta ? 0 : 0.9 })}>{w.puerta ? 'Cerrar' : '+ Puerta'}</button>
+              <button className="boton peligro chico" onClick={() => setPlano({ ...plano, paredes: paredes.filter((_, k) => k !== i) })} aria-label="Quitar pared">✕</button>
+            </div>
+          ))}
+          {(plano.columnas ?? []).length > 0 && <button className="boton claro chico" onClick={() => setPlano({ ...plano, columnas: [] })}>Quitar las {(plano.columnas ?? []).length} columnas</button>}
+        </div>
+      </details>
       <details>
         <summary className="chico"><b>El local</b> ({plano.ancho} × {plano.fondo} m)</summary>
         <div className="rejilla-campos" style={{ marginTop: '.5rem' }}>
