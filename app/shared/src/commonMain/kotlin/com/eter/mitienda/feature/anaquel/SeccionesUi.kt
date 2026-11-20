@@ -70,7 +70,7 @@ data class EstiloSeccion(val icono: ImageVector, val color: Color, val titulo: S
 fun estiloDe(s: SeccionAnaquel): EstiloSeccion = when (s) {
     SeccionAnaquel.HOY -> EstiloSeccion(Ico.PedirHoy, Color(0xFFE5484D), "Hoy", "Lo que se te acaba y a quién pedírselo")
     SeccionAnaquel.BODEGA -> EstiloSeccion(Ico.Bodega, Color(0xFF0097A7), "Mi bodega", "Dónde está cada producto")
-    SeccionAnaquel.ASESOR -> EstiloSeccion(Ico.Asesor, Color(0xFF8E44AD), "Asesor", "Pregúntale lo que quieras a tu negocio")
+    SeccionAnaquel.ASESOR -> EstiloSeccion(Ico.Asesor, Color(0xFF8E44AD), "Tu socio", "Tu amigo y asesor de negocios")
     SeccionAnaquel.RED -> EstiloSeccion(Ico.Buscar, Color(0xFF3F51B5), "Red", "Quién lo tiene más barato cerca de ti")
     SeccionAnaquel.TRATOS -> EstiloSeccion(Ico.Trato, Color(0xFFE0871B), "Tratos", "Tus negociaciones con otras tiendas")
     SeccionAnaquel.ANAQUELES -> EstiloSeccion(Ico.Foto, Color(0xFF00897B), "Anaqueles", "Una foto al día y sabes qué falta")

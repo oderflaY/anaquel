@@ -57,6 +57,10 @@ func (a *App) conTienda(h http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		h(w, r.WithContext(context.WithValue(r.Context(), ctxTienda{}, id)))
+		// Cualquier cambio (alta, venta, trato, vitrina…) refresca el clon del grafo.
+		if r.Method != http.MethodGet {
+			a.marcarGrafo()
+		}
 	}
 }
 

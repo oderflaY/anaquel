@@ -82,7 +82,7 @@ func TestAsesorIACicloDeHerramientas(t *testing.T) {
 	}
 	// 1ª llamada: modelo, herramientas e historial que empieza por el usuario.
 	p1 := pedidos[0]
-	if p1["model"] != "claude-opus-5-5" || len(p1["tools"].([]any)) != 4 {
+	if p1["model"] != "claude-opus-5-5" || len(p1["tools"].([]any)) != 5 {
 		t.Fatalf("primera llamada mal formada: %v", p1)
 	}
 	msgs := p1["messages"].([]any)

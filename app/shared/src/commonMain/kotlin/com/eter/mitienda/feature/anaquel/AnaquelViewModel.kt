@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class SeccionAnaquel(val titulo: String) {
-    HOY("Hoy"), BODEGA("Mi bodega"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"), MAYOREO("Vender al mayoreo"),
+    HOY("Hoy"), BODEGA("Mi bodega"), ASESOR("Tu socio"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"), MAYOREO("Vender al mayoreo"),
 }
 
 data class AnaquelUiState(
@@ -43,6 +43,8 @@ data class AnaquelUiState(
     val tratos: List<Trato>? = null,
     val trato: Trato? = null,
     val asesor: List<MensajeAsesor>? = null,
+    /** Plan del día de tu socio (cifras, alertas y recomendaciones del grafo). */
+    val plan: PlanAsesor? = null,
     val motorAsesor: String = "basico",
     /** Pregunta que el asesor está contestando. */
     val pensando: String? = null,
@@ -154,7 +156,7 @@ class AnaquelViewModel(
     fun elegirSeccion(s: SeccionAnaquel) {
         _state.update { it.copy(seccion = s, trato = null) }
         when (s) {
-            SeccionAnaquel.ASESOR -> if (_state.value.asesor == null) trabajo(null) { cargarAsesor() }
+            SeccionAnaquel.ASESOR -> if (_state.value.asesor == null || _state.value.plan == null) trabajo(null) { cargarAsesor() }
             SeccionAnaquel.RED -> if (_state.value.red == null) buscarRed(_state.value.consultaRed)
             SeccionAnaquel.TRATOS -> trabajo(null) { _state.update { it.copy(tratos = api.tratos()) } }
             SeccionAnaquel.MAYOREO -> cargarMayoreo()
@@ -178,6 +180,7 @@ class AnaquelViewModel(
     private suspend fun cargarAsesor() {
         val c = api.asesor()
         _state.update { it.copy(asesor = c.mensajes, motorAsesor = c.motor) }
+        runCatching { api.planAsesor() }.onSuccess { p -> _state.update { it.copy(plan = p) } }
     }
 
     fun preguntar(texto: String) {

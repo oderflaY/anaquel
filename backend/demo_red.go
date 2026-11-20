@@ -16,6 +16,7 @@ import (
 //   demo@anaquel.mx      Abarrotes Doña Lupita (tiendita)
 //   ropa@anaquel.mx      Boutique Alondra (ropa)
 //   mayoreo@anaquel.mx   Gorras y Uniformes El Tunal (mayoreo)
+// tres tienditas de abarrotes (esquina@, donbeto@, elguero@) para comparar a Lupita con tiendas parecidas,
 // y cuatro proveedores grandes (distribuidora, bebidas, lácteos y papelería).
 
 type demoArticulo struct {
@@ -230,6 +231,57 @@ var redDemo = []demoTienda{
 		anuncios: []demoAnuncio{{"promocion", "Útiles para posadas y piñatas", "Papel china y metálico a precio de mayoreo para la temporada de posadas.", "Desde $42 el paquete"}},
 	},
 	{
+		email: "esquina@anaquel.mx", nombre: "Abarrotes La Esquina (demo)", slug: "abarrotes-la-esquina", giro: "abarrotes",
+		desc: "Tiendita de barrio en la colonia Guillermina, abierta hasta las 11 pm.", tel: "6181400001", dir: "Calle Pino 214, Col. Guillermina", lat: 24.0301, lng: -104.6588,
+		articulos: []demoArticulo{
+			{"Refresco de cola 600 ml", "Bebidas", "pza", "", 2200, 0, 0, 30, 12, 140, false},
+			{"Agua natural 1 L", "Bebidas", "pza", "", 1500, 0, 0, 24, 10, 90, false},
+			{"Papas fritas 45 g", "Botanas", "pza", "", 1900, 0, 0, 20, 10, 85, false},
+			{"Arroz 1 kg", "Abarrotes", "pza", "", 3400, 0, 0, 12, 6, 30, false},
+			{"Frijol pinto 1 kg", "Abarrotes", "pza", "", 4200, 0, 0, 10, 6, 26, false},
+			{"Leche entera 1 L", "Lácteos", "pza", "", 2900, 0, 0, 12, 8, 70, false},
+			{"Atún en lata 140 g", "Enlatados", "pza", "", 2600, 0, 0, 16, 6, 35, false},
+			{"Sopa instantánea de camarón 64 g", "Abarrotes", "pza", "", 1800, 0, 0, 30, 12, 120, false},
+			{"Salsa picante 370 ml", "Abarrotes", "pza", "", 2300, 0, 0, 10, 4, 40, false},
+			{"Frituras de maíz con chile 56 g", "Botanas", "pza", "", 2200, 0, 0, 25, 12, 150, false},
+			{"Mole rojo en pasta 235 g", "Abarrotes", "pza", "", 6200, 0, 0, 6, 3, 18, false},
+			{"Pan blanco grande 680 g", "Panadería", "pza", "", 5600, 0, 0, 8, 4, 60, false},
+		},
+	},
+	{
+		email: "donbeto@anaquel.mx", nombre: "Tienda Don Beto (demo)", slug: "tienda-don-beto", giro: "abarrotes",
+		desc: "Abarrotes y recargas frente a la secundaria.", tel: "6181400002", dir: "Av. Universidad 902, Col. Nueva Vizcaya", lat: 24.0402, lng: -104.6487,
+		articulos: []demoArticulo{
+			{"Refresco de cola 600 ml", "Bebidas", "pza", "", 2200, 0, 0, 30, 12, 140, false},
+			{"Agua natural 1 L", "Bebidas", "pza", "", 1500, 0, 0, 24, 10, 90, false},
+			{"Papas fritas 45 g", "Botanas", "pza", "", 1900, 0, 0, 20, 10, 85, false},
+			{"Arroz 1 kg", "Abarrotes", "pza", "", 3400, 0, 0, 12, 6, 30, false},
+			{"Frijol pinto 1 kg", "Abarrotes", "pza", "", 4200, 0, 0, 10, 6, 26, false},
+			{"Sopa instantánea de camarón 64 g", "Abarrotes", "pza", "", 1800, 0, 0, 24, 12, 95, false},
+			{"Frituras de maíz con chile 56 g", "Botanas", "pza", "", 2200, 0, 0, 18, 12, 110, false},
+			{"Leche condensada 387 g", "Repostería", "pza", "", 4000, 0, 0, 8, 4, 22, false},
+			{"Totopos sabor queso 62 g", "Botanas", "pza", "", 2300, 0, 0, 15, 8, 70, false},
+			{"Consomé de pollo en polvo 100 g", "Abarrotes", "pza", "", 2900, 0, 0, 8, 4, 25, false},
+		},
+	},
+	{
+		email: "elguero@anaquel.mx", nombre: "Minisúper El Güero (demo)", slug: "minisuper-el-guero", giro: "abarrotes",
+		desc: "Minisúper familiar con pan, lácteos y botanas.", tel: "6181400003", dir: "Blvd. Durango 1550, Col. Jardines", lat: 24.0187, lng: -104.642,
+		articulos: []demoArticulo{
+			{"Agua natural 1 L", "Bebidas", "pza", "", 1500, 0, 0, 24, 10, 90, false},
+			{"Papas fritas 45 g", "Botanas", "pza", "", 1900, 0, 0, 20, 10, 85, false},
+			{"Arroz 1 kg", "Abarrotes", "pza", "", 3400, 0, 0, 12, 6, 30, false},
+			{"Frijol pinto 1 kg", "Abarrotes", "pza", "", 4200, 0, 0, 10, 6, 26, false},
+			{"Leche entera 1 L", "Lácteos", "pza", "", 2900, 0, 0, 12, 8, 70, false},
+			{"Atún en lata 140 g", "Enlatados", "pza", "", 2600, 0, 0, 16, 6, 35, false},
+			{"Sopa instantánea de camarón 64 g", "Abarrotes", "pza", "", 1800, 0, 0, 20, 10, 80, false},
+			{"Salsa picante 370 ml", "Abarrotes", "pza", "", 2300, 0, 0, 8, 4, 30, false},
+			{"Pastelito relleno 50 g", "Pan dulce", "pza", "", 2000, 0, 0, 20, 10, 90, false},
+			{"Bebida hidratante 600 ml", "Bebidas", "pza", "", 2900, 0, 0, 12, 6, 45, false},
+			{"Mole rojo en pasta 235 g", "Abarrotes", "pza", "", 6200, 0, 0, 4, 2, 12, false},
+		},
+	},
+	{
 		email: "fletes@anaquel.mx", nombre: "Fletes Durango Express (demo)", slug: "fletes-durango-express", giro: "servicios",
 		desc: "Fletes y repartos en camioneta dentro de la ciudad.", tel: "6181200006",
 		dir: "Col. Valle del Sur", lat: 24.0005, lng: -104.6455,
@@ -354,6 +406,30 @@ func (a *App) sembrarRed() error {
 				if t := ids[s]; t > 0 {
 					a.db.Exec("INSERT OR IGNORE INTO producto_audiencia (producto_id, tienda_id) VALUES (?, ?)", miel, t)
 				}
+			}
+		}
+		// Compras ya entregadas: la distribuidora y la de bebidas son sus proveedores de confianza.
+		var hay int
+		a.db.QueryRow("SELECT COUNT(*) FROM tratos WHERE comprador_id = ? AND estado = 'entregado'", lupita).Scan(&hay)
+		if hay == 0 {
+			for _, c := range []struct {
+				slug, producto string
+				cant           int64
+				dias           int64
+			}{
+				{"distribuidora-abarrotera-guadiana", "Arroz súper extra 1 kg", 24, 20}, {"distribuidora-abarrotera-guadiana", "Aceite vegetal 1 L", 12, 12},
+				{"distribuidora-abarrotera-guadiana", "Atún en lata 140 g", 48, 6}, {"central-bebidas-botanas", "Refresco de cola 600 ml", 48, 9},
+			} {
+				var prov, prod, precio int64
+				if prov = ids[c.slug]; prov == 0 {
+					continue
+				}
+				if a.db.QueryRow("SELECT id, precio_mayoreo_c FROM productos WHERE tienda_id = ? AND nombre = ?", prov, c.producto).Scan(&prod, &precio) != nil {
+					continue
+				}
+				cuando := t - c.dias*24*3600_000
+				a.db.Exec(`INSERT INTO tratos (comprador_id, vendedor_id, producto_id, titulo, cantidad, precio_c, propuso_id, estado, creado, actualizado)
+					VALUES (?, ?, ?, ?, ?, ?, ?, 'entregado', ?, ?)`, lupita, prov, prod, c.producto, c.cant, precio, lupita, cuando, cuando)
 			}
 		}
 		if tostadas > 0 {
@@ -493,6 +569,7 @@ func (a *App) reiniciarDemo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.prepararDemoVisual()
+	a.marcarGrafo()
 	var id int64
 	a.db.QueryRow("SELECT id FROM tiendas WHERE email = ?", email).Scan(&id)
 	a.responderSesion(w, id)

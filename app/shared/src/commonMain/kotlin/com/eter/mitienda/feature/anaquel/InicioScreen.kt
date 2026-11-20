@@ -230,6 +230,17 @@ private fun Resumen(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () -
             item(key = "cargando") { if (st.error != null) Txt(st.error, secundario = true) else TarjetasCargando("Revisando qué le conviene a tu tienda…", 4) }
             return@LazyColumn
         }
+        if (ini.recomendados.isNotEmpty()) {
+            item(key = "r-t") { Seccion("Tu socio te recomienda", "Salió de comparar tu tienda con toda la red") }
+            items(ini.recomendados.take(6), key = { "r-" + it.clave }) { r ->
+                Box(Modifier.animateItem().entrada()) {
+                    TarjetaRecomendacion(
+                        r, pedir = { t, p, n -> chat(t, true, p, n) }, negociar = { negociando = it },
+                        escribir = { t -> chat(t, true, null, 0) },
+                    )
+                }
+            }
+        }
         if (ini.paraSurtir.isNotEmpty()) {
             item(key = "s-t") { Seccion("Se te está acabando", "Lo más barato de la red para surtirlo") }
             items(ini.paraSurtir, key = { "s-" + it.productoId }) { s -> Box(Modifier.animateItem().entrada()) { TarjetaSurtir(s, chat) } }
@@ -258,7 +269,7 @@ private fun Resumen(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () -
             item(key = "t-t") { Seccion("Tiendas de tu zona") }
             items(ini.tiendas.take(12), key = { "t-" + it.id }) { t -> Box(Modifier.animateItem().entrada()) { TarjetaTienda(t, chat) } }
         }
-        if (ini.paraSurtir.isEmpty() && ini.convienen.isEmpty() && ini.proveedores.isEmpty()) {
+        if (ini.paraSurtir.isEmpty() && ini.convienen.isEmpty() && ini.proveedores.isEmpty() && ini.recomendados.isEmpty()) {
             item(key = "vacio") { Txt("Todo en orden por ahora. Toma la foto de tus anaqueles en Mi tienda y aquí verás qué surtir y con quién.", secundario = true) }
         }
     }

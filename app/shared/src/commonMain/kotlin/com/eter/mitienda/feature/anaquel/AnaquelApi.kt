@@ -194,6 +194,49 @@ data class Inicio(
     val tiendas: List<TiendaZona> = emptyList(),
     @SerialName("chats_sin_leer") val chatsSinLeer: Int = 0,
     @SerialName("tratos_pendientes") val pendientes: Int = 0,
+    /** Lo que recomienda el grafo de la red (tu socio). */
+    val recomendados: List<Recomendacion> = emptyList(),
+)
+
+// ---------------- Tu socio: recomendaciones del grafo y plan del día ----------------
+
+@Serializable
+data class OfertaGrafo(
+    val id: Long, val nombre: String, val foto: String? = null,
+    @SerialName("precio_c") val precioC: Long = 0, @SerialName("precio_mayoreo_c") val precioMayoreoC: Long = 0,
+    @SerialName("minimo_mayoreo") val minimoMayoreo: Long = 0, val unidad: String = "pza", val disponible: Long? = null,
+)
+
+@Serializable
+data class Recomendacion(
+    /** surtir | nuevo | proveedor | vender | exclusivo */
+    val tipo: String, val titulo: String, val motivo: String = "",
+    val cantidad: Long = 0, val ganancia: Long = 0,
+    val oferta: OfertaGrafo? = null, val tienda: TiendaCorta? = null,
+    @SerialName("distancia_km") val distanciaKm: Double? = null,
+) {
+    val clave: String get() = "$tipo:${oferta?.id}:${tienda?.id}"
+    /** Como tarjeta de la red, para negociar la oferta. */
+    fun comoResultado(): ResultadoRed? = oferta?.let { o ->
+        ResultadoRed(
+            tipo = "producto", id = o.id, titulo = o.nombre, detalle = motivo, precioC = o.precioC,
+            precioMayoreoC = o.precioMayoreoC, minimoMayoreo = o.minimoMayoreo, unidad = o.unidad, disponible = o.disponible,
+            tienda = tienda, distanciaKm = distanciaKm, motivo = motivo, gananciaPct = ganancia, foto = o.foto,
+        )
+    }
+}
+
+@Serializable
+data class CifraPlan(val etiqueta: String, val valor: String, val detalle: String = "", val tono: String = "")
+
+@Serializable
+data class AlertaPlan(val tipo: String, val titulo: String, val texto: String, val accion: String = "")
+
+@Serializable
+data class PlanAsesor(
+    val saludo: String = "", val resumen: String = "", val cifras: List<CifraPlan> = emptyList(),
+    val alertas: List<AlertaPlan> = emptyList(), val recomendaciones: List<Recomendacion> = emptyList(),
+    val consejo: String = "", val grafo: Boolean = false, val preguntas: List<String> = emptyList(),
 )
 
 // ---------------- Vender al mayoreo (con audiencia) ----------------
@@ -429,6 +472,7 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
     suspend fun asesor(): ConversacionAsesor = get("/asesor")
     suspend fun preguntar(m: String): RespuestaAsesor = post("/asesor", Pregunta(m))
     suspend fun borrarAsesor() { llamar(HttpMethod.Delete, "/asesor") }
+    suspend fun planAsesor(): PlanAsesor = get("/asesor/plan")
 
     // Inicio y chats
     suspend fun inicio(): Inicio = get("/inicio")

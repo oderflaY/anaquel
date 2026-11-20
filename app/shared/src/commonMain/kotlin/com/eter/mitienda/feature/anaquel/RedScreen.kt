@@ -64,9 +64,10 @@ private val sugerenciasAsesor = listOf(
 )
 
 internal fun LazyListScope.asesor(st: AnaquelUiState, vm: AnaquelViewModel, negociar: (ResultadoRed) -> Unit) {
+    st.plan?.let { planSocio(it, vm, negociar) }
     item(key = "asesor-cab") {
         Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceSm)) {
-            T("Conoce tu inventario, tus ventas y la temporada de tu giro, y busca por ti en la red.", secundario = true)
+            if (st.plan == null) T("Conoce tu inventario, tus ventas y la temporada de tu giro, y busca por ti en la red.", secundario = true)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Etiqueta(if (st.motorAsesor == "ia") "Con IA (Claude)" else "Asesor básico, sin IA")
                 Spacer(Modifier.weight(1f))
@@ -79,18 +80,18 @@ internal fun LazyListScope.asesor(st: AnaquelUiState, vm: AnaquelViewModel, nego
         item(key = "asesor-vacio") {
             NeumorphicCard(Modifier.fillMaxWidth()) {
                 T("¿En qué te ayudo hoy?", negritas = true)
-                T("Pregúntame qué comprar para la temporada, cómo va tu negocio o dime qué buscas y lo encuentro en la red.", secundario = true)
+                T("Pregúntame qué te conviene comprar, cómo va tu negocio o dime qué buscas y lo encuentro en la red.", secundario = true)
             }
         }
     }
     items(st.asesor.orEmpty(), key = { "am-" + it.id }) { m -> BurbujaAsesor(m, negociar) }
     st.pensando?.let { q ->
         item(key = "asesor-q") { BurbujaUsuario(q) }
-        item(key = "asesor-pensando") { NeumorphicCard(Modifier.fillMaxWidth()) { T("Revisando tu negocio y la red…", secundario = true) } }
+        item(key = "asesor-pensando") { NeumorphicCard(Modifier.fillMaxWidth()) { T("Tu socio está revisando tus números y la red…", secundario = true) } }
     }
     item(key = "asesor-sug") {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
-            items(sugerenciasAsesor) { s -> NeumorphicChip(s, selected = false, onClick = { vm.preguntar(s) }) }
+            items(st.plan?.preguntas?.takeIf { it.isNotEmpty() } ?: sugerenciasAsesor) { s -> NeumorphicChip(s, selected = false, onClick = { vm.preguntar(s) }) }
         }
     }
     item(key = "asesor-input") {

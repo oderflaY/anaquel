@@ -23,6 +23,7 @@ import RedPublica from './pages/RedPublica'
 
 // El 3D (three.js) se baja solo cuando se abre.
 const Bodega3D = lazy(() => import('./pages/Bodega3D'))
+const Grafo = lazy(() => import('./pages/Grafo'))
 // El mercado (servicios en services/) también se baja solo cuando se abre.
 const Mercado = lazy(() => import('./mercado/Mercado'))
 
@@ -77,6 +78,7 @@ export default function App() {
         : camino === '/panel/red' ? <Red sesion={s} consulta={ruta.split('?')[1] ?? ''} />
         : camino === '/panel/asesor' ? <Asesor sesion={s} />
         : camino === '/panel/bodega' ? <Bodega3D sesion={s} />
+        : camino === '/panel/grafo' ? <Grafo />
         : camino === '/panel/vitrina' ? <Vitrina sesion={s} />
         : camino === '/panel/avisos' ? <Avisos sesion={s} />
         : camino === '/panel/anaqueles' ? <Anaqueles sesion={s} />

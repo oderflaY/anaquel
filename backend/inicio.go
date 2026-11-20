@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -56,6 +57,8 @@ type Inicio struct {
 	Tiendas      []TiendaZona      `json:"tiendas"`
 	ChatsSinLeer int               `json:"chats_sin_leer"`
 	Pendientes   int               `json:"tratos_pendientes"`
+	// Lo que recomienda el grafo de la red (Neo4j); vacío si el grafo no está.
+	Recomendados []Recomendacion `json:"recomendados"`
 }
 
 func costoUnitario(r Resultado) int64 {
@@ -81,7 +84,7 @@ func (a *App) inicio(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) datosInicio(yo int64) (Inicio, error) {
 	lat, lng := a.coordsDe(yo)
-	out := Inicio{Proveedores: []ProveedorGrande{}, ParaSurtir: []SurtirInicio{}, Convienen: []OfertaInicio{}, Promociones: []Resultado{}, Buscan: []Resultado{}, Tiendas: []TiendaZona{}}
+	out := Inicio{Recomendados: []Recomendacion{}, Proveedores: []ProveedorGrande{}, ParaSurtir: []SurtirInicio{}, Convienen: []OfertaInicio{}, Promociones: []Resultado{}, Buscan: []Resultado{}, Tiendas: []TiendaZona{}}
 
 	var nombre, giro string
 	a.db.QueryRow("SELECT nombre, giro FROM tiendas WHERE id = ?", yo).Scan(&nombre, &giro)
@@ -267,6 +270,12 @@ func (a *App) datosInicio(yo int64) (Inicio, error) {
 			}
 		}
 		out.Proveedores = out.Proveedores[:n]
+	}
+	if rs, err := a.recomendacionesGrafo(context.Background(), yo); err == nil {
+		if len(rs) > 10 {
+			rs = rs[:10]
+		}
+		out.Recomendados = append(out.Recomendados, rs...)
 	}
 	return out, nil
 }

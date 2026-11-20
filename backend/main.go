@@ -22,6 +22,7 @@ type App struct {
 	vision Vision
 	claude *clienteClaude // nil = asesor básico (sin llave de Anthropic)
 	local  *modeloLocal   // modelo ligero en llama.cpp (LLM_URL); nil = sin él
+	grafo  *Grafo         // Neo4j con el clon de la red (NEO4J_URL); nil = sin grafo
 }
 
 func env(k, def string) string {
@@ -45,6 +46,7 @@ func main() {
 		vision: nuevaVision(),
 		claude: nuevoClaude(),
 		local:  nuevoModeloLocal(),
+		grafo:  nuevoGrafo(),
 	}
 	if env("DATOS_DEMO", "1") == "1" {
 		if err := app.sembrarDemo(); err != nil {
@@ -55,6 +57,7 @@ func main() {
 		}
 		app.prepararDemoVisual()
 	}
+	go app.vigilarGrafo()
 	addr := env("ADDR", ":8080")
 	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v, modelo local: %v)", addr, app.vision.Nombre(), app.claude != nil, app.local != nil)
 	srv := &http.Server{
@@ -136,6 +139,10 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("GET /api/tiendas/{id}/catalogo", a.conTienda(a.catalogoDe))
 	m.HandleFunc("GET /api/tiendas/{id}/perfil", a.conTienda(a.perfilTienda))
 	m.HandleFunc("GET /api/mayoreo", a.conTienda(a.verMayoreo))
+	m.HandleFunc("GET /api/grafo/recomendaciones", a.conTienda(a.verRecomendaciones))
+	m.HandleFunc("GET /api/grafo/mapa", a.conTienda(a.mapaGrafo))
+	m.HandleFunc("GET /api/grafo/estado", a.conTienda(a.estadoGrafo))
+	m.HandleFunc("GET /api/asesor/plan", a.conTienda(a.planAsesor))
 	m.HandleFunc("PUT /api/mayoreo/{id}", a.conTienda(a.guardarMayoreo))
 	m.HandleFunc("GET /api/notificaciones", a.conTienda(a.notificaciones))
 	m.HandleFunc("GET /api/avisos", a.conTienda(a.listarAvisos))
