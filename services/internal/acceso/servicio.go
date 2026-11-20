@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"anaquel/servicios/internal/plataforma"
@@ -43,7 +44,10 @@ type Config struct {
 const (
 	duracionInactiva = 12 * time.Hour
 	duracionMaxima   = 7 * 24 * time.Hour
-	refrescoUso      = 5 * time.Minute
+	// App móvil: 14 días sin uso / 60 días máximo.
+	duracionInactivaApp = 14 * 24 * time.Hour
+	duracionMaximaApp   = 60 * 24 * time.Hour
+	refrescoUso         = 5 * time.Minute
 )
 
 type Servicio struct {
@@ -148,14 +152,36 @@ type ctxSesion struct{}
 
 func sesionDe(r *http.Request) sesion { return r.Context().Value(ctxSesion{}).(sesion) }
 
+// esApp: la petición viene de la app nativa, no de un navegador. Los
+// navegadores siempre mandan Origin o Sec-Fetch-* en fetch/POST y JavaScript no
+// puede quitarlas; así un script en la web nunca recibe un token en el cuerpo.
+func esApp(r *http.Request) bool {
+	return r.Header.Get("X-Cliente") == "app-anaquel" && r.Header.Get("Origin") == "" &&
+		r.Header.Get("Sec-Fetch-Site") == "" && r.Header.Get("Sec-Fetch-Mode") == ""
+}
+
+// tokenDe toma el token de la cookie (web) o de "Authorization: Bearer" (app).
+func (s *Servicio) tokenDe(r *http.Request) string {
+	if c, err := r.Cookie(s.nombreCookie()); err == nil && c.Value != "" {
+		if len(c.Value) > 128 {
+			return ""
+		}
+		return c.Value
+	}
+	if t, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok && len(t) <= 128 {
+		return strings.TrimSpace(t)
+	}
+	return ""
+}
+
 func (s *Servicio) conSesion(regla plataforma.Regla, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie(s.nombreCookie())
-		if err != nil || c.Value == "" || len(c.Value) > 128 {
+		tok := s.tokenDe(r)
+		if tok == "" {
 			plataforma.Manejar(w, r, nil, plataforma.FalloClave(401, "sin_sesion", "Inicia sesión para continuar"))
 			return
 		}
-		th := hashToken(c.Value)
+		th := hashToken(tok)
 		cu, err := s.cuentaDeSesion(r.Context(), th)
 		if err != nil {
 			s.borrarCookie(w)
@@ -177,8 +203,9 @@ func (s *Servicio) cuentaDeSesion(ctx context.Context, th []byte) (cuenta, error
 	var c cuenta
 	var ultimo time.Time
 	err := s.bd.QueryRow(ctx, `SELECT `+columnasCuenta+`, s.ultimo_uso FROM sesiones s JOIN cuentas c ON c.id = s.cuenta_id
-		WHERE s.token_hash = $1 AND s.expira > now() AND s.ultimo_uso > now() - make_interval(secs => $2)`,
-		th, duracionInactiva.Seconds()).Scan(append(c.campos(), &ultimo)...)
+		WHERE s.token_hash = $1 AND s.expira > now()
+			AND s.ultimo_uso > now() - make_interval(secs => CASE WHEN s.tipo = 'app' THEN $3::float8 ELSE $2::float8 END)`,
+		th, duracionInactiva.Seconds(), duracionInactivaApp.Seconds()).Scan(append(c.campos(), &ultimo)...)
 	if err != nil {
 		return c, err
 	}
@@ -191,16 +218,30 @@ func (s *Servicio) cuentaDeSesion(ctx context.Context, th []byte) (cuenta, error
 	return c, nil
 }
 
-func (s *Servicio) crearSesion(ctx context.Context, cuentaID int64, agente string) (string, error) {
+func (s *Servicio) crearSesion(ctx context.Context, cuentaID int64, agente string, app bool) (string, error) {
 	token := plataforma.Aleatorio(32) // 256 bits
 	if len(agente) > 120 {
 		agente = agente[:120]
 	}
-	_, err := s.bd.Exec(ctx, `INSERT INTO sesiones (token_hash, cuenta_id, expira, agente) VALUES ($1, $2, now() + make_interval(secs => $3), $4)`,
-		hashToken(token), cuentaID, duracionMaxima.Seconds(), aUTF8(agente))
+	tipo, dura := "web", duracionMaxima
+	if app {
+		tipo, dura = "app", duracionMaximaApp
+	}
+	_, err := s.bd.Exec(ctx, `INSERT INTO sesiones (token_hash, cuenta_id, expira, agente, tipo) VALUES ($1, $2, now() + make_interval(secs => $3), $4, $5)`,
+		hashToken(token), cuentaID, dura.Seconds(), aUTF8(agente), tipo)
 	// Limpieza oportunista de sesiones vencidas.
 	_, _ = s.bd.Exec(ctx, "DELETE FROM sesiones WHERE expira < now() - interval '1 day'")
 	return token, err
+}
+
+// entregarSesion: al navegador como cookie; a la app, en el cuerpo (una sola vez).
+func (s *Servicio) entregarSesion(w http.ResponseWriter, r *http.Request, token string, cuerpo map[string]any) {
+	if esApp(r) {
+		cuerpo["token"] = token
+	} else {
+		s.ponerCookie(w, token)
+	}
+	plataforma.Manejar(w, r, cuerpo, nil)
 }
 
 // ---- bitácora ----

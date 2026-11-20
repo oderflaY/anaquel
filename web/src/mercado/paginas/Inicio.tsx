@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ir } from '../../router'
-import { api, type Categoria, type Pagina, type Publicacion } from '../api'
+import { api, intercalar, type Categoria, type Espacios, type Pagina, type Publicacion } from '../api'
 import { Icono, ICONO_CATEGORIA } from '../iconos'
-import { Boton, Esqueleto, EsqueletoRejilla, EstadoError, EstadoVacio, mensajeDe, TarjetaProducto, useConsulta, useTitulo } from '../ui'
+import { BannerPatrocinado, Boton, Esqueleto, EsqueletoRejilla, EstadoError, EstadoVacio, mensajeDe, TarjetaProducto, useConsulta, useTitulo } from '../ui'
 
 export default function Inicio({ q, categoria }: { q: string; categoria: string }) {
   useTitulo(q ? `Buscar «${q}»` : 'Explorar')
@@ -24,6 +24,13 @@ export default function Inicio({ q, categoria }: { q: string; categoria: string 
     return `/mercado/publicaciones?${p}`
   }
   const lista = useConsulta((s) => api.get<Pagina<Publicacion>>(consulta(), s), [q, categoria])
+  // Anuncios: los decide el servidor (mismo orden en web y app). Si fallan, el catálogo sigue igual.
+  const anuncios = useConsulta((s) => {
+    const p = new URLSearchParams()
+    if (q) p.set('q', q)
+    if (categoria) p.set('categoria', categoria)
+    return api.get<Espacios>(`/mercado/promociones/espacios?${p}`, s).catch(() => ({ banner: null, productos: [] }) as Espacios)
+  }, [q, categoria])
   useEffect(() => { setTexto(q) }, [q])
 
   const navegar = (nq: string, ncat: string, reemplazar = false) => {
@@ -63,7 +70,9 @@ export default function Inicio({ q, categoria }: { q: string; categoria: string 
     return () => o.disconnect()
   }) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const items = [...(lista.datos?.items ?? []), ...mas]
+  const organicos = [...(lista.datos?.items ?? []), ...mas]
+  const items = intercalar(organicos, anuncios.datos?.productos ?? [])
+  const banner = anuncios.datos?.banner
   const nombreCat = cats.datos?.find((c) => c.clave === categoria)?.nombre
 
   return (
@@ -99,7 +108,8 @@ export default function Inicio({ q, categoria }: { q: string; categoria: string 
           <section aria-labelledby="t-productos">
             <h2 id="t-productos" className="sr-only">Productos</h2>
             <p className="sr-only" role="status">{items.length} productos{siguiente ? ', hay más' : ''}</p>
-            <div className="m-rejilla">{items.map((p) => <TarjetaProducto key={p.id} p={p} />)}</div>
+            {banner && <BannerPatrocinado b={banner} />}
+            <div className="m-rejilla">{items.map((p) => <TarjetaProducto key={('promo_id' in p ? 'a' : 'o') + p.id} p={p} promo={'promo_id' in p ? p.promo_id : undefined} />)}</div>
             {siguiente && (
               <div className="m-cargar-mas" ref={centinela}>
                 {errorMas ? <Boton variante="secundario" onClick={cargarMas}>Reintentar</Boton>

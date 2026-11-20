@@ -32,7 +32,7 @@ func TestAutenticacion(t *testing.T) {
 			sort.Slice(ts, func(i, j int) bool { return ts[i] < ts[j] })
 			return ts[2]
 		}
-		existe, noExiste := medir("textiles@anaquel.mx"), medir("x-"+time.Now().Format("150405")+"@anaquel.mx")
+		existe, noExiste := medir("revision@anaquel.mx"), medir("x-"+time.Now().Format("150405")+"@anaquel.mx")
 		r := float64(existe) / float64(noExiste)
 		t.Logf("mediana existe=%v no existe=%v (razón %.2f)", existe, noExiste, r)
 		if r < 0.5 || r > 2 {
@@ -180,5 +180,35 @@ func TestAutenticacion(t *testing.T) {
 				t.Errorf("se permitió: %s", sql)
 			}
 		}
+	})
+
+	t.Run("app nativa: token Bearer solo fuera del navegador", func(t *testing.T) {
+		app := map[string]string{"X-Cliente": "app-anaquel"}
+		c := nuevo(t)
+		r := c.pedir("POST", "/acceso/entrar", map[string]string{"email": "demo@anaquel.mx", "password": "demo1234"}, app)
+		esperar(t, r, 200)
+		tok, _ := r.json()["token"].(string)
+		if len(tok) != 64 || r.cab.Get("Set-Cookie") != "" {
+			t.Fatalf("la app debe recibir el token en el cuerpo y sin cookie: token=%d cookie=%q", len(tok), r.cab.Get("Set-Cookie"))
+		}
+		bearer := map[string]string{"Authorization": "Bearer " + tok}
+		x := nuevo(t)
+		esperar(t, x.pedir("GET", "/mercado/publicaciones", nil, bearer), 200)
+		esperar(t, x.pedir("GET", "/acceso/yo", nil, bearer), 200)
+		// Un navegador (con Origin o Sec-Fetch-*) nunca recibe el token en el cuerpo.
+		for _, extra := range []map[string]string{{"Origin": base}, {"Sec-Fetch-Site": "same-origin"}, {"Sec-Fetch-Mode": "cors"}} {
+			cab := map[string]string{"X-Cliente": "app-anaquel"}
+			for k, v := range extra {
+				cab[k] = v
+			}
+			r := nuevo(t).pedir("POST", "/acceso/entrar", map[string]string{"email": "demo@anaquel.mx", "password": "demo1234"}, cab)
+			if _, hay := r.json()["token"]; hay {
+				t.Errorf("con %v el token salió en el cuerpo", extra)
+			}
+		}
+		// Salir con Bearer revoca el token.
+		esperar(t, x.pedir("POST", "/acceso/salir", map[string]any{}, bearer), 200)
+		esperar(t, nuevo(t).pedir("GET", "/mercado/publicaciones", nil, bearer), 401)
+		esperar(t, nuevo(t).pedir("GET", "/mercado/publicaciones", nil, map[string]string{"Authorization": "Bearer " + strings.Repeat("a", 64)}), 401)
 	})
 }

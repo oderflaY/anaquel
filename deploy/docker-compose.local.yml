@@ -1,0 +1,24 @@
+# Ajustes para correr todo en tu computadora (sin HTTPS ni proxy enfrente):
+#
+#   docker compose -f deploy/docker-compose.servicios.yml -f deploy/docker-compose.local.yml --env-file deploy/.env up -d --build
+#
+# Abre http://localhost:8080/anaquel/mercado. Desde el celular o el emulador usa
+# la IP de esta computadora (el emulador de Android la ve como 10.0.2.2).
+services:
+  nucleo:
+    environment:
+      DATOS_DEMO: "1"
+  acceso:
+    environment:
+      COOKIE_INSEGURA: "1" # http://, solo en local
+  pasarela:
+    environment:
+      COOKIE_INSEGURA: "1"
+      CONFIAR_PROXY: "0"
+      HSTS: "0"
+    ports:
+      - "8080:8080"
+
+networks:
+  rutacree_edge:
+    external: false

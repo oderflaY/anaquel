@@ -70,6 +70,7 @@ func (s *Servicio) SembrarDemo(ctx context.Context) {
 	}
 	var hay bool
 	_ = s.bd.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM publicaciones)").Scan(&hay)
+	defer s.promosDemo(ctx)
 	if hay {
 		return
 	}
@@ -126,4 +127,33 @@ func (s *Servicio) SembrarDemo(ctx context.Context) {
 		return
 	}
 	slog.Info("demo: catálogo del mercado creado", "publicaciones", len(catalogoDemo))
+}
+
+// promosDemo crea los anuncios de ejemplo si todavía no hay ninguno.
+func (s *Servicio) promosDemo(ctx context.Context) {
+	var hay bool
+	_ = s.bd.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM promociones)").Scan(&hay)
+	if hay {
+		return
+	}
+	err := s.enTx(ctx, 0, "sistema", func(tx pgx.Tx) error {
+		filas, err := tx.Query(ctx, "SELECT titulo, min(id) FROM publicaciones GROUP BY titulo")
+		if err != nil {
+			return err
+		}
+		pubs := map[string]int64{}
+		for filas.Next() {
+			var t string
+			var id int64
+			if err := filas.Scan(&t, &id); err != nil {
+				return err
+			}
+			pubs[t] = id
+		}
+		filas.Close()
+		return s.sembrarPromosDemo(ctx, tx, pubs)
+	})
+	if err != nil {
+		slog.Error("demo: anuncios", "err", err)
+	}
 }

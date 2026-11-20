@@ -63,6 +63,14 @@ func (s *Servicio) Rutas() http.Handler {
 	m.HandleFunc("POST /publicaciones/{id}/fotos", vendedor(s.subirFoto))
 	m.HandleFunc("DELETE /publicaciones/{id}/fotos/{foto}", vendedor(s.borrarFoto))
 
+	// Publicidad de negocios
+	m.HandleFunc("GET /promociones/planes", cliente(s.planes))
+	m.HandleFunc("GET /promociones/espacios", cliente(s.espacios))
+	m.HandleFunc("POST /promociones/{id}/clic", cliente(s.clicPromo))
+	m.HandleFunc("GET /promociones/mias", vendedor(s.misPromos))
+	m.HandleFunc("POST /promociones", vendedor(s.crearPromo))
+	m.HandleFunc("POST /promociones/{id}/estado", vendedor(s.estadoPromo))
+
 	m.HandleFunc("POST /ordenes", cliente(s.crearOrden))
 	m.HandleFunc("GET /ordenes", cliente(s.listarOrdenes))
 	m.HandleFunc("GET /ordenes/{id}", cliente(s.verOrden))

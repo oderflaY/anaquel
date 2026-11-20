@@ -277,23 +277,22 @@ func (s *Servicio) entrar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Contra fijación de sesión: la sesión que traía (si traía) se revoca y se crea una nueva.
-	if vieja, err := r.Cookie(s.nombreCookie()); err == nil && vieja.Value != "" {
-		_, _ = s.bd.Exec(ctx, "DELETE FROM sesiones WHERE token_hash = $1", hashToken(vieja.Value))
+	if vieja := s.tokenDe(r); vieja != "" {
+		_, _ = s.bd.Exec(ctx, "DELETE FROM sesiones WHERE token_hash = $1", hashToken(vieja))
 	}
-	token, err := s.crearSesion(ctx, c.ID, r.UserAgent())
+	token, err := s.crearSesion(ctx, c.ID, r.UserAgent(), esApp(r))
 	if err != nil {
 		plataforma.Manejar(w, r, nil, err)
 		return
 	}
-	s.ponerCookie(w, token)
-	s.anotar(ctx, r, &c.ID, "entrar", nil)
-	plataforma.Manejar(w, r, map[string]any{"cuenta": s.publica(c)}, nil)
+	s.anotar(ctx, r, &c.ID, "entrar", map[string]any{"app": esApp(r)})
+	s.entregarSesion(w, r, token, map[string]any{"cuenta": s.publica(c)})
 }
 
 func (s *Servicio) salir(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(s.nombreCookie()); err == nil && c.Value != "" && len(c.Value) <= 128 {
+	if tok := s.tokenDe(r); tok != "" {
 		var id *int64
-		_ = s.bd.QueryRow(r.Context(), "DELETE FROM sesiones WHERE token_hash = $1 RETURNING cuenta_id", hashToken(c.Value)).Scan(&id)
+		_ = s.bd.QueryRow(r.Context(), "DELETE FROM sesiones WHERE token_hash = $1 RETURNING cuenta_id", hashToken(tok)).Scan(&id)
 		if id != nil {
 			s.anotar(r.Context(), r, id, "salir", nil)
 		}
@@ -429,25 +428,24 @@ func (s *Servicio) registro(w http.ResponseWriter, r *http.Request) {
 		plataforma.Manejar(w, r, nil, err)
 		return
 	}
-	token, err := s.crearSesion(ctx, nueva.ID, r.UserAgent())
+	token, err := s.crearSesion(ctx, nueva.ID, r.UserAgent(), esApp(r))
 	if err != nil {
 		plataforma.Manejar(w, r, nil, err)
 		return
 	}
-	s.ponerCookie(w, token)
 	s.anotar(ctx, r, &nueva.ID, "registro", nil)
-	plataforma.Manejar(w, r, map[string]any{"cuenta": s.publica(nueva)}, nil)
+	s.entregarSesion(w, r, token, map[string]any{"cuenta": s.publica(nueva)})
 }
 
 // sesionActual responde 200 siempre: {cuenta} o {cuenta: null}. La web la usa
 // al abrir para decidir qué mostrar sin generar errores 401 en la consola.
 func (s *Servicio) sesionActual(w http.ResponseWriter, r *http.Request) {
-	c, err := r.Cookie(s.nombreCookie())
-	if err != nil || c.Value == "" || len(c.Value) > 128 {
+	tok := s.tokenDe(r)
+	if tok == "" {
 		plataforma.Manejar(w, r, map[string]any{"cuenta": nil}, nil)
 		return
 	}
-	cu, err := s.cuentaDeSesion(r.Context(), hashToken(c.Value))
+	cu, err := s.cuentaDeSesion(r.Context(), hashToken(tok))
 	if err != nil {
 		s.borrarCookie(w)
 		plataforma.Manejar(w, r, map[string]any{"cuenta": nil}, nil)
@@ -547,7 +545,7 @@ func (s *Servicio) cambiarPass(w http.ResponseWriter, r *http.Request) {
 
 func (s *Servicio) listarSesiones(w http.ResponseWriter, r *http.Request) {
 	se := sesionDe(r)
-	filas, err := s.bd.Query(r.Context(), `SELECT token_hash = $2, creada, ultimo_uso, agente FROM sesiones
+	filas, err := s.bd.Query(r.Context(), `SELECT token_hash = $2, creada, ultimo_uso, agente, tipo FROM sesiones
 		WHERE cuenta_id = $1 AND expira > now() ORDER BY ultimo_uso DESC LIMIT 50`, se.cuenta.ID, se.tokenHash)
 	if err != nil {
 		plataforma.Manejar(w, r, nil, err)
@@ -558,10 +556,11 @@ func (s *Servicio) listarSesiones(w http.ResponseWriter, r *http.Request) {
 		Creada    time.Time `json:"creada"`
 		UltimoUso time.Time `json:"ultimo_uso"`
 		Agente    string    `json:"agente"`
+		Tipo      string    `json:"tipo"`
 	}
 	lista, err := pgx.CollectRows(filas, func(f pgx.CollectableRow) (fila, error) {
 		var x fila
-		return x, f.Scan(&x.Actual, &x.Creada, &x.UltimoUso, &x.Agente)
+		return x, f.Scan(&x.Actual, &x.Creada, &x.UltimoUso, &x.Agente, &x.Tipo)
 	})
 	plataforma.Manejar(w, r, lista, err)
 }

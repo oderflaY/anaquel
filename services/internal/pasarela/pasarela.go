@@ -194,8 +194,9 @@ func (p *Pasarela) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			plataforma.Manejar(w, r, nil, err)
 			return
 		}
-		// Los servicios de negocio no necesitan (ni deben ver) la cookie de sesión.
+		// Los servicios de negocio no necesitan (ni deben ver) la credencial de sesión.
 		r.Header.Del("Cookie")
+		r.Header.Del("Authorization")
 	}
 	id.IP = ip
 	r.Header.Set(plataforma.CabeceraIdentidad, p.firma.Firmar(id))
@@ -205,13 +206,19 @@ func (p *Pasarela) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // sesion pregunta al servicio de acceso de quién es la cookie.
 func (p *Pasarela) sesion(ctx context.Context, r *http.Request) (plataforma.Identidad, error) {
 	var id plataforma.Identidad
-	c, err := r.Cookie(acceso.NombreCookie(p.cfg.CookieSegura))
-	if err != nil || c.Value == "" {
+	// Navegador: cookie. App nativa: "Authorization: Bearer <token>".
+	token := ""
+	if c, err := r.Cookie(acceso.NombreCookie(p.cfg.CookieSegura)); err == nil {
+		token = c.Value
+	} else if t, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
+		token = strings.TrimSpace(t)
+	}
+	if token == "" || len(token) > 128 {
 		return id, plataforma.FalloClave(http.StatusUnauthorized, "sin_sesion", "Inicia sesión para continuar")
 	}
 	ctx, cancelar := context.WithTimeout(ctx, 5*time.Second)
 	defer cancelar()
-	err = p.acceso.Llamar(ctx, http.MethodPost, "/interno/sesion", map[string]string{"token": c.Value}, &id)
+	err := p.acceso.Llamar(ctx, http.MethodPost, "/interno/sesion", map[string]string{"token": token}, &id)
 	var e plataforma.ErrHTTP
 	if errors.As(err, &e) {
 		return id, err

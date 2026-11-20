@@ -72,6 +72,26 @@ export type Reel = {
   vendedor: { nombre: string; slug: string }; publicacion: { id: number; titulo: string; precio_c: number; unidad: Unidad } | null
   es_mio: boolean; creado: string
 }
+export type Patrocinado = Publicacion & { promo_id: number; plan: 'basico' | 'destacado' | 'premium'; mensaje: string }
+export type Espacios = { banner: Patrocinado | null; productos: Patrocinado[] }
+export type Plan = { clave: Patrocinado['plan']; nombre: string; precio_semana_c: number; banner: boolean; en_busquedas: boolean; descripcion: string }
+export type MiPromo = {
+  id: number; plan: Plan['clave']; plan_nombre: string; mensaje: string; semanas: number; costo_c: number
+  publicacion: { id: number; titulo: string; foto: Foto | null; categoria: string }
+  inicio: string; fin: string; estado: 'activa' | 'pausada'; vigente: boolean; impresiones: number; clics: number
+}
+/** Posiciones fijas de los patrocinados en la cuadrícula: 1, 9 y 17 (nunca juntos). */
+export const POSICIONES_PATROCINADAS = [0, 8, 16]
+/** Intercala los patrocinados sin duplicar productos y sin pasarse del final de la lista. */
+export function intercalar<T extends { id: number }>(organicos: T[], patrocinados: (T & { promo_id: number })[]): (T | (T & { promo_id: number }))[] {
+  const ids = new Set(patrocinados.map((p) => p.id))
+  const lista: (T | (T & { promo_id: number }))[] = organicos.filter((p) => !ids.has(p.id))
+  patrocinados.forEach((p, i) => {
+    const pos = Math.min(POSICIONES_PATROCINADAS[i] ?? lista.length, lista.length)
+    lista.splice(pos, 0, p)
+  })
+  return lista
+}
 export type Proveedor = { clave: 'mercadopago' | 'clip' | 'simulador'; nombre: string }
 export type Terminal = { id: number; proveedor: Proveedor['clave']; marca: string; nombre: string; dispositivo: string; creada: string }
 export type Cobro = {

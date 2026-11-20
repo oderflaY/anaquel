@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import type { SesionMercado } from '../Mercado'
 import { Enlace, ir } from '../../router'
-import { api, fecha, pesos, unidad, type Proveedor, type Publicacion, type Reel, type Registro, type Terminal } from '../api'
+import { api, fecha, pesos, unidad, type MiPromo, type Plan, type Proveedor, type Publicacion, type Reel, type Registro, type Terminal } from '../api'
 import { Icono } from '../iconos'
 import { Alerta, Boton, BotonIcono, Campo, Cargando, EnlaceBoton, Esqueleto, EsqueletoLista, EstadoError, EstadoVacio, Insignia, MediaProducto, mensajeDe, Modal, useConsulta, useTitulo, avisar } from '../ui'
 
-const PESTANAS: [string, string][] = [['publicaciones', 'Publicaciones'], ['reels', 'Reels'], ['terminales', 'Terminales'], ['ingresos', 'Cobros recibidos']]
+const PESTANAS: [string, string][] = [['publicaciones', 'Publicaciones'], ['publicidad', 'Publicidad'], ['reels', 'Reels'], ['terminales', 'Terminales'], ['ingresos', 'Cobros recibidos']]
 
 export default function Vender({ pestana }: { sesion: SesionMercado; pestana: string }) {
   useTitulo('Vender')
@@ -23,7 +23,7 @@ export default function Vender({ pestana }: { sesion: SesionMercado; pestana: st
         ))}
       </div>
       <div id="panel-vender" role="tabpanel" aria-labelledby={`tab-${actual}`} className="m-pila">
-        {actual === 'publicaciones' ? <MisPublicaciones /> : actual === 'reels' ? <MisReels /> : actual === 'terminales' ? <MisTerminales /> : <Ingresos />}
+        {actual === 'publicaciones' ? <MisPublicaciones /> : actual === 'publicidad' ? <Publicidad /> : actual === 'reels' ? <MisReels /> : actual === 'terminales' ? <MisTerminales /> : <Ingresos />}
       </div>
     </div>
   )
@@ -250,6 +250,115 @@ function Ingresos() {
             </li>
           ))}
         </ul>}
+    </div>
+  )
+}
+
+/** Publicidad del negocio: elegir plan, producto y semanas; ver cómo le va a cada anuncio. */
+function Publicidad() {
+  const planes = useConsulta((s) => api.get<Plan[]>('/mercado/promociones/planes', s), [])
+  const pubs = useConsulta((s) => api.get<Publicacion[]>('/mercado/mias', s), [])
+  const mias = useConsulta((s) => api.get<MiPromo[]>('/mercado/promociones/mias', s), [])
+  const [plan, setPlan] = useState<Plan['clave']>('destacado')
+  const [pub, setPub] = useState('')
+  const [semanas, setSemanas] = useState(2)
+  const [mensaje, setMensaje] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+  const [ocupado, setOcupado] = useState<string | null>(null)
+  const elegido = planes.datos?.find((p) => p.clave === plan)
+  const activas = pubs.datos?.filter((p) => p.estado === 'activa') ?? []
+
+  const anunciar = async (e: FormEvent) => {
+    e.preventDefault(); setErr(null)
+    if (!pub) return setErr('Elige el producto que quieres anunciar')
+    setOcupado('crear')
+    try {
+      const r = await api.post<{ id: number; costo_c: number }>('/mercado/promociones', { publicacion_id: Number(pub), plan, semanas, mensaje: mensaje.trim() })
+      avisar(`Anuncio activo por ${semanas} ${semanas === 1 ? 'semana' : 'semanas'} (${pesos(r.costo_c)})`)
+      setMensaje(''); setPub(''); mias.recargar()
+    } catch (ex) { setErr(mensajeDe(ex)) } finally { setOcupado(null) }
+  }
+  const alternar = async (m: MiPromo) => {
+    setOcupado(`e${m.id}`)
+    try {
+      await api.post(`/mercado/promociones/${m.id}/estado`, { estado: m.estado === 'activa' ? 'pausada' : 'activa' })
+      mias.recargar()
+    } catch (ex) { avisar(mensajeDe(ex), 'error') } finally { setOcupado(null) }
+  }
+
+  return (
+    <div className="m-pila">
+      <form className="m-card m-pila" onSubmit={anunciar} noValidate aria-labelledby="t-anunciar">
+        <div className="m-pila-chica">
+          <h2 id="t-anunciar">Anuncia tu negocio</h2>
+          <p className="m-terciario">Tu producto aparece como «Patrocinado» en lugares fijos del mercado, sin tapar nada. Pagas por semana.</p>
+        </div>
+        {planes.cargando ? <Cargando><div className="m-planes">{[0, 1, 2].map((i) => <Esqueleto key={i} style={{ height: 150, borderRadius: 16 }} />)}</div></Cargando>
+          : planes.error ? <EstadoError error={planes.error} reintentar={planes.recargar} />
+          : (
+            <fieldset className="m-planes" style={{ border: 0, padding: 0, margin: 0 }}>
+              <legend className="sr-only">Plan</legend>
+              {planes.datos?.map((p) => (
+                <label key={p.clave} className="m-plan">
+                  <input type="radio" name="plan" value={p.clave} checked={plan === p.clave} onChange={() => setPlan(p.clave)} />
+                  <span className="m-fila m-entre"><b>{p.nombre}</b>{p.banner && <Insignia tono="acento">Banner</Insignia>}</span>
+                  <span className="m-plan-precio">{pesos(p.precio_semana_c)} <span className="m-terciario" style={{ fontWeight: 400 }}>/ semana</span></span>
+                  <span className="m-terciario">{p.descripcion}</span>
+                </label>
+              ))}
+            </fieldset>
+          )}
+        <div className="m-rejilla-campos">
+          <Campo etiqueta="Producto a anunciar">
+            {(p) => (
+              <select {...p} value={pub} onChange={(e) => setPub(e.target.value)} disabled={pubs.cargando}>
+                <option value="">{pubs.cargando ? 'Cargando…' : activas.length ? 'Elige uno' : 'No tienes productos activos'}</option>
+                {activas.map((x) => <option key={x.id} value={x.id}>{x.titulo}</option>)}
+              </select>
+            )}
+          </Campo>
+          <Campo etiqueta="Duración">
+            {(p) => (
+              <select {...p} value={semanas} onChange={(e) => setSemanas(Number(e.target.value))}>
+                {[1, 2, 4, 8, 12].map((n) => <option key={n} value={n}>{n} {n === 1 ? 'semana' : 'semanas'}</option>)}
+              </select>
+            )}
+          </Campo>
+          <Campo etiqueta="Mensaje del anuncio" opcional className="m-completo" ayuda={`${mensaje.length}/90 · Ej. «Gorras para tu evento desde 50 piezas»`}>
+            {(p) => <input {...p} maxLength={90} value={mensaje} onChange={(e) => setMensaje(e.target.value)} />}
+          </Campo>
+        </div>
+        {elegido && <div className="m-fila m-entre"><span className="m-secundario">Total</span><b style={{ fontSize: 'var(--texto-20)' }}>{pesos(elegido.precio_semana_c * semanas)}</b></div>}
+        <p className="m-terciario">Prototipo: el cobro del plan aún no se realiza; el anuncio se activa al momento.</p>
+        {err && <Alerta tipo="error">{err}</Alerta>}
+        <Boton type="submit" icono="etiqueta" cargando={ocupado === 'crear'} disabled={!activas.length}>Anunciar</Boton>
+      </form>
+
+      <h2>Mis anuncios</h2>
+      {mias.cargando ? <EsqueletoLista n={2} />
+        : mias.error ? <EstadoError error={mias.error} reintentar={mias.recargar} />
+        : !mias.datos?.length ? <EstadoVacio icono="etiqueta" titulo="Aún no anuncias nada" texto="Elige un plan arriba para que más negocios de Durango vean tus productos." />
+        : (
+          <ul className="m-lista" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {mias.datos.map((m) => {
+              const ctr = m.impresiones ? ((m.clics / m.impresiones) * 100).toFixed(1) : '0.0'
+              const estado = !m.vigente ? ['Terminó', 'neutro'] : m.estado === 'activa' ? ['Activo', 'exito'] : ['Pausado', 'aviso']
+              return (
+                <li key={m.id} className="m-renglon" style={{ flexWrap: 'wrap' }}>
+                  <div className="m-miniatura m-media"><MediaProducto foto={m.publicacion.foto} categoria={m.publicacion.categoria} conAlt={false} /></div>
+                  <div className="m-renglon-cuerpo" style={{ minWidth: 160 }}>
+                    <b>{m.publicacion.titulo}</b>
+                    <span className="m-terciario">Plan {m.plan_nombre} · hasta {fecha(m.fin)}</span>
+                    <span className="m-terciario">{m.impresiones.toLocaleString('es-MX')} vistas · {m.clics.toLocaleString('es-MX')} clics · {ctr} % de clics</span>
+                  </div>
+                  <Insignia tono={estado[1]}>{estado[0]}</Insignia>
+                  {m.vigente && <BotonIcono etiqueta={m.estado === 'activa' ? 'Pausar anuncio' : 'Reanudar anuncio'} icono={m.estado === 'activa' ? 'pausa' : 'play'}
+                    disabled={ocupado === `e${m.id}`} onClick={() => alternar(m)} />}
+                </li>
+              )
+            })}
+          </ul>
+        )}
     </div>
   )
 }

@@ -228,15 +228,17 @@ export function Existencias({ p }: { p: Pick<Publicacion, 'existencias' | 'unida
   return null
 }
 
-export function TarjetaProducto({ p }: { p: Publicacion }) {
+export function TarjetaProducto({ p, promo }: { p: Publicacion; promo?: number }) {
   const lugar = p.distancia_km != null ? `${p.vendedor.colonia} · ${p.distancia_km < 1 ? 'a menos de 1 km' : `a ${p.distancia_km.toLocaleString('es-MX')} km`}` : p.vendedor.colonia
   return (
-    <Enlace href={`/mercado/p/${p.id}`} className="m-producto">
+    <Enlace href={`/mercado/p/${p.id}`} className={`m-producto ${promo ? 'm-producto--patrocinado' : ''}`}
+      onClick={() => { if (promo) contarClic(promo) }}>
       <div className="m-media">
         <MediaProducto foto={p.foto} categoria={p.categoria} />
         <Existencias p={p} />
       </div>
       <div className="m-producto-cuerpo">
+        {promo ? <span className="m-patrocinado">Patrocinado</span> : null}
         <span className="m-precio">{pesos(p.precio_c)} <small>/ {unidad(p.unidad as Unidad)}</small></span>
         <h3 className="m-titulo-producto">{p.titulo}</h3>
         <span className="m-meta">{p.vendedor.nombre}</span>
@@ -253,4 +255,26 @@ export function Avatar({ nombre, grande }: { nombre: string; grande?: boolean })
 /** Título del documento (se lee al cambiar de página). */
 export function useTitulo(t: string) {
   useEffect(() => { document.title = `${t} · Anaquel Mercado` }, [t])
+}
+
+/** Cuenta el clic de un anuncio (no bloquea la navegación). */
+export function contarClic(promo: number) {
+  void fetch(`${import.meta.env.BASE_URL}api/mercado/promociones/${promo}/clic`, { method: 'POST', credentials: 'same-origin' }).catch(() => {})
+}
+
+/** Banner de «Negocio destacado» (plan Premium). Ocupa su propio renglón: nunca se encima con nada. */
+export function BannerPatrocinado({ b }: { b: import('./api').Patrocinado }) {
+  return (
+    <aside className="m-banner" aria-label={`Anuncio patrocinado de ${b.vendedor.nombre}`}>
+      <Enlace href={`/mercado/p/${b.id}`} className="m-banner-enlace" onClick={() => contarClic(b.promo_id)}>
+        <div className="m-banner-media m-media"><MediaProducto foto={b.foto} categoria={b.categoria} conAlt={false} /></div>
+        <div className="m-banner-cuerpo">
+          <span className="m-patrocinado">Patrocinado · {b.vendedor.nombre}</span>
+          <b className="m-banner-mensaje">{b.mensaje || b.titulo}</b>
+          <span className="m-meta">{b.titulo} · {pesos(b.precio_c)} / {unidad(b.unidad as Unidad)}</span>
+        </div>
+        <span className="m-boton m-boton--secundario m-boton--chico m-banner-accion" aria-hidden="true">Ver</span>
+      </Enlace>
+    </aside>
+  )
 }
