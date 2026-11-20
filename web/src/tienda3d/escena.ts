@@ -11,7 +11,7 @@ import {
   construirMueble, dibujarProducto, type ProductoDibujado, esCompartida, etiquetaPrecio, mat, persona, texturaLetrero, texturaPiso, texturaToldo,
 } from './modelos'
 import type { Ruta } from './ruta'
-import { calcularHuecos, estadoDe, huecoEntero, huella, type DatosBodega, type Hueco, type Lugar, type Mueble, type Plano } from './tipos'
+import { calcularHuecos, estadoDe, huecoEntero, huella, tramosPared, type DatosBodega, type Hueco, type Lugar, type Mueble, type Plano } from './tipos'
 
 export type Modo = 'normal' | 'existencia' | 'rotacion' | 'foto' | 'valor'
 export type Tema = 'light' | 'dark'
@@ -307,6 +307,41 @@ export class Tienda3D {
       cable.position.set(x, H - 0.12, z)
       this.sitio.add(cable)
     }
+
+    // Paredes interiores y columnas del armador.
+    const muroInt = this.matTema('muro', { transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+    const cristal = new THREE.MeshStandardMaterial({ color: 0xcfeaff, transparent: true, opacity: 0.25, roughness: 0.05, depthWrite: false })
+    const remate = mat(0x5d4b3a, { roughness: 0.7 })
+    for (const w of p.paredes ?? []) {
+      const alto = w.tipo === 'media' ? Math.min(w.alto || 1.2, 1.5) : Math.min(w.alto || H, H)
+      for (const [x1, z1, x2, z2] of tramosPared(w)) {
+        const L = Math.hypot(x2 - x1, z2 - z1)
+        if (L < 0.02) continue
+        const ang = -Math.atan2(z2 - z1, x2 - x1)
+        const muro = new THREE.Mesh(new THREE.BoxGeometry(L, alto, 0.12), w.tipo === 'cristal' ? cristal : muroInt)
+        muro.position.set((x1 + x2) / 2, alto / 2, (z1 + z2) / 2)
+        muro.rotation.y = ang
+        muro.castShadow = w.tipo !== 'cristal'
+        this.sitio.add(muro)
+        const tapa = new THREE.Mesh(new THREE.BoxGeometry(L, 0.04, 0.14), remate)
+        tapa.position.set((x1 + x2) / 2, alto, (z1 + z2) / 2)
+        tapa.rotation.y = ang
+        this.sitio.add(tapa)
+      }
+      // Marco de la puerta interior.
+      if (w.puerta > 0) {
+        const L = Math.hypot(w.x2 - w.x1, w.z2 - w.z1)
+        const cx = (w.x1 + w.x2) / 2, cz = (w.z1 + w.z2) / 2, ang = -Math.atan2(w.z2 - w.z1, w.x2 - w.x1)
+        if (L > w.puerta && alto > 2.2 && w.tipo !== 'media') {
+          const dintel = new THREE.Mesh(new THREE.BoxGeometry(w.puerta, alto - 2.1, 0.12), w.tipo === 'cristal' ? cristal : muroInt)
+          dintel.position.set(cx, 2.1 + (alto - 2.1) / 2, cz)
+          dintel.rotation.y = ang
+          this.sitio.add(dintel)
+        }
+      }
+    }
+    const concreto = mat(0xbdb6aa, { roughness: 0.9 })
+    for (const c of p.columnas ?? []) this.bloque(c.lado, H, c.lado, concreto, c.x, H / 2, c.z)
 
     // Áreas en el piso (probadores, andén…).
     for (const ar of p.areas) {

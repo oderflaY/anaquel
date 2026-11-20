@@ -21,6 +21,9 @@ type App struct {
 	web    string // build de la web (SPA)
 	vision Vision
 	claude *clienteClaude // nil = asesor básico (sin llave de Anthropic)
+	local  *modeloLocal   // modelo ligero en llama.cpp (LLM_URL); nil = sin él
+	grafo  *Grafo         // Neo4j con el clon de la red (NEO4J_URL); nil = sin grafo
+	stripe *stripeCli     // cobros en línea (STRIPE_SECRET_KEY); nil = página de pago de prueba
 }
 
 func env(k, def string) string {
@@ -43,6 +46,9 @@ func main() {
 		web:    env("WEB", "../web/dist"),
 		vision: nuevaVision(),
 		claude: nuevoClaude(),
+		local:  nuevoModeloLocal(),
+		grafo:  nuevoGrafo(),
+		stripe: stripeDesdeEnv(),
 	}
 	if env("DATOS_DEMO", "1") == "1" {
 		if err := app.sembrarDemo(); err != nil {
@@ -51,9 +57,11 @@ func main() {
 		if err := app.sembrarRed(); err != nil {
 			log.Println("demo red:", err)
 		}
+		app.prepararDemoVisual()
 	}
+	go app.vigilarGrafo()
 	addr := env("ADDR", ":8080")
-	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v)", addr, app.vision.Nombre(), app.claude != nil)
+	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v, modelo local: %v, Stripe: %v)", addr, app.vision.Nombre(), app.claude != nil, app.local != nil, app.stripe != nil)
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           app.rutas(),
@@ -122,6 +130,30 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("GET /api/tratos/{id}", a.conTienda(a.verTrato))
 	m.HandleFunc("POST /api/tratos/{id}/mensajes", a.conTienda(a.mensajeTrato))
 	m.HandleFunc("POST /api/tratos/{id}/{accion}", a.conTienda(a.accionTrato))
+	m.HandleFunc("GET /api/inicio", a.conTienda(a.inicio))
+	m.HandleFunc("GET /api/asesor/hoja", a.conTienda(a.hojaAsesor))
+	m.HandleFunc("GET /api/chats", a.conTienda(a.listarChats))
+	m.HandleFunc("POST /api/chats", a.conTienda(a.abrirChat))
+	m.HandleFunc("GET /api/chats/{id}", a.conTienda(a.verChat))
+	m.HandleFunc("POST /api/chats/{id}/mensajes", a.conTienda(a.escribirChat))
+	m.HandleFunc("POST /api/chats/{id}/pedido", a.conTienda(a.pedirDeChat))
+	m.HandleFunc("POST /api/chats/{id}/pedido/{msg}/{accion}", a.conTienda(a.accionPedido))
+	m.HandleFunc("GET /api/mapa", a.conTienda(a.mapa))
+	m.HandleFunc("GET /api/cobros/{id}", a.conTienda(a.verCobro))
+	m.HandleFunc("GET /api/cobros/{id}/prueba", a.pruebaCobro)
+	m.HandleFunc("POST /api/cobros/{id}/prueba", a.pruebaCobro)
+	m.HandleFunc("GET /api/cobros/{id}/vuelta", a.vueltaCobro)
+	m.HandleFunc("POST /api/cobros/stripe/webhook", a.webhookStripe)
+	m.HandleFunc("GET /api/tiendas/{id}/catalogo", a.conTienda(a.catalogoDe))
+	m.HandleFunc("GET /api/tiendas/{id}/perfil", a.conTienda(a.perfilTienda))
+	m.HandleFunc("GET /api/mayoreo", a.conTienda(a.verMayoreo))
+	m.HandleFunc("GET /api/grafo/recomendaciones", a.conTienda(a.verRecomendaciones))
+	m.HandleFunc("GET /api/grafo/mapa", a.conTienda(a.mapaGrafo))
+	m.HandleFunc("GET /api/grafo/estado", a.conTienda(a.estadoGrafo))
+	m.HandleFunc("GET /api/asesor/plan", a.conTienda(a.planAsesor))
+	m.HandleFunc("GET /api/pronostico", a.conTienda(a.verPronostico))
+	m.HandleFunc("PUT /api/mayoreo/{id}", a.conTienda(a.guardarMayoreo))
+	m.HandleFunc("GET /api/notificaciones", a.conTienda(a.notificaciones))
 	m.HandleFunc("GET /api/avisos", a.conTienda(a.listarAvisos))
 	m.HandleFunc("POST /api/avisos/leidos", a.conTienda(a.avisosLeidos))
 

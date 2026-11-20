@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.eter.mitienda.core.notifications.AvisosAnaquel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,5 +21,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             App((application as MiTiendaApplication).container)
         }
+    }
+
+    // Al salir de la app revisamos pronto, para no esperar los 15 minutos del ciclo.
+    override fun onStop() {
+        super.onStop()
+        AvisosAnaquel.revisarYa(this)
     }
 }

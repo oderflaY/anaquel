@@ -8,18 +8,13 @@ import com.eter.mitienda.data.sync.NearbyPeerSyncService
 import com.eter.mitienda.core.notifications.AndroidOrderReminderScheduler
 import com.eter.mitienda.di.AppContainer
 import com.eter.mitienda.di.AppContainerProvider
+import com.eter.mitienda.core.notifications.AvisosAnaquel
 
 /**
  * El contenedor vive en la Application y no en la Activity: al rotar la
  * pantalla la Activity se recrea, pero la conexión a la BD sigue siendo la misma.
  */
 class MiTiendaApplication : Application(), AppContainerProvider {
-
-    override fun onCreate() {
-        super.onCreate()
-        // El almacén seguro del mercado necesita el contexto de la app.
-        com.eter.mitienda.feature.mercado.ContextoMercado.app = this
-    }
 
     override val container: AppContainer by lazy {
         val databaseFiles = AndroidDatabaseFileStore(this)
@@ -30,5 +25,12 @@ class MiTiendaApplication : Application(), AppContainerProvider {
             reminderScheduler = AndroidOrderReminderScheduler(this),
             peerSyncFactory = { syncManager -> NearbyPeerSyncService(this, syncManager, databaseFiles) },
         )
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        // El almacén seguro del mercado necesita el contexto de la app.
+        com.eter.mitienda.feature.mercado.ContextoMercado.app = this
+        AvisosAnaquel.programar(this)
     }
 }

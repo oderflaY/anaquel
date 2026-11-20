@@ -766,6 +766,57 @@ export function construirMueble(m: Mueble, copete: string, marca: number): THREE
       gr.add(letrero)
       break
     }
+    case 'vitrina': {
+      // Mostrador de cristal: base de madera, caja de vidrio con entrepaños y luz.
+      const madera = mat(0x6d4c33, { roughness: 0.6 })
+      const vidrio = new THREE.MeshStandardMaterial({ color: 0xcfeaff, transparent: true, opacity: 0.22, roughness: 0.05, metalness: 0.1, depthWrite: false })
+      const aluminio = mat(0xc9ced3, { metalness: 0.8, roughness: 0.3 })
+      gr.add(caja(w, 0.15, d, madera, 0, 0.075, 0))
+      gr.add(caja(w - 0.02, H - 0.17, d - 0.02, vidrio, 0, 0.15 + (H - 0.17) / 2, 0))
+      for (const x of [-w / 2, w / 2]) for (const z of [-d / 2, d / 2]) gr.add(caja(0.025, H - 0.15, 0.025, aluminio, x, 0.15 + (H - 0.15) / 2, z))
+      gr.add(caja(w, 0.02, d, aluminio, 0, H - 0.01, 0))
+      for (let n = 1; n <= m.niveles; n++) gr.add(caja(w - 0.04, 0.012, d - 0.04, vidrio, 0, e.base + (n - 1) * e.h, 0))
+      const tira = caja(w - 0.06, 0.01, 0.03, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff3d6, emissiveIntensity: 0.9 }), 0, H - 0.03, 0)
+      gr.add(tira)
+      gr.add(caja(w - 0.02, 0.05, 0.01, mat(marca, { roughness: 0.5 }), 0, 0.11, d / 2 + 0.005))
+      break
+    }
+    case 'ganchera': {
+      // Panel perforado de pared con ganchos (ferretería, accesorios, dulces colgados).
+      const perf = texturaPerforada()
+      perf.repeat.set(w * 8, H * 8)
+      gr.add(caja(w, H - 0.1, 0.03, mat(0xd8c3a0, { map: perf, roughness: 0.85 }), 0, 0.1 + (H - 0.1) / 2, -d / 2 + 0.015))
+      gr.add(caja(w, 0.1, d, mat(0x3a3f47, { roughness: 0.6 }), 0, 0.05, 0))
+      for (const x of [-w / 2, w / 2]) gr.add(caja(0.03, H, 0.05, mat(marca, { roughness: 0.6 }), x, H / 2, -d / 2 + 0.03))
+      const gancho = mat(0xb0b5ba, { metalness: 0.85, roughness: 0.3 })
+      for (let n = 1; n <= m.niveles; n++) {
+        const y = e.base + (n - 1) * e.h + e.h * 0.85
+        for (let x = -w / 2 + 0.12; x < w / 2 - 0.05; x += 0.2) {
+          const g = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, d - 0.05, 4), gancho)
+          g.rotation.x = Math.PI / 2
+          g.position.set(x, y, 0.01)
+          gr.add(g)
+        }
+      }
+      break
+    }
+    case 'cajas': {
+      // Estante metálico con cajas de plástico de colores al frente de cada nivel.
+      const metal = mat(0x5b6470, { metalness: 0.5, roughness: 0.5 })
+      for (const x of [-w / 2 + 0.02, w / 2 - 0.02]) for (const z of [-d / 2 + 0.02, d / 2 - 0.02]) gr.add(caja(0.035, H, 0.035, metal, x, H / 2, z))
+      const colores = [0x2f80ed, 0xeb5757, 0xf2c94c, 0x27ae60, 0x9b51e0]
+      for (let n = 1; n <= m.niveles; n++) {
+        const y = e.base + (n - 1) * e.h
+        gr.add(caja(w - 0.02, 0.02, d - 0.02, metal, 0, y - 0.01, 0))
+        const k = Math.max(2, Math.round((w - 0.1) / 0.32))
+        const cw = (w - 0.1) / k
+        for (let i = 0; i < k; i++) {
+          const c = caja(cw - 0.02, Math.min(0.14, e.h * 0.45), 0.06, mat(colores[(i + n) % colores.length], { roughness: 0.6 }), -w / 2 + 0.05 + (i + 0.5) * cw, y + 0.07, d / 2 - 0.05)
+          gr.add(c)
+        }
+      }
+      break
+    }
   }
   return sombras(gr)
 }

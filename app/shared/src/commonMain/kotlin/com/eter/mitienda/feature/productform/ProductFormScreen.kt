@@ -20,7 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
+import com.eter.mitienda.core.designsystem.components.DialogoAnaquel
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Icon
@@ -478,27 +478,9 @@ private fun DeleteConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = NeuColors.Background,
-        shape = NeuShapes.Large,
-        title = { Text("¿Eliminar producto?", color = NeuColors.TextPrimary) },
-        text = {
-            Text(
-                text = "Se eliminará \"$productName\" del inventario. Esta acción no se puede deshacer.",
-                color = NeuColors.TextSecondary,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Eliminar", color = NeuColors.OnLowStock, fontWeight = FontWeight.SemiBold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = NeuColors.TextPrimary)
-            }
-        },
+    DialogoAnaquel(
+        "¿Eliminar producto?", "Eliminar", onConfirmar = onConfirm, onCerrar = onDismiss,
+        texto = "Se eliminará \"$productName\" del inventario. Esta acción no se puede deshacer.", peligro = true,
     )
 }
 

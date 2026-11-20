@@ -59,6 +59,7 @@ import mitienda.shared.generated.resources.ic_add
 import mitienda.shared.generated.resources.ic_barcode
 import mitienda.shared.generated.resources.ic_cart
 import mitienda.shared.generated.resources.ic_bluetooth
+import mitienda.shared.generated.resources.ic_chart
 import mitienda.shared.generated.resources.ic_search
 import mitienda.shared.generated.resources.ic_settings
 import org.jetbrains.compose.resources.painterResource
@@ -79,6 +80,7 @@ fun DashboardRoute(
     onSellClick: () -> Unit,
     onProductClick: (Product) -> Unit,
     onCreateProduct: (barcode: String) -> Unit,
+    onStatsClick: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showScanner by rememberSaveable { mutableStateOf(false) }
@@ -114,6 +116,7 @@ fun DashboardRoute(
             onRetry = viewModel::onRetry,
             onManageCategories = onManageCategories,
             onBluetoothClick = onBluetoothClick,
+            onStatsClick = onStatsClick,
             onScanClick = { showScanner = true },
             onAddProductClick = onAddProductClick,
             onSellClick = onSellClick,
@@ -165,6 +168,7 @@ fun DashboardScreen(
     onManageCategories: () -> Unit,
     onBluetoothClick: () -> Unit,
     onScanClick: () -> Unit,
+    onStatsClick: () -> Unit = {},
     onAddProductClick: () -> Unit,
     onSellClick: () -> Unit,
     onProductClick: (Product) -> Unit,
@@ -181,6 +185,7 @@ fun DashboardScreen(
                 totalProducts = state.totalProducts,
                 onManageCategories = onManageCategories,
                 onBluetoothClick = onBluetoothClick,
+                onStatsClick = onStatsClick,
                 modifier = Modifier.padding(
                     start = NeuDimens.ScreenPadding,
                     end = NeuDimens.ScreenPadding,
@@ -267,6 +272,7 @@ private fun DashboardHeader(
     totalProducts: Int,
     onManageCategories: () -> Unit,
     onBluetoothClick: () -> Unit,
+    onStatsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -285,6 +291,12 @@ private fun DashboardHeader(
                 color = NeuColors.TextSecondary,
             )
         }
+        NeumorphicIconButton(
+            icon = painterResource(Res.drawable.ic_chart),
+            contentDescription = "Gráficas de ventas",
+            onClick = onStatsClick,
+        )
+        Spacer(Modifier.width(NeuDimens.SpaceLg))
         NeumorphicIconButton(
             icon = painterResource(Res.drawable.ic_bluetooth),
             contentDescription = "Sincronizar por Bluetooth",

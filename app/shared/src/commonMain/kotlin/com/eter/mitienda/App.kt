@@ -1,5 +1,18 @@
 package com.eter.mitienda
 
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.eter.mitienda.core.designsystem.components.BottomBarItem
-import com.eter.mitienda.core.designsystem.components.NeumorphicBottomBar
 import com.eter.mitienda.core.designsystem.theme.NeuColors
 import com.eter.mitienda.feature.orders.DueUrgency
 import com.eter.mitienda.feature.orders.OrderDates
@@ -27,12 +38,26 @@ import com.eter.mitienda.feature.stats.StatsRoute
 import com.eter.mitienda.feature.stats.StatsViewModel
 import kotlinx.coroutines.flow.catch
 import mitienda.shared.generated.resources.Res
-import mitienda.shared.generated.resources.ic_cart
-import mitienda.shared.generated.resources.ic_chart
 import mitienda.shared.generated.resources.ic_inventory
-import mitienda.shared.generated.resources.ic_orders
 import mitienda.shared.generated.resources.ic_shelf
 import com.eter.mitienda.feature.anaquel.AnaquelRoute
+import com.eter.mitienda.feature.anaquel.ChatsRoute
+import com.eter.mitienda.feature.anaquel.MapaRoute
+import com.eter.mitienda.feature.anaquel.InicioRoute
+import com.eter.mitienda.feature.anaquel.BarraTienda
+import com.eter.mitienda.feature.anaquel.HojaHerramientas
+import com.eter.mitienda.feature.anaquel.PestanaTienda
+import com.eter.mitienda.feature.anaquel.SeccionAnaquel
+import com.eter.mitienda.feature.anaquel.herramientasDe
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import mitienda.shared.generated.resources.ic_chat
+import mitienda.shared.generated.resources.ic_home
 import com.eter.mitienda.feature.anaquel.AnaquelViewModel
 import org.jetbrains.compose.resources.painterResource
 import androidx.lifecycle.createSavedStateHandle
@@ -64,13 +89,16 @@ private object Routes {
     const val ORDERS = "orders"
     const val STATS = "stats"
     const val ANAQUEL = "anaquel"
+    const val INICIO = "inicio"
+    const val CHATS = "chats"
+    const val MAPA = "mapa"
     const val MERCADO = "mercado"
     const val ARG_ORDER_ID = "orderId"
     const val ORDER_FORM = "order_form?$ARG_ORDER_ID={$ARG_ORDER_ID}"
     fun orderForm(orderId: Long?) = "order_form?$ARG_ORDER_ID=${orderId ?: NEW_PRODUCT}"
 
     /** Pantallas con barra inferior. */
-    val TOP_LEVEL = setOf(ANAQUEL, MERCADO, DASHBOARD, ORDERS, STATS)
+    val TOP_LEVEL = setOf(INICIO, CHATS, ANAQUEL, DASHBOARD, ORDERS, STATS)
     const val SYNC = "sync"
     const val CATEGORIES = "categories"
     const val SALE = "sale"
@@ -137,12 +165,55 @@ fun App(container: AppContainer) {
             }
     }
 
+    // Inicio, Chats y Mi tienda comparten la misma sesión y datos de la nube.
+    val anaquel = viewModel { AnaquelViewModel(container.anaquelApi, container.ajustesDao, repository) }
+    val nube by anaquel.state.collectAsStateWithLifecycle()
+    val chatsSinLeer = nube.inicio?.chatsSinLeer ?: nube.resumen?.chatsSinLeer ?: 0
+
+    var herramientas by remember { mutableStateOf(false) }
+    // Si algo se abrió desde el menú ＋, «atrás» regresa al menú (no hasta Inicio).
+    // Guarda de qué pantalla se partió y a cuál se fue.
+    var menuOrigen by remember { mutableStateOf<String?>(null) }
+    var menuDestino by remember { mutableStateOf<String?>(null) }
+
     MiTiendaTheme {
         // Las imágenes guardan rutas relativas; aquí se indica cómo resolverlas.
-        CompositionLocalProvider(LocalImagePathResolver provides container.imageStorage::resolve) {
+        CompositionLocalProvider(
+            LocalImagePathResolver provides container.imageStorage::resolve,
+            com.eter.mitienda.feature.anaquel.LocalBajarFoto provides container.anaquelApi::bajarFoto,
+        ) {
             val navController = rememberNavController()
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
             val showBottomBar = currentRoute in Routes.TOP_LEVEL
+            // Pantalla empujada (Cobrar, Nuevo producto…): al volver al origen se reabre el menú.
+            LaunchedEffect(currentRoute) {
+                val destino = menuDestino ?: return@LaunchedEffect
+                when {
+                    currentRoute == destino -> Unit
+                    currentRoute == menuOrigen && destino !in Routes.TOP_LEVEL && destino != Routes.ORDERS -> {
+                        menuOrigen = null; menuDestino = null; herramientas = true
+                    }
+                    else -> { menuOrigen = null; menuDestino = null }
+                }
+            }
+            // Pestaña (Mi tienda, Inventario, Encargos…): «atrás» vuelve a donde estaba y abre el menú.
+            NavigationBackHandler(
+                state = rememberNavigationEventState(NavigationEventInfo.None),
+                isBackEnabled = !herramientas && menuDestino != null && currentRoute == menuDestino &&
+                    (menuDestino in Routes.TOP_LEVEL || menuDestino == Routes.ORDERS),
+                onBackCompleted = {
+                    val origen = menuOrigen
+                    menuOrigen = null; menuDestino = null
+                    if (origen != null && origen != currentRoute) {
+                        navController.navigate(origen) {
+                            popUpTo(Routes.INICIO) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                    herramientas = true
+                },
+            )
 
             Column(Modifier.fillMaxSize().background(NeuColors.Background)) {
                 Box(
@@ -151,7 +222,33 @@ fun App(container: AppContainer) {
                         // La barra inferior ya ocupa la zona de navegación del sistema.
                         .then(if (showBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier),
                 ) {
-                    NavHost(navController = navController, startDestination = Routes.ANAQUEL) {
+                    NavHost(
+                        navController = navController, startDestination = Routes.INICIO,
+                        // Entre pestañas: desvanecido con un leve acercamiento. Al entrar a una
+                        // pantalla de detalle: llega desde la derecha; al volver, regresa.
+                        enterTransition = {
+                            if (targetState.destination.route in Routes.TOP_LEVEL) fadeIn(tween(260)) + scaleIn(tween(320, easing = FastOutSlowInEasing), initialScale = 0.96f)
+                            else slideInHorizontally(tween(340, easing = FastOutSlowInEasing)) { it / 3 } + fadeIn(tween(260))
+                        },
+                        exitTransition = {
+                            if (targetState.destination.route in Routes.TOP_LEVEL) fadeOut(tween(180))
+                            else slideOutHorizontally(tween(340, easing = FastOutSlowInEasing)) { -it / 5 } + fadeOut(tween(260))
+                        },
+                        popEnterTransition = { slideInHorizontally(tween(340, easing = FastOutSlowInEasing)) { -it / 5 } + fadeIn(tween(260)) },
+                        popExitTransition = { slideOutHorizontally(tween(320, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(220)) + scaleOut(tween(320), targetScale = 0.96f) },
+                    ) {
+                        composable(Routes.INICIO) {
+                            InicioRoute(anaquel, onAbrirChats = {
+                                navController.navigate(Routes.CHATS) {
+                                    popUpTo(Routes.INICIO) { saveState = true }
+                                    launchSingleTop = true
+                                }
+                            }, onAbrirMapa = { navController.navigate(Routes.MAPA) })
+                        }
+                        composable(Routes.CHATS) { ChatsRoute(anaquel) }
+                        composable(Routes.MAPA) { MapaRoute(anaquel, onVolver = { navController.popBackStack() }) }
+                        // Mercado local: pantalla completa con sus propias pestañas (Explorar, Reels, Órdenes, Vender).
+                        composable(Routes.MERCADO) { com.eter.mitienda.feature.mercado.MercadoApp(container.mercado) }
                         composable(Routes.DASHBOARD) {
                             DashboardRoute(
                                 viewModel = viewModel { DashboardViewModel(repository, container.categoryRepository) },
@@ -163,6 +260,7 @@ fun App(container: AppContainer) {
                                 onBluetoothClick = { navController.navigate(Routes.SYNC) },
                                 onManageCategories = { navController.navigate(Routes.CATEGORIES) },
                                 onSellClick = { navController.navigate(Routes.SALE) },
+                                onStatsClick = { navController.navigate(Routes.STATS) },
                             )
                         }
 
@@ -195,13 +293,7 @@ fun App(container: AppContainer) {
                         }
 
                         composable(Routes.ANAQUEL) {
-                            AnaquelRoute(
-                                viewModel = viewModel { AnaquelViewModel(container.anaquelApi, container.ajustesDao, repository) },
-                            )
-                        }
-
-                        composable(Routes.MERCADO) {
-                            com.eter.mitienda.feature.mercado.MercadoApp(container.mercado)
+                            AnaquelRoute(viewModel = anaquel, onHerramientas = { herramientas = true })
                         }
 
                         composable(Routes.STATS) {
@@ -290,25 +382,76 @@ fun App(container: AppContainer) {
                     }
                 }
 
-                if (showBottomBar) {
-                    NeumorphicBottomBar(
-                        items = listOf(
-                            BottomBarItem(Routes.ANAQUEL, "Anaquel", painterResource(Res.drawable.ic_shelf)),
-                            BottomBarItem(Routes.MERCADO, "Mercado", painterResource(Res.drawable.ic_cart)),
-                            BottomBarItem(Routes.DASHBOARD, "Inventario", painterResource(Res.drawable.ic_inventory)),
-                            BottomBarItem(Routes.ORDERS, "Pedidos", painterResource(Res.drawable.ic_orders), badge = urgentOrders),
-                            BottomBarItem(Routes.STATS, "Gráficas", painterResource(Res.drawable.ic_chart)),
+                val irPestana = { route: String ->
+                    navController.navigate(route) {
+                        // Pestañas: una sola copia de cada una y conservan su scroll/estado.
+                        popUpTo(Routes.INICIO) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+                // Una oferta, un trato o el mapa piden ir al chat: se va desde cualquier pantalla.
+                val navegar = anaquel.navegar
+                LaunchedEffect(navegar) {
+                    if (navegar == "chats") {
+                        anaquel.onNavegado()
+                        irPestana(Routes.CHATS)
+                    }
+                }
+                // La barra se esconde hacia abajo en las pantallas de detalle y vuelve a subir.
+                AnimatedVisibility(
+                    showBottomBar,
+                    enter = slideInVertically(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)) { it } + fadeIn(),
+                    exit = slideOutVertically(tween(220)) { it } + fadeOut(tween(180)),
+                ) {
+                    BarraTienda(
+                        izquierda = listOf(
+                            PestanaTienda(Routes.INICIO, "Inicio", painterResource(Res.drawable.ic_home)),
+                            PestanaTienda(Routes.CHATS, "Chats", painterResource(Res.drawable.ic_chat), chatsSinLeer),
                         ),
-                        selectedKey = currentRoute,
-                        onSelect = { route ->
-                            navController.navigate(route) {
-                                // Pestañas: una sola copia de cada una y conservan su scroll/estado.
-                                popUpTo(Routes.ANAQUEL) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
+                        derecha = listOf(
+                            PestanaTienda(Routes.DASHBOARD, "Inventario", painterResource(Res.drawable.ic_inventory)),
+                            PestanaTienda(Routes.ANAQUEL, "Mi tienda", painterResource(Res.drawable.ic_shelf), (nube.resumen?.sinPedir ?: 0) + urgentOrders),
+                        ),
+                        // Gráficas y encargos se abren desde Inventario / herramientas: se marca la pestaña más cercana.
+                        activa = when (currentRoute) { Routes.STATS -> Routes.DASHBOARD; Routes.ORDERS -> Routes.ANAQUEL; else -> currentRoute },
+                        onElegir = { irPestana(it) },
+                        onMas = { herramientas = true },
                     )
+                }
+                if (herramientas) {
+                    HojaHerramientas(herramientasDe(nube, urgentOrders), onCerrar = { herramientas = false }) { id ->
+                        herramientas = false
+                        menuOrigen = currentRoute
+                        menuDestino = when (id) {
+                            "vender" -> Routes.SALE; "agregar" -> Routes.PRODUCT_FORM; "inventario" -> Routes.DASHBOARD
+                            "pedidos_clientes" -> Routes.ORDERS; "chats" -> Routes.CHATS; "mapa" -> Routes.MAPA; "graficas" -> Routes.STATS
+                            "mercado" -> Routes.MERCADO
+                            "categorias" -> Routes.CATEGORIES; "bluetooth" -> Routes.SYNC; "sincronizar" -> null
+                            else -> Routes.ANAQUEL
+                        }
+                        val seccion = when (id) {
+                            "hoy" -> SeccionAnaquel.HOY; "foto" -> SeccionAnaquel.ANAQUELES; "pedidos" -> SeccionAnaquel.PEDIDOS
+                            "bodega" -> SeccionAnaquel.BODEGA; "red" -> SeccionAnaquel.RED; "tratos" -> SeccionAnaquel.TRATOS
+                            "asesor" -> SeccionAnaquel.ASESOR; "mayoreo" -> SeccionAnaquel.MAYOREO; else -> null
+                        }
+                        if (seccion != null) {
+                            anaquel.elegirSeccion(seccion)
+                            irPestana(Routes.ANAQUEL)
+                        } else when (id) {
+                            "vender" -> navController.navigate(Routes.SALE)
+                            "agregar" -> navController.navigate(Routes.productForm(null))
+                            "inventario" -> irPestana(Routes.DASHBOARD)
+                            "pedidos_clientes" -> irPestana(Routes.ORDERS)
+                            "chats" -> irPestana(Routes.CHATS)
+                            "mapa" -> navController.navigate(Routes.MAPA)
+                            "mercado" -> navController.navigate(Routes.MERCADO)
+                            "graficas" -> navController.navigate(Routes.STATS)
+                            "categorias" -> navController.navigate(Routes.CATEGORIES)
+                            "bluetooth" -> navController.navigate(Routes.SYNC)
+                            "sincronizar" -> anaquel.sincronizarInventario()
+                        }
+                    }
                 }
             }
         }

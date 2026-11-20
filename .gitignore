@@ -9,3 +9,4 @@ services/datos/
 deploy/.env
 *.exe
 deploy/datos/
+backend/anaquel

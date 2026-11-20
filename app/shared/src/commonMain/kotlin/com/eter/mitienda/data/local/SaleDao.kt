@@ -38,7 +38,7 @@ class SaleDao(private val db: PapeleriaDatabase) {
                     stmt.bindLong(4, lines.sumOf { it.quantity }.toLong())
                     stmt.step()
                 }
-                val saleId = conn.lastInsertRowId()
+                val saleId = conn.idInsertado(TABLE)
 
                 conn.prepare(
                     """

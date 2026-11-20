@@ -1,7 +1,7 @@
 // Ruta a pie dentro de la tienda: A* sobre una cuadrícula de 10 cm que evita
 // los muebles (con holgura para una persona), luego se endereza y se dicta en
 // pasos ("camina 3 metros", "gira a la izquierda", "está a tu derecha…").
-import { alturaHablada, describirLugar, huella, type Hueco, type Plano } from './tipos'
+import { aMundo, alturaHablada, describirLugar, huella, tramosPared, type Hueco, type Plano } from './tipos'
 
 export type Paso = { texto: string; voz: string }
 export type Ruta = { puntos: [number, number][]; destino: [number, number]; pasos: Paso[]; metros: number; segundos: number }
@@ -26,6 +26,16 @@ function rejilla(plano: Plano): Rejilla {
     const h = huella(m)
     tapar(m.x - h.w - HOLGURA, m.z - h.d - HOLGURA, m.x + h.w + HOLGURA, m.z + h.d + HOLGURA)
   }
+  // Paredes interiores del armador (por el hueco de su puerta sí se pasa) y columnas.
+  const g = HOLGURA - 0.08
+  for (const w of plano.paredes ?? []) for (const [x1, z1, x2, z2] of tramosPared(w)) {
+    const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / (CELDA / 2)))
+    for (let k = 0; k <= n; k++) {
+      const x = x1 + ((x2 - x1) * k) / n, z = z1 + ((z2 - z1) * k) / n
+      tapar(x - g, z - g, x + g, z + g)
+    }
+  }
+  for (const c of plano.columnas ?? []) tapar(c.x - c.lado / 2 - g, c.z - c.lado / 2 - g, c.x + c.lado / 2 + g, c.z + c.lado / 2 + g)
   return { nx, nz, libre }
 }
 
@@ -190,4 +200,41 @@ export function trazar(plano: Plano, h: Hueco, nombre: string, desde: 'entrada' 
     voz: `Llegaste. ${nombre} está ${lado}, ${altura}, en ${h.mueble.nombre}.`,
   })
   return { puntos, destino: [h.cx, h.cz], pasos, metros: Math.round(metros * 10) / 10, segundos: Math.max(3, Math.round(metros / 0.9)) }
+}
+
+/** Muebles a los que ya no se puede llegar caminando desde la entrada (un mueble o pared tapó el paso). */
+export function encerrados(plano: Plano): Set<string> {
+  const r = rejilla(plano)
+  const ini = puntoInicio(plano, 'entrada')
+  const a = cercana(r, ini[0], ini[1])
+  const fuera = new Set<string>()
+  if (!a) return fuera
+  const visto = new Uint8Array(r.nx * r.nz)
+  const cola = [a[1] * r.nx + a[0]]
+  visto[cola[0]] = 1
+  while (cola.length) {
+    const n = cola.pop()!
+    const i = n % r.nx, j = (n / r.nx) | 0
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const x = i + di, y = j + dj
+      if (x < 0 || y < 0 || x >= r.nx || y >= r.nz) continue
+      const k = y * r.nx + x
+      if (!visto[k] && r.libre[k]) { visto[k] = 1; cola.push(k) }
+    }
+  }
+  const llega = (x: number, z: number) => {
+    const ci = Math.round(x / CELDA), cj = Math.round(z / CELDA), rad = 6
+    for (let i = ci - rad; i <= ci + rad; i++) for (let j = cj - rad; j <= cj + rad; j++)
+      if (i >= 0 && j >= 0 && i < r.nx && j < r.nz && visto[j * r.nx + i]) return true
+    return false
+  }
+  for (const m of plano.muebles) {
+    const s = m.fondo / 2 + HOLGURA + 0.15
+    // Lo que se ve por ambos lados (góndola, mesa, tarima) basta con alcanzarlo por uno.
+    const dosLados = m.tipo === 'gondola' || m.tipo === 'mesa' || m.tipo === 'tarima' || m.tipo === 'perchero'
+    const puntos = [aMundo(m, 0, s), aMundo(m, -m.ancho / 3, s), aMundo(m, m.ancho / 3, s)]
+    if (dosLados) puntos.push(aMundo(m, 0, -s), aMundo(m, -m.ancho / 3, -s), aMundo(m, m.ancho / 3, -s))
+    if (!puntos.some(([x, z]) => llega(x, z))) fuera.add(m.id)
+  }
+  return fuera
 }

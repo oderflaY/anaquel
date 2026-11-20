@@ -55,18 +55,17 @@ fun NeumorphicBottomBar(
             .fillMaxWidth()
             .neumorphic(RoundedCornerShape(topStart = NeuDimens.SpaceXl, topEnd = NeuDimens.SpaceXl), NeuDimens.ElevationMedium)
             .windowInsetsPadding(WindowInsets.navigationBars)
-            // Con 5 pestañas el margen lateral es menor para que cada nombre quepa en una línea.
             .padding(horizontal = NeuDimens.SpaceSm, vertical = NeuDimens.SpaceSm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items.forEach { item ->
-            BarTab(item, selected = item.key == selectedKey, onClick = { onSelect(item.key) }, modifier = Modifier.weight(1f))
+            BarTab(item, selected = item.key == selectedKey, onClick = { onSelect(item.key) }, modifier = Modifier.weight(1f), compacta = items.size > 4)
         }
     }
 }
 
 @Composable
-private fun BarTab(item: BottomBarItem, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun BarTab(item: BottomBarItem, selected: Boolean, onClick: () -> Unit, modifier: Modifier, compacta: Boolean = false) {
     val interaction = remember { MutableInteractionSource() }
     val inset by animateInsetProgress(interaction, forceInset = selected)
     val color = if (selected) NeuColors.Magenta else NeuColors.TextSecondary
@@ -76,7 +75,7 @@ private fun BarTab(item: BottomBarItem, selected: Boolean, onClick: () -> Unit, 
             Modifier
                 .neumorphic(NeuShapes.Large, NeuDimens.ElevationSmall, insetProgress = { inset })
                 .clickable(interactionSource = interaction, indication = null, role = Role.Tab, onClick = onClick)
-                .padding(horizontal = 6.dp, vertical = NeuDimens.SpaceSm),
+                .padding(horizontal = if (compacta) NeuDimens.SpaceSm else NeuDimens.SpaceLg, vertical = NeuDimens.SpaceSm),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box {
@@ -98,12 +97,11 @@ private fun BarTab(item: BottomBarItem, selected: Boolean, onClick: () -> Unit, 
             Spacer(Modifier.size(2.dp))
             Text(
                 item.label,
-                style = MaterialTheme.typography.labelMedium,
+                style = if (compacta) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                 color = color,
                 maxLines = 1,
                 softWrap = false,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Visible,
             )
         }
     }

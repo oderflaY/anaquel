@@ -104,6 +104,7 @@ data class Resumen(
     @SerialName("pedidos_abiertos") val pedidosAbiertos: Int = 0, val atrasados: Int = 0,
     val anaqueles: Int = 0, @SerialName("sin_foto_hoy") val sinFotoHoy: Int = 0, val productos: Int = 0,
     val avisos: Int = 0, @SerialName("tratos_pendientes") val tratosPendientes: Int = 0,
+    @SerialName("chats_sin_leer") val chatsSinLeer: Int = 0,
 )
 
 // ---------------- Red de comercio local ----------------
@@ -121,10 +122,208 @@ data class ResultadoRed(
     val disponible: Long? = null, val precio: String? = null, val cantidad: Long? = null,
     val tienda: TiendaCorta? = null, val telefono: String? = null, val lugar: String? = null,
     @SerialName("distancia_km") val distanciaKm: Double? = null,
+    /** Solo en Inicio: por qué te conviene y cuánto ganas por pieza si lo revendes. */
+    val motivo: String? = null,
+    @SerialName("ganancia_pct") val gananciaPct: Long? = null,
+    /** Foto real del producto ("/media/…"), si la tiene. */
+    val foto: String? = null,
 ) {
     val clave: String get() = "$tipo:$id"
     val negociable: Boolean get() = tipo != "productor" && tienda != null
 }
+
+// ---------------- Perfil de tienda y notificaciones ----------------
+
+@Serializable
+data class PerfilTienda(
+    val id: Long, val nombre: String, val slug: String = "", val giro: String = "", val telefono: String = "",
+    val descripcion: String = "", val direccion: String = "", val portada: String? = null, val horario: String? = null,
+    val entrega: String? = null, val credito: String? = null, val pagos: String? = null, val zona: String? = null,
+    @SerialName("pedido_minimo_c") val pedidoMinimoC: Long? = null, val desde: Int? = null, val clientes: Int? = null,
+    val verificada: Boolean = false, val calificacion: Double? = null, val resenas: Int? = null,
+    val etiquetas: List<String> = emptyList(), val productos: Int = 0, val tratos: Int = 0, val completo: Int = 0,
+    val catalogo: List<ItemCatalogo> = emptyList(), val anuncios: List<ResultadoRed> = emptyList(),
+    @SerialName("distancia_km") val distanciaKm: Double? = null,
+)
+
+@Serializable
+data class Notificacion(
+    val clave: String, val tipo: String, val titulo: String, val texto: String,
+    @SerialName("chat_id") val chatId: Long? = null, val creado: Long = 0,
+)
+
+@Serializable
+data class Notificaciones(
+    val items: List<Notificacion> = emptyList(),
+    @SerialName("ult_aviso") val ultAviso: Long = 0, @SerialName("ult_chat") val ultChat: Long = 0,
+)
+
+// ---------------- Inicio ----------------
+
+/** Producto que se te acaba y con quién surtirlo. */
+@Serializable
+data class SurtirInicio(
+    @SerialName("producto_id") val productoId: Long, val nombre: String, val stock: Long? = null,
+    @SerialName("stock_min") val stockMin: Long = 0, val unidad: String = "pza", val nivel: String = "",
+    @SerialName("mi_precio_c") val miPrecioC: Long = 0, val ofertas: List<ResultadoRed> = emptyList(),
+)
+
+@Serializable
+data class TiendaZona(
+    val id: Long, val nombre: String, val slug: String = "", val giro: String = "", val telefono: String = "",
+    val descripcion: String = "", @SerialName("distancia_km") val distanciaKm: Double? = null,
+    val productos: Int = 0, @SerialName("chat_id") val chatId: Long? = null,
+)
+
+@Serializable
+data class ProveedorGrande(
+    val id: Long, val nombre: String, val slug: String = "", val giro: String = "", val telefono: String = "",
+    val descripcion: String = "", @SerialName("distancia_km") val distanciaKm: Double? = null,
+    val productos: Int = 0, @SerialName("chat_id") val chatId: Long? = null,
+    val afines: Int = 0, val destacados: List<ResultadoRed> = emptyList(), val promocion: String? = null,
+)
+
+@Serializable
+data class Inicio(
+    val saludo: String = "",
+    val proveedores: List<ProveedorGrande> = emptyList(),
+    @SerialName("para_surtir") val paraSurtir: List<SurtirInicio> = emptyList(),
+    @SerialName("te_convienen") val convienen: List<ResultadoRed> = emptyList(),
+    val promociones: List<ResultadoRed> = emptyList(),
+    val buscan: List<ResultadoRed> = emptyList(),
+    val tiendas: List<TiendaZona> = emptyList(),
+    @SerialName("chats_sin_leer") val chatsSinLeer: Int = 0,
+    @SerialName("tratos_pendientes") val pendientes: Int = 0,
+    /** Lo que recomienda el grafo de la red (tu socio). */
+    val recomendados: List<Recomendacion> = emptyList(),
+)
+
+// ---------------- Tu socio: recomendaciones del grafo y plan del día ----------------
+
+@Serializable
+data class OfertaGrafo(
+    val id: Long, val nombre: String, val foto: String? = null,
+    @SerialName("precio_c") val precioC: Long = 0, @SerialName("precio_mayoreo_c") val precioMayoreoC: Long = 0,
+    @SerialName("minimo_mayoreo") val minimoMayoreo: Long = 0, val unidad: String = "pza", val disponible: Long? = null,
+)
+
+@Serializable
+data class Recomendacion(
+    /** surtir | nuevo | proveedor | vender | exclusivo */
+    val tipo: String, val titulo: String, val motivo: String = "",
+    val cantidad: Long = 0, val ganancia: Long = 0,
+    val oferta: OfertaGrafo? = null, val tienda: TiendaCorta? = null,
+    @SerialName("distancia_km") val distanciaKm: Double? = null,
+) {
+    val clave: String get() = "$tipo:${oferta?.id}:${tienda?.id}"
+    /** Como tarjeta de la red, para negociar la oferta. */
+    fun comoResultado(): ResultadoRed? = oferta?.let { o ->
+        ResultadoRed(
+            tipo = "producto", id = o.id, titulo = o.nombre, detalle = motivo, precioC = o.precioC,
+            precioMayoreoC = o.precioMayoreoC, minimoMayoreo = o.minimoMayoreo, unidad = o.unidad, disponible = o.disponible,
+            tienda = tienda, distanciaKm = distanciaKm, motivo = motivo, gananciaPct = ganancia, foto = o.foto,
+        )
+    }
+}
+
+@Serializable
+data class CifraPlan(val etiqueta: String, val valor: String, val detalle: String = "", val tono: String = "")
+
+@Serializable
+data class AlertaPlan(val tipo: String, val titulo: String, val texto: String, val accion: String = "")
+
+@Serializable
+data class PlanAsesor(
+    val saludo: String = "", val resumen: String = "", val cifras: List<CifraPlan> = emptyList(),
+    val alertas: List<AlertaPlan> = emptyList(), val recomendaciones: List<Recomendacion> = emptyList(),
+    val consejo: String = "", val grafo: Boolean = false, val preguntas: List<String> = emptyList(),
+)
+
+// ---------------- Vender al mayoreo (con audiencia) ----------------
+
+@Serializable
+data class ProductoMayoreo(
+    val id: Long, val nombre: String, val categoria: String = "", val unidad: String = "pza", val foto: String? = null,
+    @SerialName("precio_c") val precioC: Long = 0, @SerialName("precio_mayoreo_c") val precioMayoreoC: Long = 0,
+    @SerialName("minimo_mayoreo") val minimoMayoreo: Long = 0, val stock: Long? = null, val publicado: Boolean = false,
+    val audiencia: String = "todos", val elegidos: List<Long> = emptyList(),
+)
+
+@Serializable
+data class TiendaElegible(val id: Long, val nombre: String, val giro: String = "", val contacto: Boolean = false)
+
+@Serializable
+data class MiMayoreo(val productos: List<ProductoMayoreo> = emptyList(), val tiendas: List<TiendaElegible> = emptyList())
+
+@Serializable
+data class CambioMayoreo(
+    val publicado: Boolean, @SerialName("precio_mayoreo_c") val precioMayoreoC: Long, @SerialName("minimo_mayoreo") val minimoMayoreo: Long,
+    val audiencia: String, val elegidos: List<Long>,
+)
+
+// ---------------- Chats con proveedores y tiendas ----------------
+
+@Serializable
+data class ItemCatalogo(
+    @SerialName("producto_id") val productoId: Long, val nombre: String, val categoria: String = "",
+    val unidad: String = "pza", @SerialName("precio_c") val precioC: Long = 0,
+    @SerialName("precio_mayoreo_c") val precioMayoreoC: Long = 0, @SerialName("minimo_mayoreo") val minimoMayoreo: Long = 0,
+    val disponible: Long? = null, val sigue: Boolean = true, val foto: String? = null,
+) {
+    /** Precio por pieza según cuántas pidas (mayoreo desde el mínimo). */
+    fun precioPara(n: Long): Long = if (precioMayoreoC > 0 && minimoMayoreo > 0 && n >= minimoMayoreo) precioMayoreoC else precioC
+}
+
+@Serializable
+data class TratoChat(
+    val id: Long, val titulo: String, val cantidad: Long, @SerialName("precio_c") val precioC: Long, val estado: String,
+    val pagado: Boolean = false, val foto: String? = null,
+)
+
+@Serializable
+data class MensajeChat(
+    val id: Long, val de: String, val tipo: String, val texto: String = "",
+    val items: List<ItemCatalogo> = emptyList(), val tratos: List<TratoChat> = emptyList(),
+    val total: Long = 0, val rol: String = "", val estado: String = "", val puedo: List<String> = emptyList(),
+    /** Oferta: lo que se propuso en ese momento. */
+    val cantidad: Long = 0, @SerialName("precio_c") val precioC: Long = 0,
+    /** Lo que puedo pagar en línea ya (0 = nada). */
+    @SerialName("por_pagar_c") val porPagarC: Long = 0,
+    val pagado: Boolean = false,
+    /** Oferta: es la propuesta vigente de su trato. */
+    val vigente: Boolean = false,
+    val creado: Long = 0,
+)
+
+/** Pago en línea (Stripe Checkout o la página de prueba). */
+@Serializable
+data class Cobro(val id: Long, val url: String = "", val modo: String = "", @SerialName("monto_c") val montoC: Long = 0, val estado: String = "")
+
+@Serializable
+private data class Contraoferta(
+    @SerialName("trato_id") val tratoId: Long, val cantidad: Long, @SerialName("precio_c") val precioC: Long, val texto: String = "",
+)
+
+@Serializable
+data class Chat(
+    val id: Long, val otra: TiendaCorta, val ultimo: String = "", @SerialName("ultimo_mio") val ultimoMio: Boolean = false,
+    val actualizado: Long = 0, @SerialName("sin_leer") val sinLeer: Int = 0, val pendientes: Int = 0,
+    val mensajes: List<MensajeChat> = emptyList(), val whatsapp: String? = null,
+    @SerialName("distancia_km") val distanciaKm: Double? = null,
+    /** Solo al pedir «pagar»: a dónde ir a pagar. */
+    val cobro: Cobro? = null,
+)
+
+@Serializable
+private data class ChatNuevo(@SerialName("tienda_id") val tiendaId: Long)
+
+@Serializable
+private data class EscribirChat(
+    val texto: String = "", val catalogo: List<Long>? = null, @SerialName("catalogo_todo") val catalogoTodo: Boolean = false,
+)
+
+@Serializable
+private data class PedidoChat(val catalogo: Long? = null, val items: List<ItemNuevo>, val texto: String = "")
 
 @Serializable
 data class MensajeTrato(
@@ -222,6 +421,8 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
             // El asesor con IA puede tardar (busca en la red varias veces).
             requestTimeoutMillis = 180_000
             connectTimeoutMillis = 15_000
+            // OkHttp corta a los 10 s sin datos; el modelo local tarda ~30 s en contestar.
+            socketTimeoutMillis = 120_000
         }
         expectSuccess = false
     }
@@ -294,6 +495,30 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
     suspend fun asesor(): ConversacionAsesor = get("/asesor")
     suspend fun preguntar(m: String): RespuestaAsesor = post("/asesor", Pregunta(m))
     suspend fun borrarAsesor() { llamar(HttpMethod.Delete, "/asesor") }
+    suspend fun planAsesor(): PlanAsesor = get("/asesor/plan")
+
+    // Inicio y chats
+    suspend fun inicio(): Inicio = get("/inicio")
+    suspend fun chats(): List<Chat> = get("/chats")
+    suspend fun chat(id: Long): Chat = get("/chats/$id")
+    suspend fun abrirChat(tienda: Long): Chat = post("/chats", ChatNuevo(tienda))
+    suspend fun escribirChat(id: Long, texto: String): Chat = post("/chats/$id/mensajes", EscribirChat(texto = texto))
+    suspend fun mandarCatalogo(id: Long, productos: List<Long>?): Chat =
+        post("/chats/$id/mensajes", EscribirChat(catalogo = productos, catalogoTodo = productos == null))
+    suspend fun pedirEnChat(id: Long, catalogo: Long?, items: List<Pair<Long, Long>>, texto: String = ""): Chat =
+        post("/chats/$id/pedido", PedidoChat(catalogo, items.map { (p, c) -> ItemNuevo(p, c) }, texto))
+    /** aceptar | entregar | cancelar */
+    suspend fun accionPedidoChat(id: Long, mensaje: Long, accion: String): Chat = post("/chats/$id/pedido/$mensaje/$accion", Vacio())
+    suspend fun contraofertaChat(id: Long, mensaje: Long, trato: Long, cantidad: Long, precioC: Long, texto: String): Chat =
+        post("/chats/$id/pedido/$mensaje/contra", Contraoferta(trato, cantidad, precioC, texto))
+    suspend fun cobro(id: Long): Cobro = get("/cobros/$id")
+    suspend fun catalogo(tienda: Long): List<ItemCatalogo> = get("/tiendas/$tienda/catalogo")
+    suspend fun perfil(tienda: Long): PerfilTienda = get("/tiendas/$tienda/perfil")
+    suspend fun notificaciones(aviso: Long?, chat: Long?): Notificaciones =
+        get(if (aviso == null || chat == null) "/notificaciones" else "/notificaciones?aviso=$aviso&chat=$chat")
+    suspend fun miCatalogo(): List<ItemCatalogo> = get("/tiendas/yo/catalogo")
+    suspend fun mayoreo(): MiMayoreo = get("/mayoreo")
+    suspend fun guardarMayoreo(id: Long, c: CambioMayoreo): MiMayoreo = put("/mayoreo/$id", c)
 
     suspend fun cambiarEstado(pedido: Long, estado: String): Pedido = post("/pedidos/$pedido/estado", CambioEstado(estado))
 

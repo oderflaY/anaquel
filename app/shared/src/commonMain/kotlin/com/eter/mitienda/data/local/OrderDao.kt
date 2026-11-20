@@ -56,10 +56,11 @@ class OrderDao(private val db: PapeleriaDatabase) {
             stmt.bindLong(11, now)
             stmt.step()
         }
-        conn.lastInsertRowId()
+        conn.idInsertado(TABLE)
     }
 
     suspend fun update(order: Order): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, order.id)
         conn.prepare(
             """
             UPDATE $TABLE SET $CUSTOMER = ?, $PHONE = ?, $KIND = ?, $DESCRIPTION = ?, $DELIVERY_AT = ?, $PRICE = ?,
@@ -72,25 +73,27 @@ class OrderDao(private val db: PapeleriaDatabase) {
             stmt.bindLong(11, order.id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 
     suspend fun updateStatus(id: Long, status: OrderStatus): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, id)
         conn.prepare("UPDATE $TABLE SET $STATUS = ?, $UPDATED_AT = ? WHERE $ID = ?").use { stmt ->
             stmt.bindText(1, status.name)
             stmt.bindLong(2, nowMillis())
             stmt.bindLong(3, id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 
     suspend fun delete(id: Long): Int = db.withConnection { conn ->
+        val habia = conn.existe(TABLE, id)
         conn.prepare("DELETE FROM $TABLE WHERE $ID = ?").use { stmt ->
             stmt.bindLong(1, id)
             stmt.step()
         }
-        conn.changes()
+        habia
     }
 
     suspend fun getKinds(): List<String> = db.withConnection { conn ->

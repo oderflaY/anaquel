@@ -221,6 +221,77 @@ ALTER TABLE productos ADD COLUMN lugar_lado INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE productos ADD COLUMN lugar_nivel INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE productos ADD COLUMN lugar_pos REAL NOT NULL DEFAULT 0;
 `,
+	// 4: chat entre tiendas. Cada par de tiendas tiene una conversación; los
+	// mensajes pueden ser texto, un mini catálogo o un pedido (tratos).
+	`
+CREATE TABLE chats (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	tienda_a    INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	tienda_b    INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	actualizado INTEGER NOT NULL,
+	leido_a     INTEGER NOT NULL DEFAULT 0, -- último mensaje que leyó cada tienda
+	leido_b     INTEGER NOT NULL DEFAULT 0,
+	UNIQUE (tienda_a, tienda_b)
+);
+CREATE TABLE chat_mensajes (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	chat_id    INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+	tienda_id  INTEGER,                         -- NULL = mensaje del sistema
+	tipo       TEXT NOT NULL DEFAULT 'texto',   -- texto | catalogo | pedido | sistema
+	texto      TEXT NOT NULL DEFAULT '',
+	datos      TEXT NOT NULL DEFAULT '',
+	creado     INTEGER NOT NULL
+);
+CREATE INDEX idx_chat_mensajes ON chat_mensajes(chat_id, id);
+`,
+	// 6: perfiles completos de tienda (portada, horario, reparto, crédito…),
+	// foto de producto y lectura de notificaciones del teléfono.
+	`
+ALTER TABLE productos ADD COLUMN foto TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN portada TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN horario TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN entrega TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN pedido_minimo_c INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN credito TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN pagos TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN zona TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN desde INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN clientes INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN verificada INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN calificacion REAL NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN resenas INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN etiquetas TEXT NOT NULL DEFAULT '';
+`,
+	`
+-- Mayoreo con audiencia: 'todos' (toda la red) o 'elegidos' (solo las tiendas de producto_audiencia).
+ALTER TABLE productos ADD COLUMN audiencia TEXT NOT NULL DEFAULT 'todos';
+CREATE TABLE producto_audiencia (
+	producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+	tienda_id   INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	PRIMARY KEY (producto_id, tienda_id)
+);
+CREATE INDEX producto_audiencia_tienda ON producto_audiencia(tienda_id);
+`,
+	// 8: cobros en línea (Stripe Checkout o página de prueba) de lo acordado en el chat.
+	`
+CREATE TABLE cobros (
+	id           INTEGER PRIMARY KEY AUTOINCREMENT,
+	comprador_id INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	vendedor_id  INTEGER NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
+	chat_id      INTEGER REFERENCES chats(id) ON DELETE SET NULL,
+	tratos       TEXT NOT NULL,                     -- JSON con los ids de los tratos
+	monto_c      INTEGER NOT NULL,
+	estado       TEXT NOT NULL DEFAULT 'pendiente', -- pendiente | pagado | cancelado
+	proveedor    TEXT NOT NULL,                     -- stripe | prueba
+	sesion       TEXT NOT NULL DEFAULT '',          -- id de la Checkout Session
+	secreto      TEXT NOT NULL,                     -- para las páginas públicas de pago y vuelta
+	url          TEXT NOT NULL DEFAULT '',
+	creado       INTEGER NOT NULL,
+	pagado       INTEGER
+);
+CREATE INDEX cobros_sesion ON cobros(sesion);
+ALTER TABLE tratos ADD COLUMN cobro_id INTEGER;
+`,
 }
 
 func abrirDB(ruta string) (*sql.DB, error) {

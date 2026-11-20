@@ -1,0 +1,15 @@
+[Unit]
+Description=Entrenar «tu socio» de Anaquel (reanudable)
+
+[Service]
+Type=simple
+WorkingDirectory=%h/AnaquelIA
+TimeoutStartSec=infinity
+ExecStartPre=/bin/sleep 45
+ExecStart=/usr/bin/systemd-inhibit --what=sleep:idle:handle-lid-switch --why="Entrenando tu socio" %h/AnaquelIA/entrenar_reanudable.sh
+StandardOutput=append:%h/AnaquelIA/entrenar.log
+StandardError=append:%h/AnaquelIA/entrenar.log
+Nice=-0
+
+[Install]
+WantedBy=default.target

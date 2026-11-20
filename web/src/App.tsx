@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { api, guardarToken, token, type Resumen, type Tienda } from './api'
 import { Enlace, ir, useRuta } from './router'
 import { Toasts } from './ui'
+import { BarraAbajo, Icono, Lateral, gruposPanel } from './Navegacion'
 import Portada from './pages/Portada'
 import Entrar from './pages/Entrar'
 import Hoy from './pages/Hoy'
@@ -22,6 +23,8 @@ import RedPublica from './pages/RedPublica'
 
 // El 3D (three.js) se baja solo cuando se abre.
 const Bodega3D = lazy(() => import('./pages/Bodega3D'))
+const Grafo = lazy(() => import('./pages/Grafo'))
+const MapaRed = lazy(() => import('./pages/MapaRed'))
 // El mercado (servicios en services/) también se baja solo cuando se abre.
 const Mercado = lazy(() => import('./mercado/Mercado'))
 
@@ -76,6 +79,8 @@ export default function App() {
         : camino === '/panel/red' ? <Red sesion={s} consulta={ruta.split('?')[1] ?? ''} />
         : camino === '/panel/asesor' ? <Asesor sesion={s} />
         : camino === '/panel/bodega' ? <Bodega3D sesion={s} />
+        : camino === '/panel/grafo' ? <Grafo />
+        : camino === '/panel/mapa' ? <MapaRed />
         : camino === '/panel/vitrina' ? <Vitrina sesion={s} />
         : camino === '/panel/avisos' ? <Avisos sesion={s} />
         : camino === '/panel/anaqueles' ? <Anaqueles sesion={s} />
@@ -87,18 +92,7 @@ export default function App() {
     }
   } else pagina = <Portada conSesion={!!tienda} />
 
-  const pestanas: [string, string, number?][] = [
-    ['/panel', 'Hoy', resumen?.sin_pedir],
-    ['/panel/asesor', '✨ Asesor'],
-    ['/panel/red', 'Red'],
-    ['/panel/tratos', 'Tratos', resumen?.tratos_pendientes],
-    ['/panel/productos', 'Inventario'],
-    ['/panel/bodega', 'Bodega 3D'],
-    ['/panel/vitrina', 'Mi vitrina'],
-    ['/panel/anaqueles', 'Anaqueles'],
-    ['/panel/pedidos', 'Pedidos', resumen?.atrasados],
-    ['/panel/tienda', 'Mi tienda'],
-  ]
+  const grupos = gruposPanel(resumen)
 
   // Dentro de la app (WebView) va sin encabezado: la app ya tiene el suyo.
   const enApp = new URLSearchParams(ruta.split('?')[1] ?? '').get('app') === '1'
@@ -106,22 +100,14 @@ export default function App() {
   return (
     <>
       {!enApp && <header className="barra">
-        <div className="contenedor">
+        <div className={`contenedor ${enPanel && tienda ? 'panel-ancho' : ''}`}>
           <Enlace href={tienda ? '/panel' : '/'} className="logo">
             <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" /> <span>Anaquel</span>
           </Enlace>
-          {enPanel && tienda ? (
-            <nav className="nav" aria-label="Panel">
-              {pestanas.map(([href, txt, n]) => (
-                <Enlace key={href} href={href} className={(href === '/panel' ? camino === '/panel' : camino.startsWith(href)) ? 'activo' : ''}>
-                  {txt}{n ? <span className="burbuja">{n}</span> : null}
-                </Enlace>
-              ))}
-            </nav>
-          ) : null}
+          {enPanel && tienda ? <div style={{ flex: 1 }} /> : null}
           {enPanel && tienda ? (
             <Enlace href="/panel/avisos" className={`campana ${camino === '/panel/avisos' ? 'activo' : ''}`} aria-label={`Avisos${resumen?.avisos ? `: ${resumen.avisos} nuevos` : ''}`}>
-              🔔{resumen?.avisos ? <span className="burbuja">{resumen.avisos}</span> : null}
+              <Icono n="campana" />{resumen?.avisos ? <span className="burbuja">{resumen.avisos}</span> : null}
             </Enlace>
           ) : (
             <nav className="nav" aria-label="Principal">
@@ -133,9 +119,20 @@ export default function App() {
           )}
         </div>
       </header>}
-      <main className={`contenedor ${enApp ? 'en-app' : ''}`} style={{ paddingTop: enApp ? '.6rem' : '1.25rem', paddingBottom: '2rem' }}>
-        <Suspense fallback={<div className="vacio-lista">Cargando el 3D…</div>}>{pagina}</Suspense>
-      </main>
+      {enPanel && tienda && !enApp ? (
+        // Panel: barra lateral agrupada en computadora y barra de abajo en teléfono.
+        <div className="panel-marco">
+          <Lateral grupos={grupos} camino={camino} tienda={tienda} />
+          <main key={camino} className="panel-contenido">
+            <Suspense fallback={<div className="vacio-lista">Cargando el 3D…</div>}>{pagina}</Suspense>
+          </main>
+          <BarraAbajo grupos={grupos} camino={camino} />
+        </div>
+      ) : (
+        <main className={`contenedor ${enApp ? 'en-app' : ''}`} style={{ paddingTop: enApp ? '.6rem' : '1.25rem', paddingBottom: '2rem' }}>
+          <Suspense fallback={<div className="vacio-lista">Cargando el 3D…</div>}>{pagina}</Suspense>
+        </main>
+      )}
       <Toasts />
     </>
   )

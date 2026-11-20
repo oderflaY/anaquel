@@ -1,5 +1,13 @@
 package com.eter.mitienda.feature.anaquel
 
+import androidx.compose.runtime.key
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.semantics.contentDescription
+
+import androidx.compose.ui.semantics.semantics
+
+import androidx.compose.foundation.clickable
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.eter.mitienda.core.designsystem.components.DialogoAnaquel
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -68,7 +76,7 @@ import org.jetbrains.compose.resources.painterResource
 private enum class Proposito { CREAR, HOY, REFERENCIA }
 
 @Composable
-fun AnaquelRoute(viewModel: AnaquelViewModel) {
+fun AnaquelRoute(viewModel: AnaquelViewModel, onHerramientas: () -> Unit = {}) {
     val st by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val uri = LocalUriHandler.current
@@ -101,7 +109,7 @@ fun AnaquelRoute(viewModel: AnaquelViewModel) {
             st.revisandoSesion -> Texto("Cargando…", Modifier.align(Alignment.Center))
             st.tienda == null -> Entrar(st, viewModel)
             abierto != null -> DetalleAnaquel(st, abierto, viewModel, tomarFoto)
-            else -> Principal(st, viewModel, onNuevo = { n -> nombreNuevo = n; tomarFoto(Proposito.CREAR) })
+            else -> Principal(st, viewModel, onHerramientas, onNuevo = { n -> nombreNuevo = n; tomarFoto(Proposito.CREAR) })
         }
         if (camara.isProcessing || st.ocupado == "foto" || st.ocupado == "crear") {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)), contentAlignment = Alignment.Center) {
@@ -125,7 +133,7 @@ private fun Titulo(t: String) = Text(t, style = MaterialTheme.typography.titleMe
 // ---------------- Entrar ----------------
 
 @Composable
-private fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
+internal fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
     var registro by remember { mutableStateOf(false) }
     var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -153,7 +161,7 @@ private fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
                     NeumorphicInput(pass, { pass = it }, Modifier.fillMaxWidth(), placeholder = "Contraseña",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), visualTransformation = PasswordVisualTransformation())
-                    if (registro) NeumorphicInput(tel, { tel = it }, Modifier.fillMaxWidth(), placeholder = "WhatsApp de la tienda",
+                    if (registro) NeumorphicInput(tel, { tel = it }, Modifier.fillMaxWidth(), placeholder = "Teléfono de la tienda",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
                     NeumorphicButton(
                         text = if (ocupado) "Un momento…" else if (registro) "Crear mi tienda" else "Entrar",
@@ -188,56 +196,36 @@ private fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
 // ---------------- Principal ----------------
 
 @Composable
-private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String) -> Unit) {
+private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: () -> Unit, onNuevo: (String) -> Unit) {
     var pedirNombre by remember { mutableStateOf(false) }
     var confirmarSalir by remember { mutableStateOf(false) }
     var negociando by remember { mutableStateOf<ResultadoRed?>(null) }
     var contra by remember { mutableStateOf(false) }
+    var editandoMayoreo by remember { mutableStateOf<ProductoMayoreo?>(null) }
+    var filtroMayoreo by remember { mutableStateOf("todos") }
+    var buscaMayoreo by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.padding(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceLg),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Anaquel", style = MaterialTheme.typography.headlineMedium, color = NeuColors.TextPrimary)
-                    Texto(st.tienda?.nombre.orEmpty())
-                }
-                NeumorphicIconButton(painterResource(Res.drawable.ic_upload), "Sincronizar inventario", onClick = vm::sincronizarInventario)
-                Spacer(Modifier.width(NeuDimens.SpaceMd))
-                TextButton(onClick = { confirmarSalir = true }) { Text("Salir", color = NeuColors.TextSecondary) }
-            }
-            LazyRow(
-                contentPadding = PaddingValues(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceXl, bottom = NeuDimens.SpaceSm),
-                horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd),
-            ) {
-                items(SeccionAnaquel.entries) { s ->
-                    val n = when (s) {
-                        SeccionAnaquel.HOY -> st.resumen?.sinPedir ?: 0
-                        SeccionAnaquel.PEDIDOS -> st.resumen?.atrasados ?: 0
-                        SeccionAnaquel.ANAQUELES -> st.resumen?.sinFotoHoy ?: 0
-                        SeccionAnaquel.TRATOS -> st.resumen?.tratosPendientes ?: 0
-                        SeccionAnaquel.RED -> st.resumen?.avisos ?: 0
-                        SeccionAnaquel.ASESOR, SeccionAnaquel.BODEGA -> 0
-                    }
-                    NeumorphicChip(if (n > 0) "${s.titulo} · $n" else s.titulo, selected = st.seccion == s, onClick = { vm.elegirSeccion(s) })
-                }
-            }
+            EncabezadoTienda(
+                st, onRespaldar = vm::sincronizarInventario, onHerramientas = onHerramientas, onSalir = { confirmarSalir = true },
+                onReiniciarDemo = if (st.tienda?.slug == "dona-lupita") vm::reiniciarDemo else null,
+            )
+            BarraSecciones(SeccionAnaquel.entries.filter { it != SeccionAnaquel.RED || st.seccion == SeccionAnaquel.RED }, st.seccion, st) { vm.elegirSeccion(it) }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(NeuColors.TextSecondary.copy(alpha = 0.12f)))
             if (st.seccion == SeccionAnaquel.BODEGA) {
                 Bodega3D(vm, Modifier.weight(1f))
-            } else LazyColumn(
+            } else if (st.seccion == SeccionAnaquel.ASESOR) {
+                ChatSocio(st, vm, Modifier.weight(1f)) { negociando = it }
+            } else key(st.seccion) { LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(
-                    start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceXl,
+                    start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceLg,
                     bottom = NeuDimens.FabSize + NeuDimens.ScreenPadding * 2,
                 ),
                 verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceXl),
             ) {
-                if (st.tienda?.slug == "dona-lupita" && st.seccion == SeccionAnaquel.HOY) {
-                    item(key = "demo") {
-                        NeumorphicChip("↺ Reiniciar demo", selected = false, onClick = vm::reiniciarDemo)
-                    }
-                }
+                item(key = "titulo") { TituloSeccion(st.seccion) }
+                if (st.seccion == SeccionAnaquel.HOY) item(key = "cifras-color") { TarjetasCifras(st) { vm.elegirSeccion(it) } }
                 if (st.error != null && st.resumen == null) {
                     item { Errores(st.error, vm::refrescar) }
                 }
@@ -248,9 +236,10 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
                     SeccionAnaquel.ASESOR -> asesor(st, vm) { negociando = it }
                     SeccionAnaquel.RED -> red(st, vm) { negociando = it }
                     SeccionAnaquel.TRATOS -> tratos(st, vm) { contra = true }
+                    SeccionAnaquel.MAYOREO -> mayoreo(st, filtroMayoreo, buscaMayoreo, { filtroMayoreo = it }, { buscaMayoreo = it }) { editandoMayoreo = it }
                     SeccionAnaquel.BODEGA -> Unit
                 }
-            }
+            } }
         }
         if (st.seccion == SeccionAnaquel.ANAQUELES) {
             NeumorphicFab(painterResource(Res.drawable.ic_add), "Nuevo anaquel", onClick = { pedirNombre = true },
@@ -259,33 +248,27 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
     }
     if (pedirNombre) {
         var n by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { pedirNombre = false },
-            title = { Text("Nuevo anaquel") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
-                    Text("Toma la foto con el anaquel LLENO, de frente y desde un lugar al que puedas volver cada día.")
-                    NeumorphicInput(n, { n = it }, Modifier.fillMaxWidth(), placeholder = "Nombre (Refrescos, Botanas…)")
-                }
-            },
-            confirmButton = { TextButton(onClick = { pedirNombre = false; onNuevo(n) }) { Text("Tomar foto") } },
-            dismissButton = { TextButton(onClick = { pedirNombre = false }) { Text("Cancelar") } },
-        )
+        DialogoAnaquel(
+            "Nuevo anaquel", "Tomar foto", onConfirmar = { pedirNombre = false; onNuevo(n) }, onCerrar = { pedirNombre = false },
+            texto = "Toma la foto con el anaquel LLENO, de frente y desde un lugar al que puedas volver cada día.",
+        ) { NeumorphicInput(n, { n = it }, Modifier.fillMaxWidth(), placeholder = "Nombre (Refrescos, Botanas…)") }
     }
     negociando?.let { r ->
         DialogoNegociar(r, onCerrar = { negociando = null }) { n, pc, msg -> negociando = null; vm.negociar(r, n, pc, msg) }
+    }
+    editandoMayoreo?.let { p ->
+        HojaMayoreo(p, st.mayoreo?.tiendas.orEmpty(), ocupado = st.ocupado == "mayoreo-guardar", onCerrar = { editandoMayoreo = null }) { c ->
+            vm.guardarMayoreo(p.id, c) { editandoMayoreo = null }
+        }
     }
     val tratoAbierto = st.trato
     if (contra && tratoAbierto != null) {
         DialogoContraoferta(tratoAbierto, onCerrar = { contra = false }) { n, pc -> contra = false; vm.escribirTrato("", n, pc) }
     }
     if (confirmarSalir) {
-        AlertDialog(
-            onDismissRequest = { confirmarSalir = false },
-            title = { Text("¿Cerrar sesión de Anaquel?") },
-            text = { Text("Tu inventario del teléfono no se borra.") },
-            confirmButton = { TextButton(onClick = { confirmarSalir = false; vm.salir() }) { Text("Cerrar sesión") } },
-            dismissButton = { TextButton(onClick = { confirmarSalir = false }) { Text("Cancelar") } },
+        DialogoAnaquel(
+            "¿Cerrar sesión de Anaquel?", "Cerrar sesión", onConfirmar = { confirmarSalir = false; vm.salir() },
+            onCerrar = { confirmarSalir = false }, texto = "Tu inventario del teléfono no se borra.",
         )
     }
 }
@@ -302,7 +285,9 @@ private fun Errores(error: String, reintentar: () -> Unit) {
 @Composable
 private fun Cifra(valor: String, texto: String, alerta: Boolean, modifier: Modifier) {
     NeumorphicCard(modifier, elevation = NeuDimens.ElevationMedium) {
-        Text(valor, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+        val num = valor.toIntOrNull()
+        if (num != null) NumeroAnimado(num, if (alerta) NeuColors.OnLowStock else NeuColors.TextPrimary, MaterialTheme.typography.headlineSmall.fontSize, FontWeight.Bold, MaterialTheme.typography.headlineSmall)
+        else Text(valor, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
             color = if (alerta) NeuColors.OnLowStock else NeuColors.TextPrimary)
         Text(texto, style = MaterialTheme.typography.bodySmall, color = NeuColors.TextSecondary)
     }
@@ -312,11 +297,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.hoy(st: AnaquelUiStat
     val r = st.resumen
     if (r != null) {
         item(key = "cifras") {
+            // «Por pedir» y «pedidos» ya están en las tarjetas de color de arriba.
             Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceLg)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceLg)) {
-                    Cifra("${r.sinPedir}", "por pedir", r.sinPedir > 0, Modifier.weight(1f))
-                    Cifra("${r.pedidosAbiertos}", "en camino", false, Modifier.weight(1f))
-                }
                 Row(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceLg)) {
                     Cifra("${r.atrasados}", "no han llegado", r.atrasados > 0, Modifier.weight(1f))
                     Cifra("${r.anaqueles - r.sinFotoHoy}/${r.anaqueles}", "fotos de hoy", false, Modifier.weight(1f))
@@ -344,8 +326,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.hoy(st: AnaquelUiStat
     if (st.faltantes != null && grupos.isEmpty()) {
         item(key = "nada") { Texto("No falta nada por pedir. Toma la foto de hoy para revisar tus anaqueles.", Modifier.fillMaxWidth()) }
     }
-    if (st.faltantes == null && st.error == null) item(key = "cargando") { Texto("Cargando…") }
-    items(grupos, key = { "g-" + it.clave }) { g -> GrupoCard(g, st, vm) }
+    if (st.faltantes == null && st.error == null) item(key = "cargando") { TarjetasCargando("Revisando tus anaqueles…") }
+    itemsIndexed(grupos, key = { _, g -> "g-" + g.clave }) { i, g -> Box(Modifier.animateItem().entrada(i)) { GrupoCard(g, st, vm) } }
     val pedidos = st.faltantes.orEmpty().filter { it.enPedido != null }
     if (pedidos.isNotEmpty()) {
         item(key = "ya") {
@@ -371,7 +353,7 @@ private fun GrupoCard(g: GrupoPedido, st: AnaquelUiState, vm: AnaquelViewModel) 
         Texto(
             when {
                 s == null -> "Agrégale proveedor desde la web (Productos o Proveedores)."
-                s.tipo == "productor" -> "🌱 Productor local" + (s.distanciaKm?.let { " · a $it km" } ?: "") + (s.lugar?.let { " · $it" } ?: "")
+                s.tipo == "productor" -> "Productor local" + (s.distanciaKm?.let { " · a $it km" } ?: "") + (s.lugar?.let { " · $it" } ?: "")
                 else -> "Proveedor"
             },
         )
@@ -397,7 +379,7 @@ private fun GrupoCard(g: GrupoPedido, st: AnaquelUiState, vm: AnaquelViewModel) 
                     val elegida = f.sugerencias.firstOrNull { it.clave == (st.eleccion[f.producto.id] ?: f.sugerencias.first().clave) } ?: f.sugerencias.first()
                     NeumorphicDropdown(
                         selected = elegida, options = f.sugerencias,
-                        optionLabel = { (if (it.tipo == "productor") "🌱 " else "") + it.nombre + (it.distanciaKm?.let { d -> " ($d km)" } ?: "") },
+                        optionLabel = { (if (it.tipo == "productor") "Local · " else "") + it.nombre + (it.distanciaKm?.let { d -> " ($d km)" } ?: "") },
                         onSelect = { vm.elegir(f.producto.id, it.clave) },
                         modifier = Modifier.weight(1f),
                     )
@@ -407,7 +389,7 @@ private fun GrupoCard(g: GrupoPedido, st: AnaquelUiState, vm: AnaquelViewModel) 
         if (s != null) {
             Spacer(Modifier.height(NeuDimens.SpaceLg))
             NeumorphicButton(
-                text = if (st.ocupado == g.clave) "Enviando…" else "Pedir por WhatsApp (${g.items.size})",
+                text = if (st.ocupado == g.clave) "Enviando…" else "Hacer pedido (${g.items.size})",
                 onClick = { vm.pedir(g) }, enabled = st.ocupado != g.clave, modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -416,7 +398,7 @@ private fun GrupoCard(g: GrupoPedido, st: AnaquelUiState, vm: AnaquelViewModel) 
 
 private fun androidx.compose.foundation.lazy.LazyListScope.anaqueles(st: AnaquelUiState, vm: AnaquelViewModel) {
     val lista = st.anaqueles
-    if (lista == null) { item { Texto("Cargando…") }; return }
+    if (lista == null) { item { TarjetasCargando("Cargando…") }; return }
     if (lista.isEmpty()) {
         item {
             Texto("Aún no tienes anaqueles.\nToca + y toma la foto de tu anaquel lleno.", Modifier.fillMaxWidth().padding(top = NeuDimens.SpaceXxl))
@@ -443,22 +425,23 @@ private fun androidx.compose.foundation.lazy.LazyListScope.anaqueles(st: Anaquel
 
 private fun androidx.compose.foundation.lazy.LazyListScope.pedidos(st: AnaquelUiState, vm: AnaquelViewModel) {
     val lista = st.pedidos
-    if (lista == null) { item { Texto("Cargando…") }; return }
+    if (lista == null) { item { TarjetasCargando("Cargando…") }; return }
     val abiertos = lista.filter { it.abierto }
     val cerrados = lista.filterNot { it.abierto }.take(15)
     if (abiertos.isEmpty()) item { Texto("No hay pedidos en camino. Se crean desde «Hoy».", Modifier.fillMaxWidth()) }
-    items(abiertos, key = { it.id }) { p -> PedidoCard(p, st, vm) }
+    itemsIndexed(abiertos, key = { _, p -> p.id }) { i, p -> Box(Modifier.animateItem().entrada(i)) { PedidoCard(p, st, vm) } }
     if (cerrados.isNotEmpty()) item { Titulo("Anteriores") }
-    items(cerrados, key = { it.id }) { p -> PedidoCard(p, st, vm) }
+    items(cerrados, key = { it.id }) { p -> Box(Modifier.animateItem()) { PedidoCard(p, st, vm) } }
 }
 
 @Composable
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 private fun PedidoCard(p: Pedido, st: AnaquelUiState, vm: AnaquelViewModel) {
     NeumorphicCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Titulo("#${p.id} · ${p.destino}")
-                Texto((if (p.tipo == "productor") "🌱 Local · " else "") + "pedido ${hace(p.creado)}" +
+                Texto((if (p.tipo == "productor") "Local · " else "") + "pedido ${hace(p.creado)}" +
                     if (p.estado == "llego" && p.llegoAuto) " · confirmado por foto" else "")
             }
             EtiquetaNivel(p.estado)
@@ -471,9 +454,11 @@ private fun PedidoCard(p: Pedido, st: AnaquelUiState, vm: AnaquelViewModel) {
         p.items.forEach { Texto("${it.cantidad} × ${it.nombre}" + if (it.recibido) "  ✓" else "", secundario = it.recibido) }
         if (p.abierto) {
             Spacer(Modifier.height(NeuDimens.SpaceLg))
-            NeumorphicButton(if (p.atrasado) "Preguntar por WhatsApp" else "Abrir WhatsApp", onClick = { vm.reenviar(p) }, modifier = Modifier.fillMaxWidth())
+            if (p.telefono.isNotBlank()) NeumorphicButton(if (p.atrasado) "Llamar para preguntar" else "Llamar a ${p.destino}", onClick = { vm.reenviar(p) }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(NeuDimens.SpaceMd))
-            Row(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd), verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceSm),
+            ) {
                 if (p.estado == "enviado") NeumorphicChip("Me confirmó", selected = false, onClick = { vm.cambiarEstado(p, "confirmado") })
                 NeumorphicChip("Ya llegó", selected = false, onClick = { vm.cambiarEstado(p, "llego") })
                 NeumorphicChip("Cancelar", selected = false, onClick = { vm.cambiarEstado(p, "cancelado") })
@@ -543,19 +528,14 @@ private fun DetalleAnaquel(st: AnaquelUiState, a: Anaquel, vm: AnaquelViewModel,
     }
     if (renombrar) {
         var n by remember { mutableStateOf(a.nombre) }
-        AlertDialog(
-            onDismissRequest = { renombrar = false }, title = { Text("Renombrar anaquel") },
-            text = { NeumorphicInput(n, { n = it }, Modifier.fillMaxWidth()) },
-            confirmButton = { TextButton(onClick = { renombrar = false; vm.renombrar(n) }) { Text("Guardar") } },
-            dismissButton = { TextButton(onClick = { renombrar = false }) { Text("Cancelar") } },
-        )
+        DialogoAnaquel("Renombrar anaquel", "Guardar", onConfirmar = { renombrar = false; vm.renombrar(n) }, onCerrar = { renombrar = false }) {
+            NeumorphicInput(n, { n = it }, Modifier.fillMaxWidth())
+        }
     }
     if (borrar) {
-        AlertDialog(
-            onDismissRequest = { borrar = false }, title = { Text("¿Borrar «${a.nombre}»?") },
-            text = { Text("Se borran su foto y sus zonas. Los productos no se borran.") },
-            confirmButton = { TextButton(onClick = { borrar = false; vm.borrarAnaquel() }) { Text("Borrar", color = NeuColors.OnLowStock) } },
-            dismissButton = { TextButton(onClick = { borrar = false }) { Text("Cancelar") } },
+        DialogoAnaquel(
+            "¿Borrar «${a.nombre}»?", "Borrar", onConfirmar = { borrar = false; vm.borrarAnaquel() }, onCerrar = { borrar = false },
+            texto = "Se borran su foto y sus zonas. Los productos no se borran.", peligro = true,
         )
     }
 }
@@ -675,3 +655,6 @@ private fun Bodega3D(vm: AnaquelViewModel, modifier: Modifier) {
         }
     }
 }
+
+
+/** Encabezado tipo perfil: quién eres, tus números (se pueden tocar) y todas tus herramientas. */

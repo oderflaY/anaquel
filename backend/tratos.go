@@ -189,26 +189,83 @@ func (a *App) nombreTienda(id int64) string {
 	return n
 }
 
+type datosTrato struct {
+	ProductoID  int64  `json:"producto_id"`
+	AnuncioID   int64  `json:"anuncio_id"`
+	SolicitudID int64  `json:"solicitud_id"`
+	MiProducto  int64  `json:"mi_producto_id"` // al responder una solicitud
+	Cantidad    int64  `json:"cantidad"`
+	PrecioC     int64  `json:"precio_c"`
+	Mensaje     string `json:"mensaje"`
+}
+
 // crearTrato abre una negociación desde un producto o anuncio de otra tienda
-// (yo compro) o desde una solicitud de otra tienda (yo vendo).
+// (yo compro) o desde una solicitud de otra tienda (yo vendo). También queda
+// en el chat entre las dos tiendas.
 func (a *App) crearTrato(w http.ResponseWriter, r *http.Request) {
-	var d struct {
-		ProductoID  int64  `json:"producto_id"`
-		AnuncioID   int64  `json:"anuncio_id"`
-		SolicitudID int64  `json:"solicitud_id"`
-		MiProducto  int64  `json:"mi_producto_id"` // al responder una solicitud
-		Cantidad    int64  `json:"cantidad"`
-		PrecioC     int64  `json:"precio_c"`
-		Mensaje     string `json:"mensaje"`
-	}
+	var d datosTrato
 	if err := leerJSON(r, &d); err != nil {
 		manejar(w, nil, err)
 		return
 	}
 	yo := tiendaDe(r)
-	if d.Cantidad <= 0 {
-		manejar(w, nil, fallo(400, "Escribe cuántas piezas"))
+	id, otra, err := a.abrirTrato(yo, d, true)
+	if err != nil {
+		manejar(w, nil, err)
 		return
+	}
+	a.publicarOfertaInicial(yo, otra, id)
+	out, err := a.cargarTrato(id, yo, true)
+	manejar(w, out, err)
+}
+
+// publicarOfertaInicial deja la primera propuesta del trato en el chat de las dos tiendas.
+func (a *App) publicarOfertaInicial(yo, otra, id int64) {
+	var cant, precio int64
+	var texto string
+	a.db.QueryRow(`SELECT t.cantidad, t.precio_c, COALESCE((SELECT texto FROM trato_mensajes m WHERE m.trato_id = t.id ORDER BY m.id LIMIT 1), '')
+		FROM tratos t WHERE t.id = ?`, id).Scan(&cant, &precio, &texto)
+	a.ofertaEnChat(yo, otra, id, cant, precio, texto)
+}
+
+// contraofertar cambia cantidad y/o precio del trato (nil o <= 0 = se queda
+// igual), deja la propuesta en el trato y en el chat, y avisa a la otra tienda.
+func (a *App) contraofertar(id, yo int64, cantidad, precio *int64, texto string) (Trato, error) {
+	t, err := a.cargarTrato(id, yo, false)
+	if err != nil {
+		return t, err
+	}
+	if t.Estado != "negociando" {
+		return t, fallo(409, "El trato ya no está en negociación")
+	}
+	cant, pc := t.Cantidad, t.PrecioC
+	if cantidad != nil && *cantidad > 0 {
+		cant = *cantidad
+	}
+	if precio != nil && *precio > 0 {
+		pc = *precio
+	}
+	if t.Rol == "compro" && t.Disponible != nil && cant > *t.Disponible && *t.Disponible > 0 {
+		return t, fallo(409, fmt.Sprintf("Solo tiene %s.", cantidadTxt(*t.Disponible)))
+	}
+	texto = recortarTexto(strings.TrimSpace(texto), 1000)
+	if texto == "" {
+		texto = fmt.Sprintf("Te propongo %s a %s c/u.", cantidadTxt(cant), pesosTxt(pc))
+	}
+	ahoraMs := ahora()
+	a.db.Exec("UPDATE tratos SET cantidad = ?, precio_c = ?, propuso_id = ?, actualizado = ? WHERE id = ?", cant, pc, yo, ahoraMs, id)
+	a.db.Exec("INSERT INTO trato_mensajes (trato_id, tienda_id, texto, cantidad, precio_c, creado) VALUES (?, ?, ?, ?, ?, ?)", id, yo, texto, cant, pc, ahoraMs)
+	a.ofertaEnChat(yo, t.Otra.ID, id, cant, pc, texto)
+	a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:msg:%d", id, ahoraMs), "trato",
+		fmt.Sprintf("%s te contraofertó %s %s a %s c/u.", a.nombreTienda(yo), cantidadTxt(cant), t.Titulo, pesosTxt(pc)), fmt.Sprintf("/panel/tratos/%d", id))
+	t.Cantidad, t.PrecioC = cant, pc
+	return t, nil
+}
+
+// abrirTrato crea el trato y su primer mensaje. Devuelve el id y la otra tienda.
+func (a *App) abrirTrato(yo int64, d datosTrato, avisarOtra bool) (int64, int64, error) {
+	if d.Cantidad <= 0 {
+		return 0, 0, fallo(400, "Escribe cuántas piezas")
 	}
 	var comprador, vendedor int64
 	var producto, anuncio, solicitud any
@@ -219,9 +276,8 @@ func (a *App) crearTrato(w http.ResponseWriter, r *http.Request) {
 		var mayoreo, menudeo, minimo int64
 		err := a.db.QueryRow("SELECT tienda_id, nombre, publicado, precio_mayoreo_c, precio_c, minimo_mayoreo FROM productos WHERE id = ?", d.ProductoID).
 			Scan(&vendedor, &titulo, &publicado, &mayoreo, &menudeo, &minimo)
-		if err != nil || !publicado {
-			manejar(w, nil, fallo(404, "Ese producto ya no está en la red"))
-			return
+		if err != nil || !publicado || !a.puedeVer(yo, d.ProductoID) {
+			return 0, 0, fallo(404, "Ese producto ya no está en la red")
 		}
 		if d.PrecioC <= 0 {
 			d.PrecioC = menudeo
@@ -233,15 +289,13 @@ func (a *App) crearTrato(w http.ResponseWriter, r *http.Request) {
 		solicitud = a.solicitudQueCubre(yo, titulo)
 	case d.AnuncioID > 0:
 		if err := a.db.QueryRow("SELECT tienda_id, titulo FROM anuncios WHERE id = ? AND activo = 1", d.AnuncioID).Scan(&vendedor, &titulo); err != nil {
-			manejar(w, nil, fallo(404, "Ese anuncio ya no está"))
-			return
+			return 0, 0, fallo(404, "Ese anuncio ya no está")
 		}
 		comprador, anuncio = yo, d.AnuncioID
 		solicitud = a.solicitudQueCubre(yo, titulo)
 	case d.SolicitudID > 0:
 		if err := a.db.QueryRow("SELECT tienda_id, que FROM solicitudes WHERE id = ? AND estado = 'abierta'", d.SolicitudID).Scan(&comprador, &titulo); err != nil {
-			manejar(w, nil, fallo(404, "Esa solicitud ya se cerró"))
-			return
+			return 0, 0, fallo(404, "Esa solicitud ya se cerró")
 		}
 		vendedor, solicitud = yo, d.SolicitudID
 		if d.MiProducto > 0 {
@@ -251,26 +305,22 @@ func (a *App) crearTrato(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	default:
-		manejar(w, nil, fallo(400, "¿Sobre qué es el trato?"))
-		return
+		return 0, 0, fallo(400, "¿Sobre qué es el trato?")
 	}
 	if comprador == vendedor {
-		manejar(w, nil, fallo(400, "No puedes negociar contigo mismo"))
-		return
+		return 0, 0, fallo(400, "No puedes negociar contigo mismo")
 	}
 	t := ahora()
 	tx, err := a.db.Begin()
 	if err != nil {
-		manejar(w, nil, err)
-		return
+		return 0, 0, err
 	}
 	defer tx.Rollback()
 	res, err := tx.Exec(`INSERT INTO tratos (comprador_id, vendedor_id, producto_id, anuncio_id, solicitud_id, titulo, cantidad, precio_c,
 		propuso_id, creado, actualizado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		comprador, vendedor, producto, anuncio, solicitud, titulo, d.Cantidad, max(0, d.PrecioC), yo, t, t)
 	if err != nil {
-		manejar(w, nil, err)
-		return
+		return 0, 0, err
 	}
 	id, _ := res.LastInsertId()
 	texto := strings.TrimSpace(d.Mensaje)
@@ -284,19 +334,19 @@ func (a *App) crearTrato(w http.ResponseWriter, r *http.Request) {
 	tx.Exec("INSERT INTO trato_mensajes (trato_id, tienda_id, texto, cantidad, precio_c, creado) VALUES (?, ?, ?, ?, ?, ?)",
 		id, yo, recortarTexto(texto, 1000), d.Cantidad, max(0, d.PrecioC), t)
 	if err := tx.Commit(); err != nil {
-		manejar(w, nil, err)
-		return
+		return 0, 0, err
 	}
 	otra := vendedor
 	verbo := "quiere comprarte"
 	if yo == vendedor {
 		otra, verbo = comprador, "te ofrece"
 	}
-	a.avisar(otra, fmt.Sprintf("trato:%d:nuevo", id), "trato",
-		fmt.Sprintf("%s %s %s %s a %s c/u.", a.nombreTienda(yo), verbo, cantidadTxt(d.Cantidad), titulo, pesosTxt(d.PrecioC)),
-		fmt.Sprintf("/panel/tratos/%d", id))
-	out, err := a.cargarTrato(id, yo, true)
-	manejar(w, out, err)
+	if avisarOtra {
+		a.avisar(otra, fmt.Sprintf("trato:%d:nuevo", id), "trato",
+			fmt.Sprintf("%s %s %s %s a %s c/u.", a.nombreTienda(yo), verbo, cantidadTxt(d.Cantidad), titulo, pesosTxt(d.PrecioC)),
+			fmt.Sprintf("/panel/tratos/%d", id))
+	}
+	return id, otra, nil
 }
 
 func (a *App) mensajeTrato(w http.ResponseWriter, r *http.Request) {
@@ -336,19 +386,18 @@ func (a *App) mensajeTrato(w http.ResponseWriter, r *http.Request) {
 	if d.PrecioC != nil && *d.PrecioC >= 0 {
 		precio = *d.PrecioC
 	}
-	ahoraMs := ahora()
 	if contra {
-		if texto == "" {
-			texto = fmt.Sprintf("Te propongo %s a %s c/u.", cantidadTxt(cant), pesosTxt(precio))
+		if _, err := a.contraofertar(id, yo, &cant, &precio, texto); err != nil {
+			manejar(w, nil, err)
+			return
 		}
-		a.db.Exec("UPDATE tratos SET cantidad = ?, precio_c = ?, propuso_id = ?, actualizado = ? WHERE id = ?", cant, precio, yo, ahoraMs, id)
-		a.db.Exec("INSERT INTO trato_mensajes (trato_id, tienda_id, texto, cantidad, precio_c, creado) VALUES (?, ?, ?, ?, ?, ?)", id, yo, texto, cant, precio, ahoraMs)
 	} else {
+		ahoraMs := ahora()
 		a.db.Exec("UPDATE tratos SET actualizado = ? WHERE id = ?", ahoraMs, id)
 		a.db.Exec("INSERT INTO trato_mensajes (trato_id, tienda_id, texto, creado) VALUES (?, ?, ?, ?)", id, yo, texto, ahoraMs)
+		a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:msg:%d", id, ahoraMs), "trato",
+			a.nombreTienda(yo)+" respondió en el trato de "+t.Titulo+": "+recortarTexto(texto, 140), fmt.Sprintf("/panel/tratos/%d", id))
 	}
-	a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:msg:%d", id, ahoraMs), "trato",
-		a.nombreTienda(yo)+" respondió en el trato de "+t.Titulo+": "+recortarTexto(texto, 140), fmt.Sprintf("/panel/tratos/%d", id))
 	out, err := a.cargarTrato(id, yo, true)
 	manejar(w, out, err)
 }
@@ -362,52 +411,59 @@ func (a *App) sistemaTrato(id int64, texto string) {
 func (a *App) accionTrato(w http.ResponseWriter, r *http.Request) {
 	id, err := idRuta(r)
 	yo := tiendaDe(r)
-	var t Trato
 	if err == nil {
-		t, err = a.cargarTrato(id, yo, false)
+		err = a.hacerAccionTrato(id, yo, r.PathValue("accion"), true)
 	}
 	if err != nil {
 		manejar(w, nil, err)
 		return
 	}
-	accion := r.PathValue("accion")
+	out, err := a.cargarTrato(id, yo, true)
+	manejar(w, out, err)
+}
+
+// hacerAccionTrato: aceptar, entregar o cancelar (lo usan la pantalla de
+// tratos y las tarjetas de pedido del chat).
+func (a *App) hacerAccionTrato(id, yo int64, accion string, avisarOtra bool) error {
+	t, err := a.cargarTrato(id, yo, false)
+	if err != nil {
+		return err
+	}
 	quien := a.nombreTienda(yo)
 	enlace := fmt.Sprintf("/panel/tratos/%d", id)
+	avisa := func(clave, texto string) {
+		if avisarOtra {
+			a.avisar(t.Otra.ID, clave, "trato", texto, enlace)
+		}
+	}
 	switch accion {
 	case "aceptar":
 		if t.Estado != "negociando" || !t.TeToca {
-			manejar(w, nil, fallo(409, "Espera a que la otra tienda responda tu propuesta"))
-			return
+			return fallo(409, "Espera a que la otra tienda responda tu propuesta")
 		}
 		a.db.Exec("UPDATE tratos SET estado = 'aceptado' WHERE id = ?", id)
 		a.sistemaTrato(id, fmt.Sprintf("%s aceptó: %s %s a %s c/u (total %s).", quien, cantidadTxt(t.Cantidad), t.Titulo,
 			pesosTxt(t.PrecioC), pesosTxt(t.PrecioC*t.Cantidad)))
-		a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:aceptado", id), "trato", quien+" aceptó el trato de "+t.Titulo+". ¡Pónganse de acuerdo para la entrega!", enlace)
+		avisa(fmt.Sprintf("trato:%d:aceptado", id), quien+" aceptó el trato de "+t.Titulo+". ¡Pónganse de acuerdo para la entrega!")
 	case "entregar":
 		if t.Estado != "aceptado" || t.Rol != "vendo" {
-			manejar(w, nil, fallo(409, "Solo quien vende marca la entrega, y el trato debe estar aceptado"))
-			return
+			return fallo(409, "Solo quien vende marca la entrega, y el trato debe estar aceptado")
 		}
 		if err := a.entregarTrato(id, yo, t); err != nil {
-			manejar(w, nil, err)
-			return
+			return err
 		}
-		a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:entregado", id), "trato",
-			fmt.Sprintf("%s entregó %s %s. Ya se sumaron a tu inventario.", quien, cantidadTxt(t.Cantidad), t.Titulo), enlace)
+		avisa(fmt.Sprintf("trato:%d:entregado", id), fmt.Sprintf("%s entregó %s %s. Ya se sumaron a tu inventario.", quien, cantidadTxt(t.Cantidad), t.Titulo))
 	case "cancelar":
 		if t.Estado == "entregado" || t.Estado == "cancelado" {
-			manejar(w, nil, fallo(409, "Ese trato ya terminó"))
-			return
+			return fallo(409, "Ese trato ya terminó")
 		}
 		a.db.Exec("UPDATE tratos SET estado = 'cancelado' WHERE id = ?", id)
 		a.sistemaTrato(id, quien+" canceló el trato.")
-		a.avisar(t.Otra.ID, fmt.Sprintf("trato:%d:cancelado", id), "trato", quien+" canceló el trato de "+t.Titulo+".", enlace)
+		avisa(fmt.Sprintf("trato:%d:cancelado", id), quien+" canceló el trato de "+t.Titulo+".")
 	default:
-		manejar(w, nil, fallo(404, "Acción desconocida"))
-		return
+		return fallo(404, "Acción desconocida")
 	}
-	out, err := a.cargarTrato(id, yo, true)
-	manejar(w, out, err)
+	return nil
 }
 
 // entregarTrato mueve el inventario: salida del vendedor y entrada al comprador

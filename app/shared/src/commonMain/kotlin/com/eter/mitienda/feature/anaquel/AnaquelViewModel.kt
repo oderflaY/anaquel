@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class SeccionAnaquel(val titulo: String) {
-    HOY("Hoy"), BODEGA("Bodega 3D"), ASESOR("Asesor"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"),
+    HOY("Hoy"), BODEGA("Mi bodega"), ASESOR("Tu socio"), RED("Red"), TRATOS("Tratos"), ANAQUELES("Anaqueles"), PEDIDOS("Pedidos"), MAYOREO("Vender al mayoreo"),
 }
 
 data class AnaquelUiState(
@@ -43,10 +43,37 @@ data class AnaquelUiState(
     val tratos: List<Trato>? = null,
     val trato: Trato? = null,
     val asesor: List<MensajeAsesor>? = null,
+    /** Plan del día de tu socio (cifras, alertas y recomendaciones del grafo). */
+    val plan: PlanAsesor? = null,
     val motorAsesor: String = "basico",
     /** Pregunta que el asesor está contestando. */
     val pensando: String? = null,
+    // Inicio y chats
+    val inicio: Inicio? = null,
+    val chats: List<Chat>? = null,
+    val chat: Chat? = null,
+    /** Pedido que se está armando (diálogo con cantidades). */
+    val pidiendo: PedidoEnCurso? = null,
+    /** Mi vitrina, para elegir qué mandar como catálogo. */
+    val miCatalogo: List<ItemCatalogo>? = null,
+    /** Perfil de otra tienda abierto (hoja de perfil). */
+    val perfil: PerfilTienda? = null,
+    /** Mis productos al mayoreo y a quién se los muestro. */
+    val mayoreo: MiMayoreo? = null,
+    /** Pago en línea abierto (hoja con la página de Stripe o la de prueba). */
+    val pago: Cobro? = null,
+    /** Pago recién confirmado (para la animación de «¡Pagado!»). */
+    val pagado: Cobro? = null,
 )
+
+/** Pedido a medio armar desde un catálogo: productos de la otra tienda y cantidades. */
+data class PedidoEnCurso(
+    val chatId: Long, val tienda: String, val catalogo: Long?, val items: List<ItemCatalogo>,
+    val cantidades: Map<Long, Long> = emptyMap(),
+) {
+    val total: Long get() = items.sumOf { it.precioPara(cantidades[it.productoId] ?: 0) * (cantidades[it.productoId] ?: 0) }
+    val piezas: Long get() = cantidades.values.sum()
+}
 
 /** Un grupo de la lista de resurtido: a quién pedir y qué. */
 data class GrupoPedido(val clave: String, val sugerencia: Sugerencia?, val items: List<Faltante>)
@@ -69,9 +96,15 @@ class AnaquelViewModel(
     var mensaje by mutableStateOf<String?>(null)
         private set
 
-    /** Enlace de WhatsApp que la pantalla debe abrir (y luego limpiar). */
+    /** Enlace (tel:…) que la pantalla debe abrir y luego limpiar. */
     var abrirEnlace by mutableStateOf<String?>(null)
         private set
+
+    /** Pantalla a la que hay que ir (un solo uso): "chats". La atiende App.kt desde cualquier pestaña. */
+    var navegar by mutableStateOf<String?>(null)
+        private set
+
+    fun onNavegado() { navegar = null }
 
     private var sincronizado = false
 
@@ -111,11 +144,20 @@ class AnaquelViewModel(
         refrescarAhora()
     }
 
+    /** true solo la primera vez: después no volvemos a molestar con el permiso. */
+    suspend fun tocaPedirPermiso(): Boolean {
+        if (runCatching { ajustes.leer("anaquel.permiso.notif") }.getOrNull() != null) return false
+        runCatching { ajustes.guardar("anaquel.permiso.notif", "1") }
+        return true
+    }
+
     fun reiniciarDemo() = conSesion { api.reiniciarDemo() }
 
     fun salir() = viewModelScope.launch {
         api.token = null
         ajustes.guardar(CLAVE_TOKEN, null)
+        ajustes.guardar("anaquel.notif.aviso", null)
+        ajustes.guardar("anaquel.notif.chat", null)
         _state.value = AnaquelUiState(revisandoSesion = false)
     }
 
@@ -124,9 +166,10 @@ class AnaquelViewModel(
     fun elegirSeccion(s: SeccionAnaquel) {
         _state.update { it.copy(seccion = s, trato = null) }
         when (s) {
-            SeccionAnaquel.ASESOR -> if (_state.value.asesor == null) trabajo(null) { cargarAsesor() }
+            SeccionAnaquel.ASESOR -> if (_state.value.asesor == null || _state.value.plan == null) trabajo(null) { cargarAsesor() }
             SeccionAnaquel.RED -> if (_state.value.red == null) buscarRed(_state.value.consultaRed)
             SeccionAnaquel.TRATOS -> trabajo(null) { _state.update { it.copy(tratos = api.tratos()) } }
+            SeccionAnaquel.MAYOREO -> cargarMayoreo()
             else -> Unit
         }
     }
@@ -142,11 +185,18 @@ class AnaquelViewModel(
         return "$SERVIDOR_ANAQUEL/panel/bodega?app=1$consulta#t=$tok"
     }
 
+    /** Mapa de la red (misma página del panel, sin encabezado y con la sesión en el hash). */
+    fun urlMapa(): String? {
+        val tok = api.token ?: return null
+        return "$SERVIDOR_ANAQUEL/panel/mapa?app=1#t=$tok"
+    }
+
     // ---------------- Red, tratos y asesor ----------------
 
     private suspend fun cargarAsesor() {
         val c = api.asesor()
         _state.update { it.copy(asesor = c.mensajes, motorAsesor = c.motor) }
+        runCatching { api.planAsesor() }.onSuccess { p -> _state.update { it.copy(plan = p) } }
     }
 
     fun preguntar(texto: String) {
@@ -183,13 +233,29 @@ class AnaquelViewModel(
         buscarRed(q)
     }
 
+    /**
+     * Manda la oferta y salta directo al chat con esa tienda: ahí llega su
+     * respuesta (aceptar, contraoferta) y, cuando toca, el botón de pagar.
+     */
     fun negociar(r: ResultadoRed, cantidad: Long, precioC: Long, mensajeTexto: String) = trabajo("trato") {
         val t = api.crearTrato(r, cantidad, precioC, mensajeTexto)
-        mensaje = if (r.tipo == "solicitud") "Oferta enviada" else "Propuesta enviada. Te avisamos cuando responda."
-        _state.update { it.copy(seccion = SeccionAnaquel.TRATOS, trato = t, tratos = api.tratos()) }
+        val c = api.abrirChat(t.otra.id)
+        _state.update { it.copy(chat = c, trato = null, pidiendo = null) }
+        navegar = "chats"
+        mensaje = if (r.tipo == "solicitud") "Oferta enviada a ${t.otra.nombre.removeSuffix(" (demo)")}"
+        else "Propuesta enviada. Aquí te contesta ${t.otra.nombre.removeSuffix(" (demo)")}."
     }
 
     fun abrirTrato(t: Trato) = trabajo("trato") { _state.update { it.copy(trato = api.trato(t.id)) } }
+
+    /** Los tratos se platican en el chat con esa tienda (ahí están sus tarjetas y el pago). */
+    fun verTratoEnChat(t: Trato) = abrirChatCon(t.otra.id)
+
+    /** Abre el chat con una tienda y lleva a la pestaña Chats (desde el mapa, un trato…). */
+    fun abrirChatCon(tienda: Long, pedir: Boolean = false, producto: Long? = null, cantidad: Long = 0) {
+        chatCon(tienda, pedir, producto, cantidad)
+        navegar = "chats"
+    }
     fun cerrarTrato() = trabajo(null) { _state.update { it.copy(trato = null, tratos = api.tratos()) } }
 
     fun escribirTrato(texto: String, cantidad: Long? = null, precioC: Long? = null) {
@@ -212,7 +278,6 @@ class AnaquelViewModel(
         }
     }
 
-    fun abrirWhatsApp(enlace: String) { abrirEnlace = enlace }
 
     fun refrescar() = trabajo(null) { refrescarAhora() }
 
@@ -225,8 +290,10 @@ class AnaquelViewModel(
         val a = api.anaqueles()
         val p = api.pedidos()
         val tr = if (_state.value.seccion == SeccionAnaquel.TRATOS) runCatching { api.tratos() }.getOrNull() else null
+        val ini = runCatching { api.inicio() }.getOrNull()
         _state.update { st ->
             st.copy(
+                inicio = ini ?: st.inicio,
                 resumen = r, faltantes = f, anaqueles = a, pedidos = p, error = null, tratos = tr ?: st.tratos,
                 abierto = st.abierto?.let { ab -> a.firstOrNull { it.id == ab.id } ?: ab },
             )
@@ -253,6 +320,176 @@ class AnaquelViewModel(
         refrescarAhora()
     }
 
+    // ---------------- Vender al mayoreo ----------------
+
+    fun cargarMayoreo() = trabajo(if (_state.value.mayoreo == null) "mayoreo" else null) {
+        var m = api.mayoreo()
+        // Si aún no ha subido su inventario, se sube solo para poder publicarlo.
+        if (m.productos.isEmpty()) {
+            subirInventario()
+            m = api.mayoreo()
+        }
+        _state.update { it.copy(mayoreo = m) }
+    }
+
+    fun guardarMayoreo(id: Long, c: CambioMayoreo, listo: () -> Unit = {}) = trabajo("mayoreo-guardar") {
+        val m = api.guardarMayoreo(id, c)
+        _state.update { it.copy(mayoreo = m) }
+        val n = c.elegidos.size
+        mensaje = when {
+            !c.publicado -> "Lo quitaste de la red"
+            c.audiencia == "elegidos" -> "Publicado solo para ${if (n == 1) "1 tienda" else "$n tiendas"}"
+            else -> "Publicado para toda la red"
+        }
+        listo()
+    }
+
+    // ---------------- Inicio ----------------
+
+    fun cargarInicio() = trabajo(if (_state.value.inicio == null) "inicio" else null) {
+        val i = api.inicio()
+        _state.update { it.copy(inicio = i) }
+    }
+
+    /** Búsqueda desde Inicio: los resultados se ven ahí mismo. */
+    fun buscarDesdeInicio(q: String) {
+        if (q.isBlank()) { _state.update { it.copy(consultaRed = "", red = null) }; return }
+        buscarRed(q)
+    }
+
+    // ---------------- Chats ----------------
+
+    fun cargarChats() = trabajo(if (_state.value.chats == null) "chats" else null) {
+        _state.update { it.copy(chats = api.chats()) }
+    }
+
+    fun verPerfil(id: Long) = trabajo("perfil") { _state.update { it.copy(perfil = api.perfil(id)) } }
+    fun cerrarPerfil() = _state.update { it.copy(perfil = null) }
+
+    fun abrirChat(id: Long) = trabajo("chat") { _state.update { it.copy(chat = api.chat(id)) } }
+
+    /**
+     * Abre (o crea) la conversación con una tienda. Con [pedir] se abre además
+     * su catálogo para armar el pedido; [producto] llega con una cantidad sugerida.
+     */
+    fun chatCon(tienda: Long, pedir: Boolean = false, producto: Long? = null, cantidad: Long = 0) = trabajo("chat") {
+        val c = api.abrirChat(tienda)
+        _state.update { it.copy(chat = c) }
+        if (pedir) {
+            val items = api.catalogo(tienda)
+            if (items.isEmpty()) {
+                mensaje = "${c.otra.nombre} no tiene productos en su vitrina. Escríbele lo que necesitas."
+            } else {
+                val ini = if (producto != null && items.any { it.productoId == producto }) mapOf(producto to cantidad.coerceAtLeast(1)) else emptyMap()
+                _state.update { it.copy(pidiendo = PedidoEnCurso(c.id, c.otra.nombre, null, items, ini)) }
+            }
+        }
+    }
+
+    fun cerrarChat() {
+        _state.update { it.copy(chat = null, pidiendo = null) }
+        cargarChats()
+    }
+
+    /** Recarga el chat abierto sin bloquear la pantalla (para ver respuestas nuevas). */
+    fun refrescarChat() {
+        val c = _state.value.chat ?: return
+        viewModelScope.launch {
+            runCatching { api.chat(c.id) }.onSuccess { n -> _state.update { if (it.chat?.id == n.id) it.copy(chat = n) else it } }
+        }
+    }
+
+    fun escribirChat(texto: String) {
+        val c = _state.value.chat ?: return
+        if (texto.isBlank()) return
+        trabajo("enviar") { _state.update { it.copy(chat = api.escribirChat(c.id, texto.trim())) } }
+    }
+
+    fun cargarMiCatalogo() = trabajo("catalogo") { _state.update { it.copy(miCatalogo = api.miCatalogo()) } }
+
+    /** Manda mi catálogo (todo, o solo [productos]). */
+    fun mandarCatalogo(productos: List<Long>?) {
+        val c = _state.value.chat ?: return
+        trabajo("enviar") {
+            _state.update { it.copy(chat = api.mandarCatalogo(c.id, productos)) }
+            mensaje = "Catálogo enviado"
+        }
+    }
+
+    /** Desde una tarjeta de catálogo del chat: armar el pedido con esos productos. */
+    fun pedirDeCatalogo(m: MensajeChat) {
+        val c = _state.value.chat ?: return
+        val items = m.items.filter { it.sigue }
+        if (items.isEmpty()) { mensaje = "Esos productos ya no están en su vitrina"; return }
+        _state.update { it.copy(pidiendo = PedidoEnCurso(c.id, c.otra.nombre, m.id, items)) }
+    }
+
+    fun cambiarCantidadPedido(producto: Long, n: Long) = _state.update { st ->
+        val p = st.pidiendo ?: return@update st
+        val tope = p.items.firstOrNull { it.productoId == producto }?.disponible ?: Long.MAX_VALUE
+        val v = n.coerceIn(0, tope)
+        st.copy(pidiendo = p.copy(cantidades = if (v == 0L) p.cantidades - producto else p.cantidades + (producto to v)))
+    }
+
+    fun cancelarPedido() = _state.update { it.copy(pidiendo = null) }
+
+    fun enviarPedido(texto: String) {
+        val p = _state.value.pidiendo ?: return
+        val items = p.cantidades.filterValues { it > 0 }.toList()
+        if (items.isEmpty()) { mensaje = "Pon la cantidad de al menos un producto"; return }
+        trabajo("pedido") {
+            val c = api.pedirEnChat(p.chatId, p.catalogo, items, texto.trim())
+            _state.update { it.copy(chat = c, pidiendo = null) }
+            mensaje = "Pedido enviado a ${p.tienda}. Te avisamos cuando lo acepte."
+        }
+    }
+
+    /** «Pagar»: acepta lo propuesto (si hacía falta) y abre la página de pago. */
+    fun pagar(m: MensajeChat) {
+        val c = _state.value.chat ?: return
+        trabajo("pedido${m.id}") {
+            val n = api.accionPedidoChat(c.id, m.id, "pagar")
+            _state.update { it.copy(chat = n.copy(cobro = null), pago = n.cobro) }
+        }
+    }
+
+    /** Se cerró la hoja de pago (pagó, canceló o la cerró): se pregunta cómo quedó. */
+    fun cerrarPago() {
+        val p = _state.value.pago ?: return
+        _state.update { it.copy(pago = null) }
+        viewModelScope.launch {
+            val c = runCatching { api.cobro(p.id) }.getOrNull()
+            if (c?.estado == "pagado") {
+                _state.update { it.copy(pagado = c) }
+            } else if (c != null) {
+                mensaje = "No se hizo el cargo. Puedes pagar cuando quieras desde la tarjeta."
+            }
+            refrescarChat()
+        }
+    }
+
+    fun vistoPagado() = _state.update { it.copy(pagado = null) }
+
+    fun contraoferta(m: MensajeChat, trato: Long, cantidad: Long, precioC: Long, texto: String) {
+        val c = _state.value.chat ?: return
+        trabajo("pedido${m.id}") {
+            _state.update { it.copy(chat = api.contraofertaChat(c.id, m.id, trato, cantidad, precioC, texto)) }
+            mensaje = "Contraoferta enviada"
+        }
+    }
+
+    fun accionPedidoChat(m: MensajeChat, accion: String) {
+        val c = _state.value.chat ?: return
+        trabajo("pedido${m.id}") {
+            _state.update { it.copy(chat = api.accionPedidoChat(c.id, m.id, accion)) }
+            mensaje = when (accion) {
+                "aceptar" -> if (m.tipo == "oferta") "Oferta aceptada" else "Pedido aceptado"
+                "entregar" -> "Marcado como entregado: el inventario ya se movió"
+                else -> "Pedido cancelado"
+            }
+        }
+    }
+
     // ---------------- Resurtido y pedidos ----------------
 
     fun grupos(st: AnaquelUiState): List<GrupoPedido> {
@@ -277,8 +514,7 @@ class AnaquelViewModel(
         val s = g.sugerencia ?: return
         trabajo(g.clave) {
             val p = api.pedir(s, g.items.map { it.producto.id to cantidad(it) })
-            abrirEnlace = p.whatsapp
-            mensaje = "Pedido #${p.id} listo para ${p.destino}"
+            mensaje = "Pedido #${p.id} guardado para ${p.destino}. Lo ves en «Pedidos a proveedor»."
             refrescarAhora()
         }
     }
@@ -288,7 +524,8 @@ class AnaquelViewModel(
         refrescarAhora()
     }
 
-    fun reenviar(p: Pedido) { abrirEnlace = p.whatsapp }
+    /** Pedido a un proveedor de fuera de la red: se le llama (ya no se manda por WhatsApp). */
+    fun reenviar(p: Pedido) { if (p.telefono.isNotBlank()) abrirEnlace = "tel:" + p.telefono.filter { it.isDigit() || it == '+' } }
 
     // ---------------- Anaqueles ----------------
 

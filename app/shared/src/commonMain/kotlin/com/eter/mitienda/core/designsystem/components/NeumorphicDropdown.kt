@@ -1,5 +1,9 @@
 package com.eter.mitienda.core.designsystem.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.unit.dp
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -59,7 +63,8 @@ fun <T> NeumorphicDropdown(
             modifier = Modifier
                 .fillMaxWidth()
                 .onSizeChanged { fieldWidthPx = it.width }
-                .neumorphicInset(NeuShapes.Large)
+                .background(NeuColors.Surface, NeuShapes.Medium)
+                .border(1.dp, NeuColors.InputBorder, NeuShapes.Medium)
                 .clickable(role = Role.DropdownList) { expanded = true }
                 .heightIn(min = NeuDimens.InputHeight)
                 .padding(horizontal = NeuDimens.SpaceLg),
@@ -89,7 +94,7 @@ fun <T> NeumorphicDropdown(
             onDismissRequest = { expanded = false },
             modifier = Modifier.width(with(density) { fieldWidthPx.toDp() }.coerceAtLeast(160.dp)),
             shape = NeuShapes.Large,
-            containerColor = NeuColors.Background,
+            containerColor = NeuColors.Surface,
             shadowElevation = 8.dp,
         ) {
             options.forEach { option ->

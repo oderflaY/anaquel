@@ -94,3 +94,37 @@ func TestLimpiarPlano(t *testing.T) {
 		t.Error("debió rechazar un tipo desconocido")
 	}
 }
+
+// Las paredes y columnas que llegan del armador se recortan al local y se
+// limpian (clics sueltos fuera, puerta mínima de 60 cm, barda a media altura).
+func TestPlanoParedesYColumnas(t *testing.T) {
+	p := Plano{Ancho: 8, Fondo: 10, Alto: 3, Puerta: Puerta{X: 4, Ancho: 1.2},
+		Muebles: []Mueble{{Tipo: "vitrina", X: 2, Z: 2}, {Tipo: "ganchera", X: 5, Z: 2}, {Tipo: "cajas", X: 6, Z: 6}},
+		Paredes: []Pared{
+			{X1: 0, Z1: 3, X2: 20, Z2: 3, Puerta: 0.3},           // se sale del local y la puerta es muy chica
+			{X1: 2, Z1: 2, X2: 2.1, Z2: 2},                       // un clic: se descarta
+			{X1: 4, Z1: 0, X2: 4, Z2: 3, Tipo: "media", Alto: 4}, // barda: máximo 1.5 m
+		},
+		Columnas: []Columna{{X: -3, Z: 50, Lado: 0.4}},
+	}
+	if err := p.limpiar(); err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Paredes) != 2 {
+		t.Fatalf("esperaba 2 paredes, quedaron %+v", p.Paredes)
+	}
+	if w := p.Paredes[0]; w.X2 != 8 || w.Puerta != 0.6 || w.Alto != 3 || w.Tipo != "muro" {
+		t.Errorf("pared mal limpiada: %+v", w)
+	}
+	if w := p.Paredes[1]; w.Alto != 1.5 || w.Tipo != "media" {
+		t.Errorf("barda mal limpiada: %+v", w)
+	}
+	if c := p.Columnas[0]; c.X != 0.2 || c.Z != 9.8 {
+		t.Errorf("columna fuera del local: %+v", c)
+	}
+	for _, m := range p.Muebles {
+		if m.Niveles < tiposMueble[m.Tipo].minNiveles {
+			t.Errorf("%s con %d niveles", m.Tipo, m.Niveles)
+		}
+	}
+}

@@ -36,7 +36,7 @@ fun NeumorphicChip(
     val interactionSource = remember { MutableInteractionSource() }
     val insetProgress by animateInsetProgress(interactionSource, forceInset = selected)
     val containerColor by animateColorAsState(
-        targetValue = if (selected) NeuColors.Blue else NeuColors.Background,
+        targetValue = if (selected) NeuColors.Magenta else NeuColors.Background,
         animationSpec = tween(NeuDimens.PressAnimationMillis),
         label = "chipColor",
     )
@@ -64,7 +64,8 @@ fun NeumorphicChip(
             text = text,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (selected) NeuColors.OnAccent else NeuColors.TextSecondary,
+            color = if (selected) NeuColors.OnAccent else NeuColors.TextPrimary,
+            maxLines = 1, softWrap = false,
         )
     }
 }
