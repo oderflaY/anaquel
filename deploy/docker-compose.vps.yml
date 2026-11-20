@@ -1,0 +1,11 @@
+# Ajustes solo del VPS 2.25.68.28 (se usa junto con docker-compose.servicios.yml).
+# La pasarela responde con el nombre «anaquel-api» en la red del proxy, el mismo
+# que tenía el contenedor anterior: Caddy (/anaquel en :443 y el puerto :15443)
+# no cambia. Para regresar a la versión de un solo contenedor basta con
+# «docker compose -p anaquel down» y «docker compose -f docker-compose.yml up -d».
+services:
+  pasarela:
+    networks:
+      interna: {}
+      rutacree_edge:
+        aliases: [anaquel-api]

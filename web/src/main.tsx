@@ -4,6 +4,12 @@ import './index.css'
 import App from './App.tsx'
 import { guardarToken } from './api'
 
+// Tema elegido por la persona (claro/oscuro); si no hay, sigue al sistema.
+try {
+  const t = localStorage.getItem('anaquel.tema')
+  if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t
+} catch { /* sin almacenamiento */ }
+
 // La app móvil abre la bodega 3D con la sesión en el #t=… (no viaja al servidor).
 const hash = new URLSearchParams(location.hash.slice(1))
 if (hash.get('t')) {
