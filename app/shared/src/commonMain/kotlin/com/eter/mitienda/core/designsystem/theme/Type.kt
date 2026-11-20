@@ -20,15 +20,15 @@ val NeuTypography = Typography(
     // Título de pantalla ("Inventario")
     headlineMedium = TextStyle(
         fontFamily = NeuFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
-        letterSpacing = (-0.5).sp,
+        fontWeight = FontWeight.Black,
+        fontSize = 26.sp,
+        lineHeight = 31.sp,
+        letterSpacing = (-0.4).sp,
     ),
     // Nombre de producto / precio
     titleMedium = TextStyle(
         fontFamily = NeuFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
         lineHeight = 22.sp,
     ),
@@ -57,15 +57,15 @@ val NeuTypography = Typography(
     // Texto de botones
     labelLarge = TextStyle(
         fontFamily = NeuFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 15.sp,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 16.sp,
         lineHeight = 20.sp,
-        letterSpacing = 0.2.sp,
+        letterSpacing = 0.sp,
     ),
     // Chips y badges
     labelMedium = TextStyle(
         fontFamily = NeuFontFamily,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         lineHeight = 18.sp,
     ),

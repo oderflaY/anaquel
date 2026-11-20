@@ -29,7 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import com.eter.mitienda.core.designsystem.components.DialogoAnaquel
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -242,18 +242,10 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
     }
     if (pedirNombre) {
         var n by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { pedirNombre = false },
-            title = { Text("Nuevo anaquel") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
-                    Text("Toma la foto con el anaquel LLENO, de frente y desde un lugar al que puedas volver cada día.")
-                    NeumorphicInput(n, { n = it }, Modifier.fillMaxWidth(), placeholder = "Nombre (Refrescos, Botanas…)")
-                }
-            },
-            confirmButton = { TextButton(onClick = { pedirNombre = false; onNuevo(n) }) { Text("Tomar foto") } },
-            dismissButton = { TextButton(onClick = { pedirNombre = false }) { Text("Cancelar") } },
-        )
+        DialogoAnaquel(
+            "Nuevo anaquel", "Tomar foto", onConfirmar = { pedirNombre = false; onNuevo(n) }, onCerrar = { pedirNombre = false },
+            texto = "Toma la foto con el anaquel LLENO, de frente y desde un lugar al que puedas volver cada día.",
+        ) { NeumorphicInput(n, { n = it }, Modifier.fillMaxWidth(), placeholder = "Nombre (Refrescos, Botanas…)") }
     }
     negociando?.let { r ->
         DialogoNegociar(r, onCerrar = { negociando = null }) { n, pc, msg -> negociando = null; vm.negociar(r, n, pc, msg) }
@@ -263,12 +255,9 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onHerramientas: 
         DialogoContraoferta(tratoAbierto, onCerrar = { contra = false }) { n, pc -> contra = false; vm.escribirTrato("", n, pc) }
     }
     if (confirmarSalir) {
-        AlertDialog(
-            onDismissRequest = { confirmarSalir = false },
-            title = { Text("¿Cerrar sesión de Anaquel?") },
-            text = { Text("Tu inventario del teléfono no se borra.") },
-            confirmButton = { TextButton(onClick = { confirmarSalir = false; vm.salir() }) { Text("Cerrar sesión") } },
-            dismissButton = { TextButton(onClick = { confirmarSalir = false }) { Text("Cancelar") } },
+        DialogoAnaquel(
+            "¿Cerrar sesión de Anaquel?", "Cerrar sesión", onConfirmar = { confirmarSalir = false; vm.salir() },
+            onCerrar = { confirmarSalir = false }, texto = "Tu inventario del teléfono no se borra.",
         )
     }
 }
@@ -525,19 +514,14 @@ private fun DetalleAnaquel(st: AnaquelUiState, a: Anaquel, vm: AnaquelViewModel,
     }
     if (renombrar) {
         var n by remember { mutableStateOf(a.nombre) }
-        AlertDialog(
-            onDismissRequest = { renombrar = false }, title = { Text("Renombrar anaquel") },
-            text = { NeumorphicInput(n, { n = it }, Modifier.fillMaxWidth()) },
-            confirmButton = { TextButton(onClick = { renombrar = false; vm.renombrar(n) }) { Text("Guardar") } },
-            dismissButton = { TextButton(onClick = { renombrar = false }) { Text("Cancelar") } },
-        )
+        DialogoAnaquel("Renombrar anaquel", "Guardar", onConfirmar = { renombrar = false; vm.renombrar(n) }, onCerrar = { renombrar = false }) {
+            NeumorphicInput(n, { n = it }, Modifier.fillMaxWidth())
+        }
     }
     if (borrar) {
-        AlertDialog(
-            onDismissRequest = { borrar = false }, title = { Text("¿Borrar «${a.nombre}»?") },
-            text = { Text("Se borran su foto y sus zonas. Los productos no se borran.") },
-            confirmButton = { TextButton(onClick = { borrar = false; vm.borrarAnaquel() }) { Text("Borrar", color = NeuColors.OnLowStock) } },
-            dismissButton = { TextButton(onClick = { borrar = false }) { Text("Cancelar") } },
+        DialogoAnaquel(
+            "¿Borrar «${a.nombre}»?", "Borrar", onConfirmar = { borrar = false; vm.borrarAnaquel() }, onCerrar = { borrar = false },
+            texto = "Se borran su foto y sus zonas. Los productos no se borran.", peligro = true,
         )
     }
 }

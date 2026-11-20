@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -52,14 +55,16 @@ fun NeumorphicInput(
         modifier = modifier,
         singleLine = singleLine,
         textStyle = textStyle.copy(color = NeuColors.TextPrimary),
-        cursorBrush = SolidColor(NeuColors.TextPrimary),
+        cursorBrush = SolidColor(NeuColors.Magenta),
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         visualTransformation = visualTransformation,
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier
-                    .neumorphicInset(NeuShapes.Large)
+                    // Igual que en las hojas: blanco con filete fino (sin hundido).
+                    .background(NeuColors.Surface, NeuShapes.Medium)
+                    .border(1.dp, NeuColors.InputBorder, NeuShapes.Medium)
                     .heightIn(min = NeuDimens.InputHeight)
                     .padding(
                         start = NeuDimens.SpaceLg,

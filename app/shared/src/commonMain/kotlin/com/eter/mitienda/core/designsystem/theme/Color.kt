@@ -19,6 +19,7 @@ object NeuColors {
     val Surface = Color(0xFFFFFFFF)
     val SurfaceSunken = Color(0xFFEAEFEC)
     val Hairline = Color(0x14000000)
+    val InputBorder = Color(0x24000000)
     val ShadowSoft = Color(0x1F0B3D2E)
 
     /** Sombra proyectada (abajo a la derecha). */

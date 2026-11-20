@@ -34,7 +34,7 @@ object NeuDimens {
     val RadiusLarge = 18.dp
 
     // Tamaños de componentes
-    val ButtonHeight = 52.dp
+    val ButtonHeight = 54.dp
     val InputHeight = 56.dp
     val ChipHeight = 40.dp
     val IconButtonSize = 46.dp
@@ -55,6 +55,7 @@ object NeuDimens {
 /** Formas reutilizables. */
 object NeuShapes {
     val Small = RoundedCornerShape(NeuDimens.RadiusSmall)
+    val Medium = RoundedCornerShape(14.dp)
     val Large = RoundedCornerShape(NeuDimens.RadiusLarge)
     val Pill = RoundedCornerShape(percent = 50)
     val Circle = CircleShape

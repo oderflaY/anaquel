@@ -5,7 +5,7 @@ import com.eter.mitienda.core.util.formatPrice
 import com.eter.mitienda.domain.model.Sale
 
 /** Nombre que encabeza los tickets. */
-const val STORE_NAME = "Papelería MiTienda"
+const val STORE_NAME = "Anaquel"
 
 /**
  * Ticket en texto plano de 32 columnas (el ancho de una impresora térmica de

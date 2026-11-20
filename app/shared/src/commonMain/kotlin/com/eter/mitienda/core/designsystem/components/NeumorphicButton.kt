@@ -1,5 +1,11 @@
 package com.eter.mitienda.core.designsystem.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.dp
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +59,9 @@ fun NeumorphicButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val insetProgress by animateInsetProgress(interactionSource)
-    val contentColor = NeuColors.contentColorFor(containerColor)
+    // Blue = acción secundaria: botón blanco con filete y texto verde (como «Mensaje» en el perfil).
+    val secundario = containerColor == NeuColors.Blue
+    val contentColor = if (secundario) NeuColors.Magenta else NeuColors.contentColorFor(containerColor)
 
     Row(
         modifier = modifier
@@ -64,11 +72,23 @@ fun NeumorphicButton(
                 scaleY = scale
                 alpha = if (enabled) 1f else 0.5f
             }
-            .neumorphic(
-                shape = NeuShapes.Large,
-                elevation = elevation,
-                surfaceColor = containerColor,
-                insetProgress = { insetProgress },
+            .then(
+                if (containerColor == NeuColors.Magenta) {
+                    // Acción principal: mismo verde con degradado y brillo que las hojas nuevas.
+                    Modifier
+                        .shadow(if (enabled) 10.dp else 0.dp, NeuShapes.Large, spotColor = NeuColors.Magenta, ambientColor = NeuColors.Magenta)
+                        .background(Brush.horizontalGradient(listOf(NeuColors.Blue, NeuColors.Magenta)), NeuShapes.Large)
+                } else if (secundario) {
+                    Modifier.background(NeuColors.Surface, NeuShapes.Large)
+                        .border(1.5.dp, NeuColors.Magenta.copy(alpha = 0.55f), NeuShapes.Large)
+                } else {
+                    Modifier.neumorphic(
+                        shape = NeuShapes.Large,
+                        elevation = elevation,
+                        surfaceColor = containerColor,
+                        insetProgress = { insetProgress },
+                    )
+                },
             )
             .clickable(
                 interactionSource = interactionSource,

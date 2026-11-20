@@ -57,7 +57,7 @@ fun StatsRoute(
     ) {
         Column {
             Text("Gráficas", style = MaterialTheme.typography.headlineMedium, color = NeuColors.TextPrimary)
-            Text("Cómo va la papelería", style = MaterialTheme.typography.bodyMedium, color = NeuColors.TextSecondary)
+            Text("Cómo va tu tienda", style = MaterialTheme.typography.bodyMedium, color = NeuColors.TextSecondary)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
             StatsPeriod.entries.forEach { p ->
