@@ -63,7 +63,13 @@ func (a *App) historialAsesor(tienda int64, limite int) ([]MensajeAsesor, error)
 
 func (a *App) verAsesor(w http.ResponseWriter, r *http.Request) {
 	h, err := a.historialAsesor(tiendaDe(r), 60)
-	manejar(w, map[string]any{"mensajes": h, "motor": map[bool]string{true: "ia", false: "basico"}[a.claude != nil]}, err)
+	motor := "basico"
+	if a.claude != nil {
+		motor = "ia"
+	} else if a.local != nil {
+		motor = "local"
+	}
+	manejar(w, map[string]any{"mensajes": h, "motor": motor}, err)
 }
 
 func (a *App) borrarAsesor(w http.ResponseWriter, r *http.Request) {
@@ -127,14 +133,20 @@ func (a *App) preguntarAsesor(w http.ResponseWriter, r *http.Request) {
 	a.guardarMensajeAsesor(tienda, &yo)
 
 	var resp MensajeAsesor
-	var err error
-	if a.claude != nil {
+	err := fmt.Errorf("sin motor")
+	n := normalizar(d.Mensaje)
+	// «Publica que busco…» es una acción: la hace el básico (el modelo local solo redacta).
+	accion := contieneAlguna(n, "publica", "consigueme", "pidelo", "pide a la red", "avisa a")
+	switch {
+	case a.claude != nil:
 		resp, err = a.asesorIA(r.Context(), tienda, previos, d.Mensaje)
-		if err != nil {
-			log.Println("asesor IA falló, uso el básico:", err)
-		}
+	case a.local != nil && !accion:
+		resp, err = a.asesorLocal(r.Context(), tienda, d.Mensaje)
 	}
-	if a.claude == nil || err != nil {
+	if err != nil {
+		if a.claude != nil || (a.local != nil && !accion) {
+			log.Println("asesor con modelo falló, uso el básico:", err)
+		}
 		resp = a.asesorBasico(tienda, d.Mensaje)
 	}
 	resp.Rol = "assistant"

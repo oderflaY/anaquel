@@ -125,7 +125,7 @@ private fun Titulo(t: String) = Text(t, style = MaterialTheme.typography.titleMe
 // ---------------- Entrar ----------------
 
 @Composable
-private fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
+internal fun Entrar(st: AnaquelUiState, vm: AnaquelViewModel) {
     var registro by remember { mutableStateOf(false) }
     var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -200,7 +200,7 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Anaquel", style = MaterialTheme.typography.headlineMedium, color = NeuColors.TextPrimary)
+                    Text("Mi tienda", style = MaterialTheme.typography.headlineMedium, color = NeuColors.TextPrimary)
                     Texto(st.tienda?.nombre.orEmpty())
                 }
                 NeumorphicIconButton(painterResource(Res.drawable.ic_upload), "Sincronizar inventario", onClick = vm::sincronizarInventario)
@@ -211,7 +211,7 @@ private fun Principal(st: AnaquelUiState, vm: AnaquelViewModel, onNuevo: (String
                 contentPadding = PaddingValues(start = NeuDimens.ScreenPadding, end = NeuDimens.ScreenPadding, top = NeuDimens.SpaceXl, bottom = NeuDimens.SpaceSm),
                 horizontalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd),
             ) {
-                items(SeccionAnaquel.entries) { s ->
+                items(SeccionAnaquel.entries.filter { it != SeccionAnaquel.RED || st.seccion == SeccionAnaquel.RED }) { s ->
                     val n = when (s) {
                         SeccionAnaquel.HOY -> st.resumen?.sinPedir ?: 0
                         SeccionAnaquel.PEDIDOS -> st.resumen?.atrasados ?: 0

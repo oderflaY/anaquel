@@ -21,6 +21,7 @@ type App struct {
 	web    string // build de la web (SPA)
 	vision Vision
 	claude *clienteClaude // nil = asesor básico (sin llave de Anthropic)
+	local  *modeloLocal   // modelo ligero en llama.cpp (LLM_URL); nil = sin él
 }
 
 func env(k, def string) string {
@@ -43,6 +44,7 @@ func main() {
 		web:    env("WEB", "../web/dist"),
 		vision: nuevaVision(),
 		claude: nuevoClaude(),
+		local:  nuevoModeloLocal(),
 	}
 	if env("DATOS_DEMO", "1") == "1" {
 		if err := app.sembrarDemo(); err != nil {
@@ -53,7 +55,7 @@ func main() {
 		}
 	}
 	addr := env("ADDR", ":8080")
-	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v)", addr, app.vision.Nombre(), app.claude != nil)
+	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v, modelo local: %v)", addr, app.vision.Nombre(), app.claude != nil, app.local != nil)
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           app.rutas(),
@@ -123,6 +125,7 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("POST /api/tratos/{id}/mensajes", a.conTienda(a.mensajeTrato))
 	m.HandleFunc("POST /api/tratos/{id}/{accion}", a.conTienda(a.accionTrato))
 	m.HandleFunc("GET /api/inicio", a.conTienda(a.inicio))
+	m.HandleFunc("GET /api/asesor/hoja", a.conTienda(a.hojaAsesor))
 	m.HandleFunc("GET /api/chats", a.conTienda(a.listarChats))
 	m.HandleFunc("POST /api/chats", a.conTienda(a.abrirChat))
 	m.HandleFunc("GET /api/chats/{id}", a.conTienda(a.verChat))

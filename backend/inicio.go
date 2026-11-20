@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -37,15 +38,24 @@ type TiendaZona struct {
 	ChatID      int64    `json:"chat_id,omitempty"`
 }
 
+// ProveedorGrande: mayorista con catálogo amplio y sus ofertas más fuertes.
+type ProveedorGrande struct {
+	TiendaZona
+	Afines     int         `json:"afines"` // productos de categorías que tú manejas
+	Destacados []Resultado `json:"destacados"`
+	Promocion  string      `json:"promocion,omitempty"`
+}
+
 type Inicio struct {
-	Saludo       string         `json:"saludo"`
-	ParaSurtir   []SurtirInicio `json:"para_surtir"`
-	Convienen    []OfertaInicio `json:"te_convienen"`
-	Promociones  []Resultado    `json:"promociones"`
-	Buscan       []Resultado    `json:"buscan"` // otras tiendas buscan algo que tú vendes
-	Tiendas      []TiendaZona   `json:"tiendas"`
-	ChatsSinLeer int            `json:"chats_sin_leer"`
-	Pendientes   int            `json:"tratos_pendientes"`
+	Proveedores  []ProveedorGrande `json:"proveedores"`
+	Saludo       string            `json:"saludo"`
+	ParaSurtir   []SurtirInicio    `json:"para_surtir"`
+	Convienen    []OfertaInicio    `json:"te_convienen"`
+	Promociones  []Resultado       `json:"promociones"`
+	Buscan       []Resultado       `json:"buscan"` // otras tiendas buscan algo que tú vendes
+	Tiendas      []TiendaZona      `json:"tiendas"`
+	ChatsSinLeer int               `json:"chats_sin_leer"`
+	Pendientes   int               `json:"tratos_pendientes"`
 }
 
 func costoUnitario(r Resultado) int64 {
@@ -65,9 +75,13 @@ func ganancia(miPrecio int64, r Resultado, miUnidad string) int64 {
 }
 
 func (a *App) inicio(w http.ResponseWriter, r *http.Request) {
-	yo := tiendaDe(r)
+	out, err := a.datosInicio(tiendaDe(r))
+	manejar(w, out, err)
+}
+
+func (a *App) datosInicio(yo int64) (Inicio, error) {
 	lat, lng := a.coordsDe(yo)
-	out := Inicio{ParaSurtir: []SurtirInicio{}, Convienen: []OfertaInicio{}, Promociones: []Resultado{}, Buscan: []Resultado{}, Tiendas: []TiendaZona{}}
+	out := Inicio{Proveedores: []ProveedorGrande{}, ParaSurtir: []SurtirInicio{}, Convienen: []OfertaInicio{}, Promociones: []Resultado{}, Buscan: []Resultado{}, Tiendas: []TiendaZona{}}
 
 	var nombre, giro string
 	a.db.QueryRow("SELECT nombre, giro FROM tiendas WHERE id = ?", yo).Scan(&nombre, &giro)
@@ -76,8 +90,7 @@ func (a *App) inicio(w http.ResponseWriter, r *http.Request) {
 	// Todo lo que está en las vitrinas de la red (una sola consulta).
 	vitrinas, err := a.buscarRed(filtroRed{yo: yo, tipo: "producto", lat: lat, lng: lng})
 	if err != nil {
-		manejar(w, nil, err)
-		return
+		return out, err
 	}
 	mios, _ := a.productos(yo)
 	categorias := map[string]bool{}
@@ -104,8 +117,7 @@ func (a *App) inicio(w http.ResponseWriter, r *http.Request) {
 		s := SurtirInicio{ProductoID: p.ID, Nombre: p.Nombre, Stock: p.Stock, StockMin: p.StockMin, Unidad: p.Unidad, Nivel: f.Nivel, PrecioC: p.PrecioC, Ofertas: []OfertaInicio{}}
 		var cand []OfertaInicio
 		for _, v := range vitrinas {
-			// La palabra principal ("leche", "azucar") tiene que coincidir.
-			if !strings.Contains(normalizar(v.Titulo), claves[0]) {
+			if !mismoProducto(p.Nombre, v.Titulo) {
 				continue
 			}
 			o := OfertaInicio{Resultado: v, Ganancia: ganancia(p.PrecioC, v, p.Unidad)}
@@ -210,7 +222,107 @@ func (a *App) inicio(w http.ResponseWriter, r *http.Request) {
 	out.ChatsSinLeer = a.chatsSinLeer(yo)
 	a.db.QueryRow(`SELECT COUNT(*) FROM tratos WHERE (comprador_id = ? OR vendedor_id = ?) AND
 		((estado = 'negociando' AND propuso_id != ?) OR (estado = 'aceptado' AND vendedor_id = ?))`, yo, yo, yo, yo).Scan(&out.Pendientes)
-	manejar(w, out, nil)
+
+	// 6) Proveedores grandes: mayoristas con 10+ productos en vitrina.
+	porTienda := map[int64][]Resultado{}
+	for _, v := range vitrinas {
+		if v.Tienda != nil && v.Tienda.Giro == "mayoreo" {
+			porTienda[v.Tienda.ID] = append(porTienda[v.Tienda.ID], v)
+		}
+	}
+	for _, t := range a.tiendasDeLaZona(yo, lat, lng, 50) {
+		vs := porTienda[t.ID]
+		if len(vs) < 10 {
+			continue
+		}
+		pg := ProveedorGrande{TiendaZona: t, Destacados: []Resultado{}}
+		for _, v := range vs {
+			for c := range categorias {
+				if c != "" && strings.Contains(v.texto, c) {
+					pg.Afines++
+					break
+				}
+			}
+		}
+		// Lo que más baja de precio por mayoreo, primero lo que tú manejas.
+		sort.SliceStable(vs, func(i, j int) bool {
+			ai, aj := afin(vs[i], categorias), afin(vs[j], categorias)
+			if ai != aj {
+				return ai
+			}
+			return descuento(vs[i]) > descuento(vs[j])
+		})
+		pg.Destacados = append(pg.Destacados, vs[:min(4, len(vs))]...)
+		a.db.QueryRow("SELECT titulo || ': ' || precio FROM anuncios WHERE tienda_id = ? AND activo = 1 AND tipo = 'promocion' ORDER BY creado DESC LIMIT 1", t.ID).Scan(&pg.Promocion)
+		out.Proveedores = append(out.Proveedores, pg)
+	}
+	sort.SliceStable(out.Proveedores, func(i, j int) bool { return out.Proveedores[i].Afines > out.Proveedores[j].Afines })
+	// Si hay mayoristas con lo que vendes, no estorban los de otro giro.
+	if len(out.Proveedores) > 0 && out.Proveedores[0].Afines > 0 {
+		n := 0
+		for _, p := range out.Proveedores {
+			if p.Afines > 0 {
+				out.Proveedores[n] = p
+				n++
+			}
+		}
+		out.Proveedores = out.Proveedores[:n]
+	}
+	return out, nil
+}
+
+func afin(r Resultado, categorias map[string]bool) bool {
+	for c := range categorias {
+		if c != "" && strings.Contains(r.texto, c) {
+			return true
+		}
+	}
+	return false
+}
+
+// descuento: % que baja el precio al comprar por mayoreo.
+func descuento(r Resultado) int64 {
+	if r.PrecioC <= 0 || r.PrecioMayoreoC <= 0 || r.PrecioMayoreoC >= r.PrecioC {
+		return 0
+	}
+	return (r.PrecioC - r.PrecioMayoreoC) * 100 / r.PrecioC
+}
+
+var reTamano = regexp.MustCompile(`(\d+(?:[.,]\d+)?)\s*(kg|g|gr|l|lt|ml|piezas|pzas|pz|rollos|hojas|pliegos)\b`)
+
+// tamano: "1 L", "600 ml", "4 rollos"… normalizado (1l, 600ml, 4rollos).
+func tamano(nombre string) string {
+	m := reTamano.FindStringSubmatch(normalizar(nombre))
+	if m == nil {
+		return ""
+	}
+	u := map[string]string{"gr": "g", "lt": "l", "pzas": "piezas", "pz": "piezas"}[m[2]]
+	if u == "" {
+		u = m[2]
+	}
+	return strings.Replace(m[1], ",", ".", 1) + u
+}
+
+// mismoProducto: ¿la oferta es el mismo artículo que tengo? Las palabras
+// importantes de mi producto deben estar en la oferta (al menos 3 de cada 4)
+// y, si los dos dicen presentación, debe ser la misma (leche 1 L ≠ 600 ml).
+func mismoProducto(mio, oferta string) bool {
+	cm := clavesDe(mio)
+	if len(cm) == 0 {
+		return false
+	}
+	o := normalizar(oferta)
+	n := 0
+	for _, c := range cm {
+		if strings.Contains(o, c) {
+			n++
+		}
+	}
+	if n*4 < len(cm)*3 || !strings.Contains(o, cm[0]) {
+		return false
+	}
+	tm, to := tamano(mio), tamano(oferta)
+	return tm == "" || to == "" || tm == to
 }
 
 func prioridadMotivo(m string) int {
@@ -277,8 +389,12 @@ func (a *App) tiendasDeLaZona(yo int64, lat, lng *float64, limite int) []TiendaZ
 }
 
 // catalogoDe: GET /api/tiendas/{id}/catalogo → la vitrina de otra tienda (para pedir sin esperar a que te la mande).
+// Con id "yo" es mi propia vitrina (para elegir qué mandar en un chat).
 func (a *App) catalogoDe(w http.ResponseWriter, r *http.Request) {
 	id, err := idRuta(r)
+	if r.PathValue("id") == "yo" {
+		id, err = tiendaDe(r), nil
+	}
 	if err != nil {
 		manejar(w, nil, err)
 		return
