@@ -12,6 +12,6 @@ for k, A in L.items():
     w = W[dst]; W[dst] = (w.float() + (B.float() @ A.float()) * s).to(w.dtype); n += 1
 os.makedirs(out, exist_ok=True)
 for f in os.listdir(base):
-    if f != "model.safetensors": shutil.copy(f"{base}/{f}", out)
+    if f != "model.safetensors" and os.path.isfile(f"{base}/{f}"): shutil.copy(f"{base}/{f}", out)
 save_file({k: v.contiguous() for k, v in W.items()}, f"{out}/model.safetensors", metadata={"format": "pt"})
 print("capas fusionadas:", n)
