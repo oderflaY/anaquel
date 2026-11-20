@@ -30,5 +30,5 @@ services:
   nucleo:
     environment:
       LLM_URL: http://host.docker.internal:18085
-    extra_hosts: ["host.docker.internal:host-gateway"]
       ANAQUEL_URL_PUBLICA: https://2.25.68.28/anaquel
+    extra_hosts: ["host.docker.internal:host-gateway"]
