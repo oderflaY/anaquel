@@ -37,7 +37,12 @@ android {
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Versión rápida para el teléfono: R8 quita y optimiza código (Compose
+            // en debug corre varias veces más lento). Firmada con la llave de debug
+            // para poder instalarla encima sin desinstalar.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

@@ -54,6 +54,8 @@ data class AnaquelUiState(
     val pidiendo: PedidoEnCurso? = null,
     /** Mi vitrina, para elegir qué mandar como catálogo. */
     val miCatalogo: List<ItemCatalogo>? = null,
+    /** Perfil de otra tienda abierto (hoja de perfil). */
+    val perfil: PerfilTienda? = null,
 )
 
 /** Pedido a medio armar desde un catálogo: productos de la otra tienda y cantidades. */
@@ -128,11 +130,20 @@ class AnaquelViewModel(
         refrescarAhora()
     }
 
+    /** true solo la primera vez: después no volvemos a molestar con el permiso. */
+    suspend fun tocaPedirPermiso(): Boolean {
+        if (runCatching { ajustes.leer("anaquel.permiso.notif") }.getOrNull() != null) return false
+        runCatching { ajustes.guardar("anaquel.permiso.notif", "1") }
+        return true
+    }
+
     fun reiniciarDemo() = conSesion { api.reiniciarDemo() }
 
     fun salir() = viewModelScope.launch {
         api.token = null
         ajustes.guardar(CLAVE_TOKEN, null)
+        ajustes.guardar("anaquel.notif.aviso", null)
+        ajustes.guardar("anaquel.notif.chat", null)
         _state.value = AnaquelUiState(revisandoSesion = false)
     }
 
@@ -290,6 +301,9 @@ class AnaquelViewModel(
     fun cargarChats() = trabajo(if (_state.value.chats == null) "chats" else null) {
         _state.update { it.copy(chats = api.chats()) }
     }
+
+    fun verPerfil(id: Long) = trabajo("perfil") { _state.update { it.copy(perfil = api.perfil(id)) } }
+    fun cerrarPerfil() = _state.update { it.copy(perfil = null) }
 
     fun abrirChat(id: Long) = trabajo("chat") { _state.update { it.copy(chat = api.chat(id)) } }
 

@@ -1,0 +1,197 @@
+{
+ "arroz": {
+  "codigo": "7501111105033",
+  "producto": "Arroz  Grueso Super extra SOS",
+  "fuente": "https://world.openfoodfacts.org/product/7501111105033"
+ },
+ "frijol": {
+  "codigo": "7503028875023",
+  "producto": "frijoles bayos deshidratados",
+  "fuente": "https://world.openfoodfacts.org/product/7503028875023"
+ },
+ "aceite": {
+  "codigo": "75002343",
+  "producto": "Aceite Vegetal Mixto",
+  "fuente": "https://world.openfoodfacts.org/product/75002343"
+ },
+ "azucar": {
+  "codigo": "7503000070163",
+  "producto": "Azúcar Morena Orgánica Sugar",
+  "fuente": "https://world.openfoodfacts.org/product/7503000070163"
+ },
+ "atun": {
+  "codigo": "7501045400846",
+  "producto": "dolores",
+  "fuente": "https://world.openfoodfacts.org/product/7501045400846"
+ },
+ "harina-trigo": {
+  "codigo": "7501011151086",
+  "producto": "Botana de harina de trigo con chile y sabor limón",
+  "fuente": "https://world.openfoodfacts.org/product/7501011151086"
+ },
+ "harina-maiz": {
+  "codigo": "7501077400050",
+  "producto": "Harina de Maíz Nixtamalizado",
+  "fuente": "https://world.openfoodfacts.org/product/7501077400050"
+ },
+ "sal": {
+  "codigo": "7503018566092",
+  "producto": "Sal de Colima",
+  "fuente": "https://world.openfoodfacts.org/product/7503018566092"
+ },
+ "pasta": {
+  "codigo": "0038629000576",
+  "producto": "Animalitos",
+  "fuente": "https://world.openfoodfacts.org/product/0038629000576"
+ },
+ "sardina": {
+  "codigo": "7501041419682",
+  "producto": "Sardinas en aceite de oliva",
+  "fuente": "https://world.openfoodfacts.org/product/7501041419682"
+ },
+ "jalapenos": {
+  "codigo": "7501017004287",
+  "producto": "Frijoles Charros",
+  "fuente": "https://world.openfoodfacts.org/product/7501017004287"
+ },
+ "cafe": {
+  "codigo": "7501000912612",
+  "producto": "nescafe",
+  "fuente": "https://world.openfoodfacts.org/product/7501000912612"
+ },
+ "leche-polvo": {
+  "codigo": "7501059242258",
+  "producto": "Leche nido forticrece",
+  "fuente": "https://world.openfoodfacts.org/product/7501059242258"
+ },
+ "galletas-marias": {
+  "codigo": "7501008702482",
+  "producto": "Galletas Marias Cuetara",
+  "fuente": "https://world.openfoodfacts.org/product/7501008702482"
+ },
+ "huevo": {
+  "codigo": "7503023225052",
+  "producto": "Claras de huevo líquidas",
+  "fuente": "https://world.openfoodfacts.org/product/7503023225052"
+ },
+ "jabon": {
+  "codigo": "7501026005374",
+  "producto": "Jabón Zote Blanco",
+  "fuente": "https://world.openfoodfacts.org/product/7501026005374"
+ },
+ "cola-600": {
+  "codigo": "7501055371358",
+  "producto": "coca cola con extracto de cafe",
+  "fuente": "https://world.openfoodfacts.org/product/7501055371358"
+ },
+ "cola-2l": {
+  "codigo": "7501055371358",
+  "producto": "coca cola con extracto de cafe",
+  "fuente": "https://world.openfoodfacts.org/product/7501055371358"
+ },
+ "naranja-600": {
+  "codigo": "7501055317462",
+  "producto": "Fanta",
+  "fuente": "https://world.openfoodfacts.org/product/7501055317462"
+ },
+ "agua": {
+  "codigo": "7501055353651",
+  "producto": "Ciel Naranja",
+  "fuente": "https://world.openfoodfacts.org/product/7501055353651"
+ },
+ "jugo-naranja": {
+  "codigo": "9507471357837",
+  "producto": "Naranja & Nada",
+  "fuente": "https://world.openfoodfacts.org/product/9507471357837"
+ },
+ "energizante": {
+  "codigo": "0070847036074",
+  "producto": "monster Energy zero sugar",
+  "fuente": "https://world.openfoodfacts.org/product/0070847036074"
+ },
+ "papas": {
+  "codigo": "7500478007622",
+  "producto": "Sabritas",
+  "fuente": "https://world.openfoodfacts.org/product/7500478007622"
+ },
+ "cacahuate": {
+  "codigo": "7502271153193",
+  "producto": "Cacahuates Japoneses",
+  "fuente": "https://world.openfoodfacts.org/product/7502271153193"
+ },
+ "palomitas": {
+  "codigo": "7503036787028",
+  "producto": "Palomitas Cheddar",
+  "fuente": "https://world.openfoodfacts.org/product/7503036787028"
+ },
+ "paletas": {
+  "codigo": "75038441",
+  "producto": "Paleta tarrito",
+  "fuente": "https://world.openfoodfacts.org/product/75038441"
+ },
+ "chocolate": {
+  "codigo": "7506475100953",
+  "producto": "Carlos V sin azúcar semiamargo",
+  "fuente": "https://world.openfoodfacts.org/product/7506475100953"
+ },
+ "galletas-chocolate": {
+  "codigo": "7501000636495",
+  "producto": "Chokis",
+  "fuente": "https://world.openfoodfacts.org/product/7501000636495"
+ },
+ "leche": {
+  "codigo": "7501209705640",
+  "producto": "Leche entera 3% grasa",
+  "fuente": "https://world.openfoodfacts.org/product/7501209705640"
+ },
+ "leche-deslactosada": {
+  "codigo": "7501295600157",
+  "producto": "Leche deslactosada",
+  "fuente": "https://world.openfoodfacts.org/product/7501295600157"
+ },
+ "yogurt": {
+  "codigo": "7501040092855",
+  "producto": "Yoplait Griego Fresa",
+  "fuente": "https://world.openfoodfacts.org/product/7501040092855"
+ },
+ "queso-panela": {
+  "codigo": "7501040083709",
+  "producto": "Queso Panela",
+  "fuente": "https://world.openfoodfacts.org/product/7501040083709"
+ },
+ "queso-fresco": {
+  "codigo": "7501791606806",
+  "producto": "Queso Mozzarella Fresco Extra Special",
+  "fuente": "https://world.openfoodfacts.org/product/7501791606806"
+ },
+ "crema": {
+  "codigo": "7501055909520",
+  "producto": "CREMA",
+  "fuente": "https://world.openfoodfacts.org/product/7501055909520"
+ },
+ "mantequilla": {
+  "codigo": "7501030477488",
+  "producto": "Madalenas mantequilla",
+  "fuente": "https://world.openfoodfacts.org/product/7501030477488"
+ },
+ "jamon": {
+  "codigo": "7501040027413",
+  "producto": "jamon real pavo San Rafael",
+  "fuente": "https://world.openfoodfacts.org/product/7501040027413"
+ },
+ "salchicha": {
+  "codigo": "7502221581281",
+  "producto": "Salchicha de pavo",
+  "fuente": "https://world.openfoodfacts.org/product/7502221581281"
+ },
+ "chorizo": {
+  "codigo": "7501791667340",
+  "producto": "Chorizo de cerdo tipo español",
+  "fuente": "https://world.openfoodfacts.org/product/7501791667340"
+ },
+ "chicles": {
+  "codigo": "15061898",
+  "producto": "trident sabor sandía",
+  "fuente": "https://world.openfoodfacts.org/product/15061898"
+ }
+}

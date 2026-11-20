@@ -312,7 +312,7 @@ fun feedDe(ini: Inicio): List<Publicacion> {
 @Composable
 fun FeedParaTi(
     feed: List<Publicacion>, modifier: Modifier = Modifier,
-    onPedir: (Publicacion) -> Unit, onChat: (Long) -> Unit, onNegociar: (ResultadoRed) -> Unit,
+    onPedir: (Publicacion) -> Unit, onChat: (Long) -> Unit, onNegociar: (ResultadoRed) -> Unit, onPerfil: (Long) -> Unit = {},
 ) {
     val pager = rememberPagerState { feed.size }
     VerticalPager(pager, modifier.fillMaxSize(), key = { feed[it].clave }, beyondViewportPageCount = 1) { i ->
@@ -324,7 +324,7 @@ fun FeedParaTi(
             scaleX = s; scaleY = s
             alpha = 1f - 0.35f * d.absoluteValue.coerceAtMost(1f)
         }) {
-            PaginaFeed(pub, i, feed.size, activa = pager.currentPage == i, onPedir = { onPedir(pub) }, onChat = onChat, onNegociar = onNegociar)
+            PaginaFeed(pub, i, feed.size, activa = pager.currentPage == i, onPedir = { onPedir(pub) }, onChat = onChat, onNegociar = onNegociar, onPerfil = onPerfil)
         }
     }
 }

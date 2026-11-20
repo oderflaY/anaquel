@@ -8,6 +8,7 @@ import com.eter.mitienda.data.sync.NearbyPeerSyncService
 import com.eter.mitienda.core.notifications.AndroidOrderReminderScheduler
 import com.eter.mitienda.di.AppContainer
 import com.eter.mitienda.di.AppContainerProvider
+import com.eter.mitienda.core.notifications.AvisosAnaquel
 
 /**
  * El contenedor vive en la Application y no en la Activity: al rotar la
@@ -24,5 +25,10 @@ class MiTiendaApplication : Application(), AppContainerProvider {
             reminderScheduler = AndroidOrderReminderScheduler(this),
             peerSyncFactory = { syncManager -> NearbyPeerSyncService(this, syncManager, databaseFiles) },
         )
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        AvisosAnaquel.programar(this)
     }
 }

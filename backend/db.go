@@ -244,6 +244,24 @@ CREATE TABLE chat_mensajes (
 );
 CREATE INDEX idx_chat_mensajes ON chat_mensajes(chat_id, id);
 `,
+	// 6: perfiles completos de tienda (portada, horario, reparto, crédito…),
+	// foto de producto y lectura de notificaciones del teléfono.
+	`
+ALTER TABLE productos ADD COLUMN foto TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN portada TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN horario TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN entrega TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN pedido_minimo_c INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN credito TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN pagos TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN zona TEXT NOT NULL DEFAULT '';
+ALTER TABLE tiendas ADD COLUMN desde INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN clientes INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN verificada INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN calificacion REAL NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN resenas INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tiendas ADD COLUMN etiquetas TEXT NOT NULL DEFAULT '';
+`,
 }
 
 func abrirDB(ruta string) (*sql.DB, error) {

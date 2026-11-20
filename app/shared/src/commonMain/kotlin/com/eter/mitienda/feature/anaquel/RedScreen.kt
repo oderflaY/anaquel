@@ -41,7 +41,7 @@ import com.eter.mitienda.core.util.parseMoneyToCents
 
 // Red de comercio local en la app: asesor, búsqueda en la red y tratos.
 
-private fun miles(n: Long): String = n.toString().reversed().chunked(3).joinToString(",").reversed()
+internal fun miles(n: Long): String = n.toString().reversed().chunked(3).joinToString(",").reversed()
 
 @Composable
 private fun T(t: String, secundario: Boolean = false, negritas: Boolean = false, chico: Boolean = false) = Text(
@@ -189,31 +189,15 @@ internal fun TarjetaRed(r: ResultadoRed, negociar: (ResultadoRed) -> Unit, compa
 internal fun DialogoNegociar(r: ResultadoRed, onCerrar: () -> Unit, onEnviar: (Long, Long, String) -> Unit) {
     val ofrezco = r.tipo == "solicitud"
     val inicial = if (ofrezco) (r.cantidad ?: 1).coerceAtLeast(1) else (r.minimoMayoreo ?: 1).coerceAtLeast(1)
-    fun precioPara(n: Long): Long =
-        if ((r.precioMayoreoC ?: 0) > 0 && n >= (r.minimoMayoreo ?: 0)) r.precioMayoreoC!! else r.precioC ?: 0
-    var cantidad by remember { mutableStateOf(inicial.toString()) }
-    var precio by remember { mutableStateOf(precioPara(inicial).takeIf { it > 0 }?.let(::centsToInput).orEmpty()) }
-    var mensaje by remember { mutableStateOf("") }
-    val n = cantidad.toLongOrNull()?.coerceAtLeast(1) ?: 1
-    val pc = parseMoneyToCents(precio) ?: 0
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text(if (ofrezco) "Ofrecer a ${r.tienda?.nombre}" else "Negociar con ${r.tienda?.nombre}") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
-                T(r.titulo, negritas = true)
-                NeumorphicInput(cantidad, { v ->
-                    cantidad = v.filter(Char::isDigit)
-                    if (r.tipo == "producto") precioPara(cantidad.toLongOrNull() ?: 0).takeIf { it > 0 }?.let { precio = centsToInput(it) }
-                }, Modifier.fillMaxWidth(), placeholder = "Cantidad", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                NeumorphicInput(precio, { precio = it }, Modifier.fillMaxWidth(), placeholder = "Precio por pieza",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                T("Total: ${formatPrice(n * pc)}", negritas = true)
-                NeumorphicInput(mensaje, { mensaje = it }, Modifier.fillMaxWidth(), placeholder = "Mensaje (opcional)", singleLine = false)
-            }
-        },
-        confirmButton = { TextButton(onClick = { onEnviar(n, pc, mensaje) }) { Text(if (ofrezco) "Enviar oferta" else "Enviar propuesta") } },
-        dismissButton = { TextButton(onClick = onCerrar) { Text("Cancelar") } },
+    val mayoreo = (r.precioMayoreoC ?: 0) > 0 && inicial >= (r.minimoMayoreo ?: 0)
+    HojaNegociacion(
+        Negociacion(
+            titulo = r.titulo, tienda = r.tienda?.nombre, foto = r.foto, icono = iconoDe(r.titulo, r.tipo),
+            precioLista = r.precioC ?: 0, precioMayoreo = r.precioMayoreoC, minimoMayoreo = r.minimoMayoreo,
+            disponible = r.disponible, cantidadInicial = inicial,
+            precioInicial = if (mayoreo) r.precioMayoreoC!! else r.precioC ?: 0, modo = if (ofrezco) "ofrecer" else "proponer",
+        ),
+        onCerrar, onEnviar,
     )
 }
 
@@ -300,22 +284,12 @@ private fun LazyListScope.detalleTrato(t: Trato, st: AnaquelUiState, vm: Anaquel
 
 @Composable
 internal fun DialogoContraoferta(t: Trato, onCerrar: () -> Unit, onEnviar: (Long, Long) -> Unit) {
-    var cantidad by remember { mutableStateOf(t.cantidad.toString()) }
-    var precio by remember { mutableStateOf(centsToInput(t.precioC)) }
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Contraoferta") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(NeuDimens.SpaceMd)) {
-                NeumorphicInput(cantidad, { cantidad = it.filter(Char::isDigit) }, Modifier.fillMaxWidth(), placeholder = "Cantidad",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                NeumorphicInput(precio, { precio = it }, Modifier.fillMaxWidth(), placeholder = "Precio por pieza",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onEnviar(cantidad.toLongOrNull() ?: t.cantidad, parseMoneyToCents(precio) ?: t.precioC) }) { Text("Enviar") }
-        },
-        dismissButton = { TextButton(onClick = onCerrar) { Text("Cancelar") } },
-    )
+    HojaNegociacion(
+        Negociacion(
+            titulo = t.titulo, tienda = t.otra.nombre, foto = null, icono = iconoDe(t.titulo),
+            precioLista = t.precioC, precioMayoreo = null, minimoMayoreo = null, disponible = t.disponible,
+            cantidadInicial = t.cantidad, precioInicial = t.precioC, modo = "contra",
+        ),
+        onCerrar,
+    ) { n, pc, _ -> onEnviar(n, pc) }
 }

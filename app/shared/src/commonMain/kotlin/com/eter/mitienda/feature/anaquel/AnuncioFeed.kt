@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -85,7 +86,7 @@ private class Anuncio(
     val etiqueta: String, val etiquetaIcono: ImageVector, val icono: ImageVector, val titulo: String,
     val tienda: TiendaCorta?, val km: Double?, val precio: Long?, val precioAntes: Long?, val precioTexto: String?,
     val condicion: String?, val descuento: Int?, val detalle: String?, val disponible: Long?, val accion: String,
-    val destacados: List<Pair<String, Long>> = emptyList(),
+    val destacados: List<Pair<String, Long>> = emptyList(), val foto: String? = null,
 )
 
 private fun armar(pub: Publicacion): Anuncio = when (pub) {
@@ -107,7 +108,7 @@ private fun armar(pub: Publicacion): Anuncio = when (pub) {
             condicion = (r.minimoMayoreo ?: 0).takeIf { mayoreo && it > 0 }?.let { "Mayoreo desde $it ${r.unidad ?: "pza"}" } ?: r.unidad?.let { "por $it" },
             descuento = desc, detalle = listOfNotNull(pub.motivo?.takeIf { it.isNotBlank() }, r.detalle.takeIf { it.isNotBlank() }).joinToString(" · ").ifBlank { null },
             disponible = r.disponible,
-            accion = if (r.tipo == "solicitud") "Ofrecer ahora" else "Pedir ahora",
+            accion = if (r.tipo == "solicitud") "Ofrecer ahora" else "Pedir ahora", foto = r.foto,
         )
     }
     is Publicacion.Proveedor -> {
@@ -118,26 +119,36 @@ private fun armar(pub: Publicacion): Anuncio = when (pub) {
             precioTexto = p.promocion?.takeIf { it.isNotBlank() }, condicion = null, descuento = null,
             detalle = "${p.productos} productos · ${p.afines} de lo que tú vendes", disponible = null, accion = "Ver catálogo",
             destacados = p.destacados.take(3).map { d -> d.titulo to (if ((d.precioMayoreoC ?: 0) > 0) d.precioMayoreoC!! else d.precioC ?: 0) },
+            foto = p.destacados.firstNotNullOfOrNull { it.foto },
         )
     }
 }
 
 @Composable
-internal fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, onPedir: () -> Unit, onChat: (Long) -> Unit, onNegociar: (ResultadoRed) -> Unit) {
+internal fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, onPedir: () -> Unit, onChat: (Long) -> Unit, onNegociar: (ResultadoRed) -> Unit, onPerfil: (Long) -> Unit = {}) {
     val a = remember(pub.clave) { armar(pub) }
     val (claro, oscuro, acento) = paletas[(pub.clave.hashCode() and 0x7fffffff) % paletas.size]
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(claro, oscuro)))) {
-        FondoAnuncio(acento)
+        FondoAnuncio(acento, activa)
         // ---------- Producto en tarjeta de vidrio con aro que gira ----------
         Box(Modifier.align(Alignment.TopCenter).padding(top = 128.dp).size(196.dp).pop(), contentAlignment = Alignment.Center) {
-            AroGiratorio(acento, Modifier.fillMaxSize())
-            Box(
-                Modifier.size(150.dp).flotar(8f, 2600)
+            AroGiratorio(acento, activa, Modifier.fillMaxSize())
+            if (a.foto != null) {
+                // Foto real del producto sobre tarjeta blanca, como en catálogo.
+                Box(
+                    Modifier.size(156.dp).flotar(8f, 2600, activa).shadow(18.dp, RoundedCornerShape(36.dp))
+                        .background(Color.White, RoundedCornerShape(36.dp)).clip(RoundedCornerShape(36.dp)).padding(12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    FotoRed(a.foto, a.titulo, Modifier.fillMaxSize()) { Icon(a.icono, null, tint = oscuro.copy(alpha = 0.5f), modifier = Modifier.size(72.dp)) }
+                }
+            } else Box(
+                Modifier.size(150.dp).flotar(8f, 2600, activa)
                     .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.06f))), RoundedCornerShape(40.dp))
                     .border(1.dp, Color.White.copy(alpha = 0.45f), RoundedCornerShape(40.dp)),
                 contentAlignment = Alignment.Center,
             ) { Icon(a.icono, null, tint = Color.White, modifier = Modifier.size(84.dp)) }
-            a.descuento?.let { SelloDescuento(it, Modifier.align(Alignment.TopEnd).offset(x = (-2).dp, y = 2.dp)) }
+            a.descuento?.let { SelloDescuento(it, activa, Modifier.align(Alignment.TopEnd).offset(x = (-2).dp, y = 2.dp)) }
         }
         // ---------- Etiqueta y contador ----------
         Row(Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 66.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -212,7 +223,7 @@ internal fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, o
             Spacer(Modifier.height(12.dp))
             BotonCompra(a.accion, oscuro, activa, onPedir, Modifier.entrada(4))
             if (i == 0 && total > 1) Text("Desliza para ver más", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
-                modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally).flotar(4f, 900))
+                modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally).flotar(4f, 900, activa))
         }
         // ---------- Acciones a la derecha ----------
         Column(
@@ -222,13 +233,14 @@ internal fun PaginaFeed(pub: Publicacion, i: Int, total: Int, activa: Boolean, o
             a.tienda?.let { t ->
                 Box(
                     Modifier.size(50.dp).pop(1).latido(activa, 0.05f).border(2.dp, acento, CircleShape)
-                        .background(Brush.linearGradient(listOf(claro, oscuro)), CircleShape),
+                        .background(Brush.linearGradient(listOf(claro, oscuro)), CircleShape).clip(CircleShape)
+                        .clickable(onClickLabel = "Ver perfil de la tienda") { onPerfil(t.id) },
                     contentAlignment = Alignment.Center,
                 ) { Icon(Ico.Tienda, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
             }
             a.tienda?.let { t -> AccionLateral(Ico.Chat, "Chat") { onChat(t.id) } }
             if (pub is Publicacion.Oferta && pub.r.negociable) AccionLateral(Ico.Trato, "Negociar") { onNegociar(pub.r) }
-            if (pub is Publicacion.Proveedor) AccionLateral(Ico.Tienda, "Tienda") { onChat(pub.p.id) }
+            a.tienda?.let { t -> AccionLateral(Ico.Tienda, "Perfil") { onPerfil(t.id) } }
         }
     }
 }
@@ -243,9 +255,12 @@ private fun precioGrande(c: Long) = buildAnnotatedString {
 
 /** Círculos y una franja diagonal que se mueven despacio detrás del anuncio. */
 @Composable
-private fun FondoAnuncio(acento: Color) {
-    val t = rememberInfiniteTransition()
-    val f by t.animateFloat(0f, 1f, infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Reverse))
+private fun FondoAnuncio(acento: Color, activa: Boolean) {
+    // Solo se mueve en la página que se ve: las vecinas quedan quietas (ahorra batería y cuadros).
+    val f = if (activa) {
+        val t = rememberInfiniteTransition()
+        t.animateFloat(0f, 1f, infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Reverse)).value
+    } else 0.5f
     Canvas(Modifier.fillMaxSize().clearAndSetSemantics { }) {
         drawCircle(acento.copy(alpha = 0.10f), radius = size.width * 0.55f, center = Offset(size.width * (0.95f - 0.15f * f), size.height * (0.12f + 0.05f * f)))
         drawCircle(Color.White.copy(alpha = 0.05f), radius = size.width * 0.35f, center = Offset(size.width * (0.05f + 0.1f * f), size.height * 0.42f))
@@ -266,10 +281,12 @@ private fun FondoAnuncio(acento: Color) {
 
 /** Aro punteado que gira alrededor del producto, con un destello. */
 @Composable
-private fun AroGiratorio(acento: Color, modifier: Modifier) {
-    val t = rememberInfiniteTransition()
-    val g by t.animateFloat(0f, 360f, infiniteRepeatable(tween(14000, easing = LinearEasing)))
-    Canvas(modifier.graphicsLayer { rotationZ = g }) {
+private fun AroGiratorio(acento: Color, activa: Boolean, modifier: Modifier) {
+    val giro = if (activa) {
+        val t = rememberInfiniteTransition()
+        t.animateFloat(0f, 360f, infiniteRepeatable(tween(14000, easing = LinearEasing)))
+    } else null
+    Canvas(modifier.graphicsLayer { rotationZ = giro?.value ?: 0f }) {
         drawCircle(acento.copy(alpha = 0.35f), style = Stroke(2.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(6f, 14f))))
         drawArc(Brush.sweepGradient(listOf(Color.Transparent, acento)), -90f, 80f, false, style = Stroke(4.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
     }
@@ -277,9 +294,9 @@ private fun AroGiratorio(acento: Color, modifier: Modifier) {
 
 /** Sello circular dorado con el descuento, girado y latiendo. */
 @Composable
-private fun SelloDescuento(pct: Int, modifier: Modifier) {
+private fun SelloDescuento(pct: Int, activa: Boolean, modifier: Modifier) {
     Box(
-        modifier.size(68.dp).pop(2).latido(fuerza = 0.07f).graphicsLayer { rotationZ = -14f }
+        modifier.size(68.dp).pop(2).latido(activa, fuerza = 0.07f).graphicsLayer { rotationZ = -14f }
             .background(Brush.radialGradient(listOf(Color(0xFFFFE08A), Dorado, Color(0xFFE0A21B))), CircleShape)
             .border(2.dp, Color.White, CircleShape)
             .semantics { contentDescription = "$pct por ciento menos" },
@@ -312,14 +329,17 @@ private fun BarraExistencias(n: Long, acento: Color, modifier: Modifier) {
 @Composable
 private fun BotonCompra(texto: String, oscuro: Color, activa: Boolean, onClick: () -> Unit, modifier: Modifier) {
     val fuente = remember { MutableInteractionSource() }
-    val t = rememberInfiniteTransition()
-    val x by t.animateFloat(-0.4f, 1.4f, infiniteRepeatable(tween(2200, delayMillis = 600, easing = LinearEasing)))
+    val brillo = if (activa) {
+        val t = rememberInfiniteTransition()
+        t.animateFloat(-0.4f, 1.4f, infiniteRepeatable(tween(2200, delayMillis = 600, easing = LinearEasing)))
+    } else null
     Row(
         modifier.fillMaxWidth().heightIn(min = 52.dp).rebote(fuente, 0.95f)
             .clip(RoundedCornerShape(16.dp)).background(Color.White)
             .drawWithContent {
                 drawContent()
-                if (activa) drawRect(
+                val x = brillo?.value
+                if (x != null) drawRect(
                     Brush.linearGradient(listOf(Color.Transparent, oscuro.copy(alpha = 0.10f), Color.Transparent),
                         start = Offset(size.width * x - 80f, 0f), end = Offset(size.width * x + 80f, size.height)),
                     blendMode = BlendMode.SrcOver,

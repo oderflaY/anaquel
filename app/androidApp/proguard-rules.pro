@@ -19,3 +19,19 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# ---- Anaquel ----
+# kotlinx.serialization: conservar serializadores generados.
+-keepattributes *Annotation*, InnerClasses, Signature, EnclosingMethod
+-keepclassmembers @kotlinx.serialization.Serializable class ** {
+    *** Companion;
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class **$$serializer { *; }
+-keep class com.eter.mitienda.**$$serializer { *; }
+# Ktor / coroutines
+-dontwarn io.ktor.**
+-dontwarn org.slf4j.**
+-dontwarn java.lang.management.**
+-keep class io.ktor.client.engine.** { *; }
+# WorkManager crea los workers por reflexión.
+-keep class * extends androidx.work.ListenableWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }

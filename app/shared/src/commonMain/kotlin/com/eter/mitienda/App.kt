@@ -168,7 +168,10 @@ fun App(container: AppContainer) {
 
     MiTiendaTheme {
         // Las imágenes guardan rutas relativas; aquí se indica cómo resolverlas.
-        CompositionLocalProvider(LocalImagePathResolver provides container.imageStorage::resolve) {
+        CompositionLocalProvider(
+            LocalImagePathResolver provides container.imageStorage::resolve,
+            com.eter.mitienda.feature.anaquel.LocalBajarFoto provides container.anaquelApi::bajarFoto,
+        ) {
             val navController = rememberNavController()
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
             val showBottomBar = currentRoute in Routes.TOP_LEVEL

@@ -53,6 +53,7 @@ func main() {
 		if err := app.sembrarRed(); err != nil {
 			log.Println("demo red:", err)
 		}
+		app.prepararDemoVisual()
 	}
 	addr := env("ADDR", ":8080")
 	log.Printf("Anaquel escuchando en %s (visión: %s, asesor con IA: %v, modelo local: %v)", addr, app.vision.Nombre(), app.claude != nil, app.local != nil)
@@ -133,6 +134,8 @@ func (a *App) rutas() http.Handler {
 	m.HandleFunc("POST /api/chats/{id}/pedido", a.conTienda(a.pedirDeChat))
 	m.HandleFunc("POST /api/chats/{id}/pedido/{msg}/{accion}", a.conTienda(a.accionPedido))
 	m.HandleFunc("GET /api/tiendas/{id}/catalogo", a.conTienda(a.catalogoDe))
+	m.HandleFunc("GET /api/tiendas/{id}/perfil", a.conTienda(a.perfilTienda))
+	m.HandleFunc("GET /api/notificaciones", a.conTienda(a.notificaciones))
 	m.HandleFunc("GET /api/avisos", a.conTienda(a.listarAvisos))
 	m.HandleFunc("POST /api/avisos/leidos", a.conTienda(a.avisosLeidos))
 

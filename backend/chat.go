@@ -23,6 +23,7 @@ type ItemCatalogo struct {
 	Unidad         string `json:"unidad"`
 	PrecioC        int64  `json:"precio_c"`
 	PrecioMayoreoC int64  `json:"precio_mayoreo_c"`
+	Foto           string `json:"foto,omitempty"`
 	MinimoMayoreo  int64  `json:"minimo_mayoreo"`
 	Disponible     *int64 `json:"disponible"`
 	Sigue          bool   `json:"sigue"` // sigue publicado en la vitrina
@@ -405,7 +406,7 @@ func (a *App) escribirChat(w http.ResponseWriter, r *http.Request) {
 
 // miCatalogo: los productos de mi vitrina (publicados y con existencia) que voy a mandar.
 func (a *App) miCatalogo(yo int64, ids []int64, todo bool) ([]ItemCatalogo, error) {
-	q := `SELECT id, nombre, categoria, unidad, precio_c, precio_mayoreo_c, minimo_mayoreo, stock FROM productos
+	q := `SELECT id, nombre, categoria, unidad, precio_c, precio_mayoreo_c, minimo_mayoreo, stock, foto FROM productos
 		WHERE tienda_id = ? AND publicado = 1 AND (stock IS NULL OR stock > 0)`
 	args := []any{yo}
 	if !todo {
@@ -427,7 +428,7 @@ func (a *App) miCatalogo(yo int64, ids []int64, todo bool) ([]ItemCatalogo, erro
 	var out []ItemCatalogo
 	for rows.Next() {
 		var it ItemCatalogo
-		rows.Scan(&it.ProductoID, &it.Nombre, &it.Categoria, &it.Unidad, &it.PrecioC, &it.PrecioMayoreoC, &it.MinimoMayoreo, &it.Disponible)
+		rows.Scan(&it.ProductoID, &it.Nombre, &it.Categoria, &it.Unidad, &it.PrecioC, &it.PrecioMayoreoC, &it.MinimoMayoreo, &it.Disponible, &it.Foto)
 		it.Sigue = true
 		out = append(out, it)
 	}

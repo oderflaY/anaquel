@@ -445,6 +445,7 @@ func (a *App) reiniciarDemo(w http.ResponseWriter, r *http.Request) {
 		manejar(w, nil, err)
 		return
 	}
+	a.prepararDemoVisual()
 	var id int64
 	a.db.QueryRow("SELECT id FROM tiendas WHERE email = ?", email).Scan(&id)
 	a.responderSesion(w, id)

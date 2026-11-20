@@ -125,10 +125,38 @@ data class ResultadoRed(
     /** Solo en Inicio: por qué te conviene y cuánto ganas por pieza si lo revendes. */
     val motivo: String? = null,
     @SerialName("ganancia_pct") val gananciaPct: Long? = null,
+    /** Foto real del producto ("/media/…"), si la tiene. */
+    val foto: String? = null,
 ) {
     val clave: String get() = "$tipo:$id"
     val negociable: Boolean get() = tipo != "productor" && tienda != null
 }
+
+// ---------------- Perfil de tienda y notificaciones ----------------
+
+@Serializable
+data class PerfilTienda(
+    val id: Long, val nombre: String, val slug: String = "", val giro: String = "", val telefono: String = "",
+    val descripcion: String = "", val direccion: String = "", val portada: String? = null, val horario: String? = null,
+    val entrega: String? = null, val credito: String? = null, val pagos: String? = null, val zona: String? = null,
+    @SerialName("pedido_minimo_c") val pedidoMinimoC: Long? = null, val desde: Int? = null, val clientes: Int? = null,
+    val verificada: Boolean = false, val calificacion: Double? = null, val resenas: Int? = null,
+    val etiquetas: List<String> = emptyList(), val productos: Int = 0, val tratos: Int = 0, val completo: Int = 0,
+    val catalogo: List<ItemCatalogo> = emptyList(), val anuncios: List<ResultadoRed> = emptyList(),
+    @SerialName("distancia_km") val distanciaKm: Double? = null,
+)
+
+@Serializable
+data class Notificacion(
+    val clave: String, val tipo: String, val titulo: String, val texto: String,
+    @SerialName("chat_id") val chatId: Long? = null, val creado: Long = 0,
+)
+
+@Serializable
+data class Notificaciones(
+    val items: List<Notificacion> = emptyList(),
+    @SerialName("ult_aviso") val ultAviso: Long = 0, @SerialName("ult_chat") val ultChat: Long = 0,
+)
 
 // ---------------- Inicio ----------------
 
@@ -175,7 +203,7 @@ data class ItemCatalogo(
     @SerialName("producto_id") val productoId: Long, val nombre: String, val categoria: String = "",
     val unidad: String = "pza", @SerialName("precio_c") val precioC: Long = 0,
     @SerialName("precio_mayoreo_c") val precioMayoreoC: Long = 0, @SerialName("minimo_mayoreo") val minimoMayoreo: Long = 0,
-    val disponible: Long? = null, val sigue: Boolean = true,
+    val disponible: Long? = null, val sigue: Boolean = true, val foto: String? = null,
 ) {
     /** Precio por pieza según cuántas pidas (mayoreo desde el mínimo). */
     fun precioPara(n: Long): Long = if (precioMayoreoC > 0 && minimoMayoreo > 0 && n >= minimoMayoreo) precioMayoreoC else precioC
@@ -393,6 +421,9 @@ class AnaquelApi(private val base: String = SERVIDOR_ANAQUEL) {
     /** aceptar | entregar | cancelar */
     suspend fun accionPedidoChat(id: Long, mensaje: Long, accion: String): Chat = post("/chats/$id/pedido/$mensaje/$accion", Vacio())
     suspend fun catalogo(tienda: Long): List<ItemCatalogo> = get("/tiendas/$tienda/catalogo")
+    suspend fun perfil(tienda: Long): PerfilTienda = get("/tiendas/$tienda/perfil")
+    suspend fun notificaciones(aviso: Long?, chat: Long?): Notificaciones =
+        get(if (aviso == null || chat == null) "/notificaciones" else "/notificaciones?aviso=$aviso&chat=$chat")
     suspend fun miCatalogo(): List<ItemCatalogo> = get("/tiendas/yo/catalogo")
 
     suspend fun cambiarEstado(pedido: Long, estado: String): Pedido = post("/pedidos/$pedido/estado", CambioEstado(estado))

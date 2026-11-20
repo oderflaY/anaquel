@@ -67,6 +67,7 @@ type Resultado struct {
 	PrecioMayoreoC int64        `json:"precio_mayoreo_c,omitempty"`
 	MinimoMayoreo  int64        `json:"minimo_mayoreo,omitempty"`
 	Unidad         string       `json:"unidad,omitempty"`
+	Foto           string       `json:"foto,omitempty"` // URL de la foto del producto
 	Disponible     *int64       `json:"disponible,omitempty"`
 	Precio         string       `json:"precio,omitempty"`   // anuncio (texto libre)
 	Cantidad       int64        `json:"cantidad,omitempty"` // solicitud
@@ -154,7 +155,7 @@ func (a *App) buscarRed(f filtroRed) ([]Resultado, error) {
 
 	if quiere("producto") {
 		rows, err := a.db.Query(`SELECT p.id, p.nombre, p.categoria, p.descripcion, p.precio_c, p.precio_mayoreo_c,
-			p.minimo_mayoreo, p.unidad, p.stock, p.actualizado, `+colsTienda+`
+			p.minimo_mayoreo, p.unidad, p.stock, p.actualizado, p.foto, `+colsTienda+`
 			FROM productos p JOIN tiendas t ON t.id = p.tienda_id
 			WHERE p.publicado = 1 AND p.tienda_id != ? AND (p.stock IS NULL OR p.stock > 0)`, f.yo)
 		if err != nil {
@@ -164,7 +165,7 @@ func (a *App) buscarRed(f filtroRed) ([]Resultado, error) {
 			r := Resultado{Tipo: "producto"}
 			var cat string
 			t, lat, lng, err := tiendaDe(rows, &r.ID, &r.Titulo, &cat, &r.Detalle, &r.PrecioC, &r.PrecioMayoreoC,
-				&r.MinimoMayoreo, &r.Unidad, &r.Disponible, &r.Creado)
+				&r.MinimoMayoreo, &r.Unidad, &r.Disponible, &r.Creado, &r.Foto)
 			if err != nil {
 				rows.Close()
 				return nil, err

@@ -87,7 +87,8 @@ fun Modifier.latido(activo: Boolean = true, fuerza: Float = 0.14f): Modifier = c
 }
 
 /** Flota arriba y abajo con un leve giro (para los dibujos grandes). */
-fun Modifier.flotar(amplitud: Float = 14f, periodoMs: Int = 2200): Modifier = composed {
+fun Modifier.flotar(amplitud: Float = 14f, periodoMs: Int = 2200, activo: Boolean = true): Modifier = composed {
+    if (!activo) return@composed this
     val t = rememberInfiniteTransition()
     val y by t.animateFloat(-amplitud, amplitud, infiniteRepeatable(tween(periodoMs, easing = FastOutSlowInEasing), RepeatMode.Reverse))
     val r by t.animateFloat(-4f, 4f, infiniteRepeatable(tween(periodoMs * 3 / 2, easing = FastOutSlowInEasing), RepeatMode.Reverse))

@@ -119,6 +119,9 @@ internal fun km(d: Double?): String? = d?.let { if (it < 1) "a ${(it * 1000).toI
 fun InicioRoute(vm: AnaquelViewModel, onAbrirChats: () -> Unit) {
     MarcoAnaquel(vm) { st ->
         LaunchedEffect(st.tienda?.id) { vm.cargarInicio() }
+        // Pedimos permiso de notificaciones una sola vez (Android 13+); si lo niega no insistimos.
+        val permiso = com.eter.mitienda.core.notifications.rememberNotificationPermissionState()
+        LaunchedEffect(st.tienda?.id) { if (st.tienda != null && !permiso.granted && vm.tocaPedirPermiso()) permiso.request() }
         Inicio(st, vm, onAbrirChats)
     }
 }
@@ -150,6 +153,7 @@ private fun Inicio(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () ->
                 },
                 onChat = { chat(it, false, null, 0) },
                 onNegociar = { negociando = it },
+                onPerfil = vm::verPerfil,
             )
         } else {
             Resumen(st, vm, onAbrirChats, arriba = 56.dp)
@@ -168,6 +172,12 @@ private fun Inicio(st: AnaquelUiState, vm: AnaquelViewModel, onAbrirChats: () ->
     }
     negociando?.let { r ->
         DialogoNegociar(r, onCerrar = { negociando = null }) { n, pc, msg -> negociando = null; vm.negociar(r, n, pc, msg) }
+    }
+    st.perfil?.let { p ->
+        HojaPerfil(p, onCerrar = vm::cerrarPerfil,
+            onChat = { vm.cerrarPerfil(); chat(p.id, false, null, 0) },
+            onPedir = { vm.cerrarPerfil(); chat(p.id, true, null, 0) },
+            onProducto = { it2 -> vm.cerrarPerfil(); chat(p.id, true, it2.productoId, it2.minimoMayoreo.coerceAtLeast(1)) })
     }
 }
 
